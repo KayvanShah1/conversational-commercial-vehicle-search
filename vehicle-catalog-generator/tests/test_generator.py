@@ -28,6 +28,15 @@ def test_vehicle_references_cover_search_taxonomy():
     assert {reference.body_type for reference in VEHICLE_REFERENCES} == set(VehicleBodyType)
     assert {reference.axle_count for reference in VEHICLE_REFERENCES} == {2, 3, 4, 5}
     assert {"BharatBenz", "Eicher"} <= {reference.make for reference in VEHICLE_REFERENCES}
+    assert {
+        (reference.make, reference.model)
+        for reference in VEHICLE_REFERENCES
+        if reference.payload_is_estimated
+    } == {
+        ("Tata", "Ultra T.16"),
+        ("Tata", "Signa 4932.T"),
+        ("Mahindra", "Blazo X 48"),
+    }
 
 
 def test_catalog_is_reproducible(monkeypatch):
@@ -45,6 +54,8 @@ def test_catalog_is_reproducible(monkeypatch):
     assert first[0].axle_count >= 2
     assert "price_inr" in first[0].model_dump()
     assert "new_vehicle_price_anchor_inr" not in first[0].model_dump()
+    assert "spec_source_url" not in first[0].model_dump()
+    assert "payload_is_estimated" not in first[0].model_dump()
     assert len(first) == 100
 
 
@@ -84,3 +95,16 @@ def test_write_catalog_creates_parquet_and_csv(monkeypatch, tmp_path):
             "purpose_tags": "city_delivery|last_mile",
         }
     ]
+
+
+def test_write_reference_catalog_exports_provenance(monkeypatch, tmp_path):
+    monkeypatch.setattr(generator.settings, "generated_data_dir", tmp_path)
+
+    reference_path = generator.write_reference_catalog()
+    reference_dataframe = pl.read_csv(reference_path)
+
+    assert reference_path == tmp_path / "vehicle_reference_catalog.csv"
+    assert reference_dataframe.height == len(VEHICLE_REFERENCES)
+    assert {"spec_source_url", "payload_is_estimated"} <= set(reference_dataframe.columns)
+    assert reference_dataframe.get_column("spec_source_url").null_count() == 0
+    assert reference_dataframe.filter(pl.col("payload_is_estimated")).height == 3

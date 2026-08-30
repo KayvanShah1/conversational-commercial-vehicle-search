@@ -7,6 +7,7 @@ from vehicle_search_utils.logger import get_logger
 from vehicle_search_utils.timing import timed_run
 
 from vehicle_catalog_generator.models import VehicleCondition, VehicleListing, VehicleReference
+from vehicle_catalog_generator.quality import validate_catalog
 from vehicle_catalog_generator.reference_data import (
     CITY_WEIGHTS,
     CONDITION_PRICE_FACTORS,
@@ -118,19 +119,30 @@ def write_catalog(dataframe: pl.DataFrame) -> tuple[Path, Path]:
     return parquet_path, csv_path
 
 
+def write_reference_catalog() -> Path:
+    reference_path = settings.generated_data_dir / "vehicle_reference_catalog.csv"
+    reference_dataframe = pl.DataFrame([reference.model_dump(mode="json") for reference in VEHICLE_REFERENCES])
+    reference_dataframe = reference_dataframe.with_columns(pl.col("purpose_tags").list.join("|"))
+    reference_dataframe.write_csv(reference_path)
+    return reference_path
+
+
 @timed_run(
     logger=logger,
     name="catalog_data_generation",
 )
 def generate_catalog_files() -> tuple[Path, Path]:
     dataframe = catalog_to_dataframe(generate_catalog())
+    validate_catalog(dataframe, expected_record_count=settings.data_generation.record_count)
     parquet_path, csv_path = write_catalog(dataframe)
+    reference_path = write_reference_catalog()
     logger.info(
         "catalog_generated",
         extra={
             "row_count": dataframe.height,
             "parquet_path": settings.project_relative_path(parquet_path),
             "csv_path": settings.project_relative_path(csv_path),
+            "reference_catalog_path": settings.project_relative_path(reference_path),
         },
     )
     return parquet_path, csv_path
