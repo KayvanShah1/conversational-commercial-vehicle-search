@@ -1,7 +1,30 @@
 [project]
 name = "conversational-commercial-vehicle-search"
 version = "0.1.0"
-description = "Add your description here"
+description = "Voice-first conversational search for used commercial vehicles with structured filtering, grounded recommendations, and cross-turn memory."
 readme = "README.md"
-requires-python = ">=3.14"
-dependencies = []
+requires-python = ">=3.13"
+dependencies = ["rich>=14.0.0"]
+
+[dependency-groups]
+dev = ["ipykernel>=7.1.0", "pytest>=9.0.0", "ruff>=0.14.9"]
+
+[tool.ruff]
+extend-include = ["*.ipynb"]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 120
+quote-style = "double"
+
+[tool.ruff.lint.pycodestyle]
+# Keep pycodestyle aligned with the formatter's line length.
+max-line-length = 120
+
+[tool.uv.workspace]
+members = [
+    "vehicle-catalog-generator",
+    "utils",
+]
