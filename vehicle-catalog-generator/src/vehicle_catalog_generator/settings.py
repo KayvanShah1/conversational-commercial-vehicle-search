@@ -1,6 +1,7 @@
 from pathlib import Path
+from typing import Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from vehicle_search_utils.settings import PROJECT_ROOT, CommonSettings
 
 
@@ -18,6 +19,15 @@ class DataGenerationConfig(BaseModel):
     papers_verified_probability: float = Field(default=0.82, ge=0.0, le=1.0)
 
     output_filename: str = Field(default="vehicles")
+
+    @model_validator(mode="after")
+    def validate_ranges(self) -> Self:
+        """Reject configuration ranges whose lower bound exceeds the upper bound."""
+        if self.min_vehicle_age > self.max_vehicle_age:
+            raise ValueError("min_vehicle_age must be less than or equal to max_vehicle_age")
+        if self.min_km_per_year > self.max_km_per_year:
+            raise ValueError("min_km_per_year must be less than or equal to max_km_per_year")
+        return self
 
 
 class Settings(CommonSettings):
