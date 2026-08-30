@@ -45,6 +45,7 @@ class VehicleReference(BaseModel):
     new_vehicle_price_anchor_inr: int = Field(gt=0)
     purpose_tags: list[str]
     spec_source_url: str
+    payload_is_estimated: bool = False
 
 
 class VehicleListing(BaseModel):
