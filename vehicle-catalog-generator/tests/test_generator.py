@@ -25,6 +25,7 @@ def test_vehicle_weight_class_distribution_is_complete():
 def test_vehicle_references_cover_search_taxonomy():
     assert all(reference.spec_source_url for reference in VEHICLE_REFERENCES)
     assert {reference.weight_class for reference in VEHICLE_REFERENCES} == set(VehicleWeightClass)
+    assert sum(reference.weight_class == VehicleWeightClass.intermediate for reference in VEHICLE_REFERENCES) == 5
     assert {reference.body_type for reference in VEHICLE_REFERENCES} == set(VehicleBodyType)
     assert {reference.axle_count for reference in VEHICLE_REFERENCES} == {2, 3, 4, 5}
     assert {"BharatBenz", "Eicher"} <= {reference.make for reference in VEHICLE_REFERENCES}
