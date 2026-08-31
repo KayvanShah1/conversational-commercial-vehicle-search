@@ -11,7 +11,7 @@ data/generated/
 └── vehicle_reference_catalog.csv
 ```
 
-The listing artifacts contain only searchable vehicle data. `vehicle_reference_catalog.csv` separately records manufacturer URLs, generation price anchors, and whether a payload value is derived or estimated.
+The listing artifacts include searchable vehicle data and the selected reference's manufacturer specification URL. `vehicle_reference_catalog.csv` separately records the complete provenance metadata, generation price anchors, and whether a payload value is derived or estimated.
 
 ## Data provenance
 
@@ -21,7 +21,7 @@ flowchart LR
     REF --> SYNTH["Synthetic listing generation"]
 ```
 
-- **Manufacturer-backed attributes:** linked through `spec_source_url` in the reference artifact.
+- **Manufacturer-backed attributes:** linked through `spec_source_url` in both listing and reference artifacts.
 - **Synthetic generation anchors:** `new_vehicle_price_anchor_inr` and the configured depreciation, mileage, condition, and market-noise assumptions create realistic demo prices; they are not authoritative market quotations.
 - **Derived or estimated attributes:** `payload_is_estimated=true` identifies payload values inferred from related published specifications rather than directly published for the exact configuration.
 

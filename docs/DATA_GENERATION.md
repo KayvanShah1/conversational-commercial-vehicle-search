@@ -58,6 +58,7 @@ Once a vehicle reference is selected, listing-specific attributes are generated.
 | City | Weighted sampling across supported cities |
 | Papers verified | Configurable probability |
 | Listing ID | Deterministic generated identifier |
+| Specification source URL | Link to official vehicle listing/ selected vehicle reference spec sheet|
 
 Mileage is tied to vehicle age rather than sampled independently.
 

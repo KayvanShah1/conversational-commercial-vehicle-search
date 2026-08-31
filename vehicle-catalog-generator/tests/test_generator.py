@@ -54,7 +54,7 @@ def test_catalog_is_reproducible(monkeypatch):
     assert first[0].axle_count >= 2
     assert "price_inr" in first[0].model_dump()
     assert "new_vehicle_price_anchor_inr" not in first[0].model_dump()
-    assert "spec_source_url" not in first[0].model_dump()
+    assert first[0].spec_source_url in {reference.spec_source_url for reference in VEHICLE_REFERENCES}
     assert "payload_is_estimated" not in first[0].model_dump()
     assert len(first) == 100
 

@@ -66,3 +66,4 @@ class VehicleListing(BaseModel):
     papers_verified: bool
     condition: VehicleCondition
     purpose_tags: list[str]
+    spec_source_url: str

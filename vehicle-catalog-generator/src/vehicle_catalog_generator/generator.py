@@ -95,6 +95,7 @@ def generate_vehicle_listing(index: int) -> VehicleListing:
         papers_verified=random.random() < cfg.papers_verified_probability,
         condition=condition,
         purpose_tags=reference.purpose_tags,
+        spec_source_url=reference.spec_source_url,
     )
 
 
