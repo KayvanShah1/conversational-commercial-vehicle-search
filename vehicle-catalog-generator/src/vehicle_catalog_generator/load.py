@@ -12,6 +12,7 @@ from vehicle_catalog_generator.settings import settings
 logger = get_logger("VehicleCatalogLoader")
 
 
+@property
 def _catalog_path() -> Path:
     return settings.generated_data_dir / f"{settings.data_generation.output_filename}.parquet"
 
