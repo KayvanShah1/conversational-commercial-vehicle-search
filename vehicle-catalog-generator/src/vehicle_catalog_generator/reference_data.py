@@ -102,7 +102,7 @@ VEHICLE_REFERENCES = [
         gvw_kg=2120,
         new_vehicle_price_anchor_inr=750_000,
         purpose_tags=["city_delivery", "market_transport", "logistics"],
-        spec_source_url="https://smalltrucks.tatamotors.com/tata-intra-v10",
+        spec_source_url="https://smalltruckstest.tatamotors.com/tata-intra-v10",
     ),
     VehicleReference(
         make="Tata",
