@@ -1,21 +1,16 @@
 from pathlib import Path
-from typing import Literal
 
 from pydantic import BaseModel, Field, SecretStr
 from vehicle_search_utils.settings import PROJECT_ROOT, CommonSettings
 
 
-class LLMConfig(BaseModel):
-    provider: Literal["groq", "openrouter"] = "groq"
-    model: str = "openai/gpt-oss-120b"
-    api_key: SecretStr = SecretStr("<API_TOKEN>")
+class GroqConfig(BaseModel):
+    api_key: SecretStr = SecretStr("<API_KEY>")
     base_url: str = "https://api.groq.com/openai/v1"
-    tracing_enabled: bool = False
 
-
-class SpeechConfig(BaseModel):
-    api_key: SecretStr = SecretStr("<API_TOKEN>")
-    base_url: str = "https://api.groq.com/openai/v1"
+    # Language Model Configuration
+    primary_model: str = "openai/gpt-oss-120b"
+    fallback_model: str = "openai/gpt-oss-20b"
 
     # Speech-to-Text (STT) Configuration
     stt_model: str = "whisper-large-v3-turbo"
@@ -24,6 +19,23 @@ class SpeechConfig(BaseModel):
     tts_model: str = "canopylabs/orpheus-v1-english"
     tts_voice: str = "daniel"
     tts_format: str = "wav"
+    tts_max_chars: int = 200  # Current Orpheus English request limit.
+
+
+class OpenRouterConfig(BaseModel):
+    api_key: SecretStr = SecretStr("<API_KEY>")
+    base_url: str = "https://openrouter.ai/api/v1"
+
+
+class AgentRuntimeConfig(BaseModel):
+    top_k: int = Field(default=3, ge=1, le=3)
+    max_turns: int = Field(default=6, ge=2, le=10)
+    max_search_candidates: int = 50
+    model_timeout_seconds: float = Field(default=8.0, gt=0)
+    model_max_retries: int = Field(default=1, ge=0, le=3)
+    tool_timeout_seconds: float = Field(default=5.0, gt=0)
+    tracing_enabled: bool = False
+    trace_include_sensitive_data: bool = False
 
 
 class AgentSettings(CommonSettings):
@@ -31,11 +43,9 @@ class AgentSettings(CommonSettings):
 
     session_db_path: Path = Field(default=PROJECT_ROOT / "data" / "agent_sessions.sqlite")
 
-    max_search_candidates: int = 50
-    top_k: int = 3
-
-    llm: LLMConfig = Field(default_factory=LLMConfig)
-    speech: SpeechConfig = Field(default_factory=SpeechConfig)
+    groq: GroqConfig = Field(default_factory=GroqConfig)
+    openrouter: OpenRouterConfig = Field(default_factory=OpenRouterConfig)
+    agent_runtime: AgentRuntimeConfig = Field(default_factory=AgentRuntimeConfig)
 
     def model_post_init(self, __context, /):
         super().model_post_init(__context)
