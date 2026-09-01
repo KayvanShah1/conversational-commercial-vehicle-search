@@ -38,9 +38,6 @@ def ensure_catalog_exists() -> Path:
     if replace or not parquet_path.exists():
         generator.generate_catalog_files()
 
-    if not parquet_path.exists():
-        raise RuntimeError(f"Catalog generation did not create the expected file: {parquet_path}")
-
     return parquet_path
 
 
