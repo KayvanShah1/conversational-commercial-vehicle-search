@@ -8,16 +8,18 @@ from vehicle_search_utils.settings import MotherDuckConfig
 
 @contextmanager
 def get_motherduck_connection(
-    config: MotherDuckConfig,
+    config: MotherDuckConfig, *, read_only: bool = False
 ) -> Generator[duckdb.DuckDBPyConnection]:
-    """Open a MotherDuck connection and always close it after use."""
     token = config.token.get_secret_value()
 
     if not token or token == "<API_TOKEN>":
         raise ValueError("MotherDuck token is not configured.")
 
     connection_string = f"md:{config.database}?motherduck_token={token}"
-    connection = duckdb.connect(connection_string)
+    if read_only:
+        connection = duckdb.connect(connection_string, config={"access_mode": "read_only"})
+    else:
+        connection = duckdb.connect(connection_string)
     try:
         yield connection
     finally:
