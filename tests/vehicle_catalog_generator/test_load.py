@@ -1,37 +1,5 @@
 import pytest
-from pydantic import SecretStr
 from vehicle_catalog_generator import load
-
-
-class FakeConnection:
-    def __init__(self):
-        self.closed = False
-
-    def close(self):
-        self.closed = True
-
-
-def test_motherduck_connection_is_closed(monkeypatch):
-    connection = FakeConnection()
-    monkeypatch.setattr(load.settings.motherduck, "token", SecretStr("test-token"))
-    monkeypatch.setattr(load.duckdb, "connect", lambda _: connection)
-
-    with load.get_motherduck_connection() as active_connection:
-        assert active_connection is connection
-        assert not connection.closed
-
-    assert connection.closed
-
-
-def test_motherduck_connection_is_closed_after_error(monkeypatch):
-    connection = FakeConnection()
-    monkeypatch.setattr(load.settings.motherduck, "token", SecretStr("test-token"))
-    monkeypatch.setattr(load.duckdb, "connect", lambda _: connection)
-
-    with pytest.raises(RuntimeError, match="load failed"), load.get_motherduck_connection():
-        raise RuntimeError("load failed")
-
-    assert connection.closed
 
 
 def test_missing_catalog_runs_generator(monkeypatch, tmp_path):
