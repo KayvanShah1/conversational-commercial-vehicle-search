@@ -30,9 +30,7 @@ def test_vehicle_references_cover_search_taxonomy():
     assert {reference.axle_count for reference in VEHICLE_REFERENCES} == {2, 3, 4, 5}
     assert {"BharatBenz", "Eicher"} <= {reference.make for reference in VEHICLE_REFERENCES}
     assert {
-        (reference.make, reference.model)
-        for reference in VEHICLE_REFERENCES
-        if reference.payload_is_estimated
+        (reference.make, reference.model) for reference in VEHICLE_REFERENCES if reference.payload_is_estimated
     } == {
         ("Tata", "Ultra T.16"),
         ("Tata", "Signa 4932.T"),

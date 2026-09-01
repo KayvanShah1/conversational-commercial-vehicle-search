@@ -4,7 +4,7 @@ from pathlib import Path
 
 import duckdb
 from vehicle_search_utils.logger import get_logger
-from vehicle_search_utils.timing import timed_run
+from vehicle_search_utils.operation import OperationLogContext
 
 from vehicle_catalog_generator import generator
 from vehicle_catalog_generator.settings import settings
@@ -44,11 +44,10 @@ def ensure_catalog_exists() -> Path:
     return parquet_path
 
 
-@timed_run(
-    logger=logger,
-    name="catalog_data_load",
-)
 def load_catalog() -> int:
+    operation = OperationLogContext(operation="catalog_data_load")
+    logger.info("catalog_load_started", extra=operation.started_extra(status="started"))
+
     parquet_path = ensure_catalog_exists()
 
     with get_motherduck_connection() as connection:
@@ -61,11 +60,17 @@ def load_catalog() -> int:
             [str(parquet_path)],
         )
         count = connection.execute("SELECT COUNT(*) FROM vehicles").fetchone()[0]
-        logger.info(
-            "catalog_loaded",
-            extra={"row_count": count, "database": settings.motherduck.database, "table": "vehicles"},
-        )
-        return count
+
+    logger.info(
+        "catalog_loaded",
+        extra=operation.completed_extra(
+            status="succeeded",
+            row_count=count,
+            database=settings.motherduck.database,
+            table="vehicles",
+        ),
+    )
+    return count
 
 
 if __name__ == "__main__":
