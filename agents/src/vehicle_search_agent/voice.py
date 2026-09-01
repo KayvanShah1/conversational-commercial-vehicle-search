@@ -20,22 +20,22 @@ class TranscriptionResult(BaseModel):
 
 
 def _speech_client() -> OpenAI:
-    api_key = settings.speech.api_key.get_secret_value()
+    api_key = settings.groq.api_key.get_secret_value()
 
     if not api_key or api_key == "<API_TOKEN>":
         raise ValueError("Speech API key is not configured.")
 
     return OpenAI(
         api_key=api_key,
-        base_url=settings.speech.base_url,
+        base_url=settings.groq.base_url,
     )
 
 
 def synthesize_speech(text: str) -> SpeechResult:
     operation = OperationLogContext(operation="text_to_speech")
     log_context = {
-        "model": settings.speech.tts_model,
-        "voice": settings.speech.tts_voice,
+        "model": settings.groq.tts_model,
+        "voice": settings.groq.tts_voice,
         "character_count": len(text),
     }
     tts_logger.info(
@@ -44,10 +44,10 @@ def synthesize_speech(text: str) -> SpeechResult:
     )
 
     response = _speech_client().audio.speech.create(
-        model=settings.speech.tts_model,
-        voice=settings.speech.tts_voice,
+        model=settings.groq.tts_model,
+        voice=settings.groq.tts_voice,
         input=text,
-        response_format=settings.speech.tts_format,
+        response_format=settings.groq.tts_format,
     )
     audio = response.content
 
@@ -61,7 +61,7 @@ def synthesize_speech(text: str) -> SpeechResult:
     return SpeechResult(
         audio=audio,
         duration_ms=completed_context["duration_ms"],
-        format=settings.speech.tts_format,
+        format=settings.groq.tts_format,
     )
 
 
@@ -72,8 +72,8 @@ def transcribe_audio(
 ) -> TranscriptionResult:
     operation = OperationLogContext(operation="speech_to_text")
     log_context = {
-        "model": settings.speech.stt_model,
-        "filename": filename,
+        "model": settings.groq.stt_model,
+        "audio_filename": filename,
         "audio_byte_count": len(audio_bytes),
     }
     stt_logger.info(
@@ -83,7 +83,7 @@ def transcribe_audio(
 
     response = _speech_client().audio.transcriptions.create(
         file=(filename, audio_bytes),
-        model=settings.speech.stt_model,
+        model=settings.groq.stt_model,
         temperature=0,
         response_format="json",
     )
