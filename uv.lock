@@ -1463,14 +1463,12 @@ name = "vehicle-catalog-generator"
 version = "0.1.0"
 source = { editable = "vehicle-catalog-generator" }
 dependencies = [
-    { name = "duckdb" },
     { name = "polars" },
     { name = "vehicle-search-utils" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "duckdb", specifier = ">=1.5.5" },
     { name = "polars", specifier = ">=1.44.1" },
     { name = "vehicle-search-utils", editable = "utils" },
 ]
@@ -1480,6 +1478,7 @@ name = "vehicle-search-utils"
 version = "0.1.0"
 source = { editable = "utils" }
 dependencies = [
+    { name = "duckdb" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "rich" },
@@ -1487,6 +1486,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "duckdb", specifier = ">=1.5.5" },
     { name = "pydantic", specifier = ">=2.10.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },
     { name = "rich", specifier = ">=14.0.0" },
