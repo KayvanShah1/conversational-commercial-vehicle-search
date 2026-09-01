@@ -1,8 +1,6 @@
-from collections.abc import Generator
-from contextlib import contextmanager
 from pathlib import Path
 
-import duckdb
+from vehicle_search_utils.database import get_motherduck_connection
 from vehicle_search_utils.logger import get_logger
 from vehicle_search_utils.operation import OperationLogContext
 
@@ -14,21 +12,6 @@ logger = get_logger("VehicleCatalogLoader")
 
 def _catalog_path() -> Path:
     return settings.generated_data_dir / f"{settings.data_generation.output_filename}.parquet"
-
-
-@contextmanager
-def get_motherduck_connection() -> Generator[duckdb.DuckDBPyConnection]:
-    token = settings.motherduck.token.get_secret_value()
-
-    if not token or token == "<API_TOKEN>":
-        raise ValueError("MotherDuck token is not configured.")
-
-    connection_string = f"md:{settings.motherduck.database}?motherduck_token={token}"
-    connection = duckdb.connect(connection_string)
-    try:
-        yield connection
-    finally:
-        connection.close()
 
 
 def ensure_catalog_exists() -> Path:
@@ -47,7 +30,7 @@ def load_catalog() -> int:
 
     parquet_path = ensure_catalog_exists()
 
-    with get_motherduck_connection() as connection:
+    with get_motherduck_connection(settings.motherduck) as connection:
         connection.execute(
             """
             CREATE OR REPLACE TABLE vehicles AS
