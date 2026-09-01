@@ -21,8 +21,8 @@ CONTEXT_EXCLUDED_KEYS = LOG_RECORD_BUILTIN_KEYS | {"message", "asctime"}
 TIMING_CONTEXT_KEYS = (
     "started_at_utc",
     "ended_at_utc",
-    "duration",
-    "cpu_duration",
+    "duration_ms",
+    "duration_human",
 )
 TIMING_CONTEXT_KEY_SET = set(TIMING_CONTEXT_KEYS)
 
@@ -36,12 +36,8 @@ class ContextAwareFormatter(logging.Formatter):
         base = super().format(record)
 
         context_keys = {key for key in record.__dict__ if key not in CONTEXT_EXCLUDED_KEYS}
-        operation_parts = [
-            f"{key}={record.__dict__[key]}" for key in sorted(context_keys - TIMING_CONTEXT_KEY_SET)
-        ]
-        timing_parts = [
-            f"{key}={record.__dict__[key]}" for key in TIMING_CONTEXT_KEYS if key in context_keys
-        ]
+        operation_parts = [f"{key}={record.__dict__[key]}" for key in sorted(context_keys - TIMING_CONTEXT_KEY_SET)]
+        timing_parts = [f"{key}={record.__dict__[key]}" for key in TIMING_CONTEXT_KEYS if key in context_keys]
 
         context_groups = [" ".join(parts) for parts in (operation_parts, timing_parts) if parts]
         if not context_groups:
@@ -51,7 +47,6 @@ class ContextAwareFormatter(logging.Formatter):
 
 
 def _get_log_level(level_name: str) -> int:
-    """Resolve configured level name into a logging module constant."""
     return getattr(logging, level_name.upper(), logging.INFO)
 
 
@@ -59,7 +54,7 @@ def get_logger(name: str) -> logging.Logger:
     """
     Return a configured logger singleton for `name`.
 
-    The logger includes redaction and optional console/file handlers based on settings.
+    The logger includes optional console/file handlers based on settings.
     """
     logger = logging.getLogger(name)
 

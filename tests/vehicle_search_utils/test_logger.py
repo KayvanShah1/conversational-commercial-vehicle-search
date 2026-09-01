@@ -23,16 +23,17 @@ def test_formatter_separates_operation_and_timing_context():
     record = make_record(
         operation="catalog_data_load",
         status="succeeded",
-        started_at_utc="2026-08-30T16:57:49+00:00",
-        ended_at_utc="2026-08-30T16:57:55+00:00",
-        duration="6.177 s",
+        started_at_utc="2026-08-30T16:57:49.000+00:00",
+        ended_at_utc="2026-08-30T16:57:55.177+00:00",
+        duration_ms=6177.0,
     )
 
     assert formatter.format(record) == (
         "VehicleCatalogLoader - catalog_loaded | "
         "operation=catalog_data_load status=succeeded | "
-        "started_at_utc=2026-08-30T16:57:49+00:00 "
-        "ended_at_utc=2026-08-30T16:57:55+00:00 duration=6.177 s"
+        "started_at_utc=2026-08-30T16:57:49.000+00:00 "
+        "ended_at_utc=2026-08-30T16:57:55.177+00:00 "
+        "duration_ms=6177.0"
     )
 
 
@@ -41,6 +42,5 @@ def test_formatter_omits_empty_timing_group():
     record = make_record(parquet_path="data/generated/vehicles.parquet", replace=True)
 
     assert formatter.format(record) == (
-        "VehicleCatalogLoader - catalog_loaded | "
-        "parquet_path=data/generated/vehicles.parquet replace=True"
+        "VehicleCatalogLoader - catalog_loaded | parquet_path=data/generated/vehicles.parquet replace=True"
     )
