@@ -1,4 +1,6 @@
-# Vivi: voice-first commercial vehicle search
+# Vivi: Voice-first commercial vehicle search
+
+![Vivi voice-first commercial vehicle search](assets/vivi-repo-cover.png)
 
 Vivi is a localhost voice assistant for finding used commercial vehicles. It
 accepts microphone or text input, extracts inspectable search constraints,
@@ -52,10 +54,10 @@ uv run --package agents python analysis/agent_chat.py
 ## Evaluation
 
 The core evaluation contains 27 conversational, safety, intent, slot, search,
-correction, preference-change, and follow-up cases. A second 18-case dataset covers every vehicle
-size, all body variants, both fuels, three catalog categories, budget ranges,
-payload conversion, pagination, all-result weight lookup, full details, and a
-general commercial-vehicle question.
+correction, preference-change, and follow-up cases. A second 18-case dataset
+covers every vehicle size, all body variants, both fuels, three catalog
+categories, budget ranges, payload conversion, pagination, all-result weight
+lookup, full details, and a general commercial-vehicle question.
 
 ```powershell
 uv run --package agents python evals/evaluate_agent.py `
@@ -136,15 +138,40 @@ flowchart TB
     TTS --> SHOW
 ```
 
-See [docs/TECHNICAL_DECISIONS.md](docs/TECHNICAL_DECISIONS.md) for component
-trade-offs, rejected alternatives, limitations, and the 100,000-conversation
-scale answer.
+## Documentation
 
-External libraries, model providers, and technical references are acknowledged
-in [docs/SOURCES.md](docs/SOURCES.md).
+| Document | Purpose |
+| --- | --- |
+| [Assignment](docs/ASSIGNMENT.md) | Original requirements and scoring rubric |
+| [Architecture and decisions](docs/TECHNICAL_DECISIONS.md) | Component seams, rejected alternatives, limitations, and scale plan |
+| [Evaluation report](docs/EVALUATION.md) | Executable checks, pass rates, latency, and provider limitations |
+| [Agent code review](docs/AGENT_CODE_REVIEW.md) | Simplification decisions and remaining intentional complexity |
+| [Catalog generation](docs/DATA_GENERATION.md) | Synthetic-data method, validation, and provenance |
+| [Sources](docs/SOURCES.md) | Libraries, providers, and external technical references |
+| [Submission checklist](docs/SUBMISSION_CHECKLIST.md) | Requirement-by-requirement evidence |
+| [Presentation PDF](output/pdf/vivi-vehicle-search-presentation.pdf) | Evaluator-facing walkthrough |
 
-The evaluator walkthrough is available as
-[the presentation PDF](output/pdf/vivi-vehicle-search-presentation.pdf).
+The generated cover prompt is retained in
+[docs/REPO_COVER_PROMPT.txt](docs/REPO_COVER_PROMPT.txt).
+
+## Disclaimer
+
+This is an engineering demonstration, not a live marketplace or purchasing
+service. The vehicle catalog, prices, availability, rankings, and recommendations
+are synthetic and must not be treated as current commercial offers. Specification
+links provide provenance for selected reference attributes; buyers should confirm
+all specifications, legal requirements, condition, pricing, and suitability with
+the manufacturer or seller before making a decision.
+
+## AI-assisted development
+
+AI tools supported implementation, refactoring, test design, documentation, and
+the repository cover image. The system boundaries, product scope, architecture,
+evaluation criteria, and final verification remained human-directed. AI-generated
+code and content were reviewed against executable tests, live evaluation cases,
+catalog-grounding checks, and the assignment requirements. This disclosure follows
+the assignment's allowance for AI coding tools while keeping every submitted
+component explainable during review.
 
 ## Verify locally
 

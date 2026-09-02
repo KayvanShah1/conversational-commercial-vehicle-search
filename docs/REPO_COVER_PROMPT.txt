@@ -1,0 +1,12 @@
+Use case: stylized-concept
+Asset type: 16:9 repository README cover and technical presentation hero
+Primary request: Create a premium hero image for an open-source AI engineering project: a modern unbranded commercial truck in three-quarter view, crossing from a subtle voice waveform into a precise structured-data field of catalog nodes, filters, and grounded result paths.
+Scene/backdrop: Dark graphite technical environment with understated spatial depth.
+Subject: One modern commercial truck, abstract voice waveform, structured catalog and filter paths, and subtle data-provenance cues.
+Style/medium: Sophisticated editorial 3D illustration with crisp technical lighting; senior engineering portfolio quality, not playful.
+Composition/framing: Wide 16:9 landscape, truck anchored slightly right of center, with clean negative space on the left for repository title outside the image.
+Lighting/mood: Confident, precise, calm, and production-minded.
+Color palette: Graphite, near-black, restrained indigo and violet, with small cool-cyan highlights.
+Materials/textures: Refined metal, glass-like data nodes, and thin luminous paths.
+Constraints: Visually convey voice AI, deterministic search, grounded data, and provenance; no people; no dashboard screenshot.
+Avoid: Logos, vehicle brand marks, readable interface text, typography, watermark, cartoon styling, neon overload, and generic robot imagery.
