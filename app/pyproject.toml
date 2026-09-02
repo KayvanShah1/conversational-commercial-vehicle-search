@@ -1,10 +1,13 @@
 [project]
 name = "app"
 version = "0.1.0"
-description = "Add your description here"
+description = "Local push-to-talk interface for the grounded vehicle-search agent"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = ["vehicle-search-utils"]
+dependencies = [
+    "agents",
+    "streamlit>=1.40.0",
+]
 
 [tool.uv.sources]
-vehicle-search-utils = { workspace = true }
+agents = { workspace = true }
