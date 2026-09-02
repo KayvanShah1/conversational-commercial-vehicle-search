@@ -28,19 +28,26 @@ logger = get_logger("VehicleSearchAgent")
 class FallbackModel(Model):
     """Use the next configured model after a retryable provider failure."""
 
-    def __init__(self, models: list[OpenAIChatCompletionsModel]) -> None:
+    def __init__(self, models: list[OpenAIChatCompletionsModel], routes: list[str]) -> None:
+        if len(models) != len(routes):
+            raise ValueError("Each model requires a route label.")
         self.models = models
+        self.routes = routes
         self.index = 0
 
     @property
     def model(self) -> str:
         return str(self.models[self.index].model)
 
+    @property
+    def route(self) -> str:
+        return self.routes[self.index]
+
     def advance(self) -> str | None:
         if self.index == len(self.models) - 1:
             return None
         self.index += 1
-        return self.model
+        return self.route
 
     def reset(self) -> None:
         self.index = 0
@@ -86,41 +93,41 @@ def _instructions(ctx: RunContextWrapper[AgentContext], _agent: Agent[AgentConte
 
 
 def build_agent() -> Agent[AgentContext]:
-    api_key = settings.groq.api_key.get_secret_value()
-    groq_client = AsyncOpenAI(api_key=api_key, base_url=settings.groq.base_url)
-    models = [
-        OpenAIChatCompletionsModel(model=model_name, openai_client=groq_client)
-        for model_name in [settings.groq.primary_model, *settings.groq.fallback_models]
+    models: list[OpenAIChatCompletionsModel] = []
+    routes: list[str] = []
+    groq_clients = [
+        AsyncOpenAI(api_key=key.get_secret_value(), base_url=settings.groq.base_url)
+        for key in settings.groq.api_keys
     ]
+    for model_name in [settings.groq.primary_model, *settings.groq.fallback_models]:
+        for key_number, client in enumerate(groq_clients, start=1):
+            models.append(OpenAIChatCompletionsModel(model=model_name, openai_client=client))
+            routes.append(f"groq-key-{key_number}/{model_name}")
+
     if settings.openrouter.api_key:
         openrouter_key = settings.openrouter.api_key.get_secret_value()
         openrouter_client = AsyncOpenAI(api_key=openrouter_key, base_url=settings.openrouter.base_url)
-        models.extend(
-            OpenAIChatCompletionsModel(model=model_name, openai_client=openrouter_client)
-            for model_name in settings.openrouter.fallback_models
-        )
-    model = FallbackModel(models)
+        for model_name in settings.openrouter.fallback_models:
+            models.append(OpenAIChatCompletionsModel(model=model_name, openai_client=openrouter_client))
+            routes.append(f"openrouter/{model_name}")
+    model = FallbackModel(models, routes)
 
     def use_next_model(context) -> bool | RetryDecision:
         retryable = (
-            context.normalized.status_code in {400, 408, 409, 429, 500, 502, 503, 504}
+            (context.normalized.status_code == 400 and "tool_use_failed" in str(context.error))
+            or context.normalized.status_code in {408, 409, 429, 500, 502, 503, 504}
             or context.normalized.is_network_error
             or context.normalized.is_timeout
         )
         if not retryable:
             return False
-        previous_model = model.model
-        next_model = model.advance()
-        if next_model is None:
-            retry_after = context.normalized.retry_after
-            return RetryDecision(
-                retry=retry_after is None or retry_after <= 30,
-                delay=retry_after,
-                reason="final model cooldown",
-            )
+        previous_route = model.route
+        next_route = model.advance()
+        if next_route is None:
+            return False
         logger.warning(
             "model_fallback_activated",
-            extra={"previous_model": previous_model, "next_model": next_model},
+            extra={"previous_route": previous_route, "next_route": next_route},
         )
         return RetryDecision(retry=True, delay=0, reason="model fallback")
 
@@ -130,7 +137,7 @@ def build_agent() -> Agent[AgentContext]:
         parallel_tool_calls=False,
         timeout=settings.agent_runtime.model_timeout_seconds,
         retry=ModelRetrySettings(
-            max_retries=settings.agent_runtime.model_max_retries,
+            max_retries=len(models) - 1,
             policy=use_next_model,
         ),
     )

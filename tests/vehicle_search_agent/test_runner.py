@@ -14,6 +14,12 @@ def test_explicit_previous_result_facts_force_the_details_tool():
     assert _tool_choice("Why is the first one better?", state) == "auto"
 
 
+def test_standalone_lakh_budget_forces_search_tool():
+    state = ConversationState(session_id="test")
+
+    assert _tool_choice("my bidget is 20 lakhs", state) == "search_vehicles"
+
+
 def test_agent_can_answer_side_questions_without_a_tool(monkeypatch):
     responses = iter(
         (

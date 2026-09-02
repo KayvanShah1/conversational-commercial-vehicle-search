@@ -2,6 +2,7 @@ import io
 import wave
 from types import SimpleNamespace
 
+import vehicle_search_agent.voice as voice_module
 from vehicle_search_agent.voice import _text_chunks, synthesize_speech
 
 
@@ -33,7 +34,7 @@ def test_synthesize_speech_stitches_wav_chunks(monkeypatch):
             return SimpleNamespace(content=_wav(bytes([len(calls)])))
 
     client = SimpleNamespace(audio=SimpleNamespace(speech=SpeechApi()))
-    monkeypatch.setattr("vehicle_search_agent.voice._speech_client", lambda: client)
+    monkeypatch.setattr("vehicle_search_agent.voice._speech_clients", lambda: (client,))
     monkeypatch.setattr("vehicle_search_agent.voice.settings.groq.tts_max_chars", 30)
 
     result = synthesize_speech("The first sentence is here. The second sentence is here.")
@@ -42,3 +43,28 @@ def test_synthesize_speech_stitches_wav_chunks(monkeypatch):
     assert all(len(chunk) <= 30 for chunk in calls)
     with wave.open(io.BytesIO(result.audio), "rb") as reader:
         assert reader.readframes(reader.getnframes()) == b"\x01\x02"
+
+
+def test_speech_request_rotates_after_rate_limit(monkeypatch):
+    class TestRateLimitError(Exception):
+        pass
+
+    class RateLimitedSpeechApi:
+        def create(self, **kwargs):
+            raise TestRateLimitError
+
+    class WorkingSpeechApi:
+        def create(self, **kwargs):
+            return SimpleNamespace(content=_wav(b"\x02"))
+
+    clients = (
+        SimpleNamespace(audio=SimpleNamespace(speech=RateLimitedSpeechApi())),
+        SimpleNamespace(audio=SimpleNamespace(speech=WorkingSpeechApi())),
+    )
+    monkeypatch.setattr(voice_module, "RateLimitError", TestRateLimitError)
+    monkeypatch.setattr(voice_module, "_speech_clients", lambda: clients)
+
+    result = synthesize_speech("Use the second key.")
+
+    with wave.open(io.BytesIO(result.audio), "rb") as reader:
+        assert reader.readframes(reader.getnframes()) == b"\x02"

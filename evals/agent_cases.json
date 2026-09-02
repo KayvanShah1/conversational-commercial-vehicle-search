@@ -54,6 +54,15 @@
     "expect_results": true
   },
   {
+    "id": "standalone_budget_typo",
+    "utterance": "my bidget is 20 lakhs",
+    "expected_action": "search",
+    "expected_filters": {
+      "budget_max": 2000000
+    },
+    "expect_results": true
+  },
+  {
     "id": "heavy_machinery_route",
     "conversation_id": "heavy_machinery",
     "utterance": "Ek bada truck that can help ship heavy machinery from Mumbai to Delhi.",

@@ -11,7 +11,10 @@ from agents import ModelRetryNormalizedError, RetryPolicyContext
 
 
 def test_fallback_model_restarts_for_a_new_user_turn():
-    model = FallbackModel([SimpleNamespace(model="first"), SimpleNamespace(model="second")])
+    model = FallbackModel(
+        [SimpleNamespace(model="first"), SimpleNamespace(model="second")],
+        ["first-route", "second-route"],
+    )
     model.advance()
 
     model.reset()
@@ -51,19 +54,25 @@ def test_comparison_details_return_to_model_for_grounded_reasoning():
     assert not _tool_result(SimpleNamespace(context=context), []).is_final_output
 
 
-def test_rate_limit_walks_the_configured_model_chain_without_delay():
+def test_rate_limit_rotates_groq_keys_before_changing_model(monkeypatch):
+    monkeypatch.setattr(
+        settings.groq,
+        "api_keys",
+        [SecretStr("key-one"), SecretStr("key-two"), SecretStr("key-three")],
+    )
+    monkeypatch.setattr(settings.openrouter, "api_key", None)
     agent = build_agent()
-    expected_models = [
-        "openai/gpt-oss-20b",
-        "qwen/qwen3.6-27b",
-        "qwen/qwen3.8-27b",
+    expected_routes = [
+        f"groq-key-2/{settings.groq.primary_model}",
+        f"groq-key-3/{settings.groq.primary_model}",
+        f"groq-key-1/{settings.groq.fallback_models[0]}",
     ]
 
-    for attempt, expected_model in enumerate(expected_models, start=1):
+    for attempt, expected_route in enumerate(expected_routes, start=1):
         retry_context = RetryPolicyContext(
             error=RuntimeError("rate limited"),
             attempt=attempt,
-            max_retries=3,
+            max_retries=agent.model_settings.retry.max_retries,
             stream=False,
             normalized=ModelRetryNormalizedError(status_code=429),
         )
@@ -71,10 +80,10 @@ def test_rate_limit_walks_the_configured_model_chain_without_delay():
 
         assert decision.retry
         assert decision.delay == 0
-        assert agent.model.model == expected_model
+        assert agent.model.route == expected_route
 
 
-def test_final_model_uses_short_provider_cooldown():
+def test_final_model_does_not_retry_after_routes_are_exhausted():
     agent = build_agent()
     while agent.model.advance() is not None:
         pass
@@ -88,8 +97,7 @@ def test_final_model_uses_short_provider_cooldown():
 
     decision = agent.model_settings.retry.policy(retry_context)
 
-    assert decision.retry
-    assert decision.delay == 6.5
+    assert decision is False
 
 
 def test_openrouter_models_are_retained_after_groq_fallbacks(monkeypatch):

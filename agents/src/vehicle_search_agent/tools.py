@@ -125,7 +125,11 @@ def _set_response(context: AgentContext, response: GroundedResponse) -> str:
 async def search_vehicles(
     ctx: RunContextWrapper[AgentContext],
     budget_min: Annotated[int, Field(ge=0, description="Minimum INR budget stated by the user")] | None = None,
-    budget_max: Annotated[int, Field(ge=0, description="Maximum INR budget stated by the user")] | None = None,
+    budget_max: Annotated[
+        int,
+        Field(ge=0, description="Maximum INR budget stated by the user; convert 20 lakh to 2000000"),
+    ]
+    | None = None,
     body_type: Annotated[BodyType, Field(description="Physical cargo body stated by the user; do not infer it")]
     | None = None,
     fuel: Annotated[Fuel, Field(description="Fuel stated by the user; do not infer it")] | None = None,

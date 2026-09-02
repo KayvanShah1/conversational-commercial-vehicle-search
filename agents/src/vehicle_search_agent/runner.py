@@ -20,6 +20,8 @@ logger = get_logger("VehicleSearchAgent")
 
 def _tool_choice(transcript: str, state: ConversationState) -> str:
     """Force only explicit, non-reasoning references to prior vehicle facts."""
+    if re.search(r"\b\d+(?:\.\d+)?\s*(?:lakhs?|lacs?|crores?)\b", transcript, re.IGNORECASE):
+        return "search_vehicles"
     if not state.last_result_ids or re.search(
         r"\b(?:why|better|best|compare|suitable|recommend)\b", transcript, re.IGNORECASE
     ):

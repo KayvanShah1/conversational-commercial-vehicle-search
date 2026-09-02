@@ -1,9 +1,10 @@
 import io
 import re
 import wave
+from collections.abc import Callable
 from functools import lru_cache
 
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 from pydantic import BaseModel
 from vehicle_search_utils import OperationLogContext, get_logger
 
@@ -11,6 +12,7 @@ from vehicle_search_agent.settings import settings
 
 tts_logger = get_logger("TextToSpeech")
 stt_logger = get_logger("SpeechToText")
+provider_logger = get_logger("SpeechProvider")
 
 
 class SpeechResult(BaseModel):
@@ -25,11 +27,26 @@ class TranscriptionResult(BaseModel):
 
 
 @lru_cache(maxsize=1)
-def _speech_client() -> OpenAI:
-    return OpenAI(
-        api_key=settings.groq.api_key.get_secret_value(),
-        base_url=settings.groq.base_url,
+def _speech_clients() -> tuple[OpenAI, ...]:
+    return tuple(
+        OpenAI(api_key=key.get_secret_value(), base_url=settings.groq.base_url)
+        for key in settings.groq.api_keys
     )
+
+
+def _request_with_key_rotation[ResponseT](request: Callable[[OpenAI], ResponseT]) -> ResponseT:
+    clients = _speech_clients()
+    for key_index, client in enumerate(clients):
+        try:
+            return request(client)
+        except RateLimitError:
+            if key_index == len(clients) - 1:
+                raise
+            provider_logger.warning(
+                "speech_key_rotated",
+                extra={"previous_key_number": key_index + 1, "next_key_number": key_index + 2},
+            )
+    raise RuntimeError("No Groq speech client is configured.")
 
 
 def _text_chunks(text: str, max_chars: int) -> list[str]:
@@ -114,17 +131,17 @@ def synthesize_speech(text: str) -> SpeechResult:
         extra=operation.started_extra(status="started", **log_context),
     )
 
-    audio_chunks = [
-        _speech_client()
-        .audio.speech.create(
-            model=settings.groq.tts_model,
-            voice=settings.groq.tts_voice,
-            input=chunk,
-            response_format=settings.groq.tts_format,
+    audio_chunks = []
+    for chunk in chunks:
+        response = _request_with_key_rotation(
+            lambda client, text=chunk: client.audio.speech.create(
+                model=settings.groq.tts_model,
+                voice=settings.groq.tts_voice,
+                input=text,
+                response_format=settings.groq.tts_format,
+            )
         )
-        .content
-        for chunk in chunks
-    ]
+        audio_chunks.append(response.content)
     audio = _stitch_wav(audio_chunks)
 
     completed_context = operation.completed_extra(status="succeeded", **log_context)
@@ -157,11 +174,13 @@ def transcribe_audio(
         extra=operation.started_extra(status="started", **log_context),
     )
 
-    response = _speech_client().audio.transcriptions.create(
-        file=(filename, audio_bytes),
-        model=settings.groq.stt_model,
-        temperature=0,
-        response_format="json",
+    response = _request_with_key_rotation(
+        lambda client: client.audio.transcriptions.create(
+            file=(filename, audio_bytes),
+            model=settings.groq.stt_model,
+            temperature=0,
+            response_format="json",
+        )
     )
     text = response.text.strip()
 

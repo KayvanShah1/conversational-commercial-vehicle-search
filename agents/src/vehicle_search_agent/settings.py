@@ -5,7 +5,7 @@ from vehicle_search_utils.settings import PROJECT_ROOT, CommonSettings
 
 
 class GroqConfig(BaseModel):
-    api_key: SecretStr
+    api_keys: list[SecretStr] = Field(min_length=1)
     base_url: str = "https://api.groq.com/openai/v1"
 
     # Language Model Configuration
@@ -24,13 +24,16 @@ class GroqConfig(BaseModel):
     tts_format: str = "wav"
     tts_max_chars: int = 200  # Per-request limit; longer replies are split before synthesis.
 
-    @field_validator("api_key")
+    @field_validator("api_keys")
     @classmethod
-    def validate_api_key(cls, api_key: SecretStr) -> SecretStr:
-        value = api_key.get_secret_value().strip()
-        if not value or value == "<API_KEY>":
-            raise ValueError("GROQ__API_KEY is not configured.")
-        return SecretStr(value)
+    def validate_api_keys(cls, api_keys: list[SecretStr]) -> list[SecretStr]:
+        unique: dict[str, SecretStr] = {}
+        for key in api_keys:
+            value = key.get_secret_value().strip()
+            if not value or value == "<API_KEY>":
+                raise ValueError("GROQ__API_KEYS contains an unconfigured key.")
+            unique.setdefault(value, SecretStr(value))
+        return list(unique.values())
 
 
 class OpenRouterConfig(BaseModel):
@@ -56,7 +59,6 @@ class OpenRouterConfig(BaseModel):
 class AgentRuntimeConfig(BaseModel):
     max_turns: int = Field(default=6, ge=2, le=10)
     model_timeout_seconds: float = Field(default=8.0, gt=0)
-    model_max_retries: int = Field(default=7, ge=0, le=7)
     tool_timeout_seconds: float = Field(default=15.0, gt=0)
 
     # Agent Tracing Configuration
