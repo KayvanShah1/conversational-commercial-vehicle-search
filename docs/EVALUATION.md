@@ -43,7 +43,7 @@ or wait for the free-tier pools to reset.
 ## Final submission smoke on 2026-09-03
 
 - Ruff passed across `agents`, `app`, `evals`, and `tests`.
-- The full local suite passed: 75 passed, 1 opt-in integration skipped.
+- The full local suite passed: 80 passed, 1 opt-in integration skipped.
 - Live STT transcribed the sample correctly in 843.71 ms.
 - Live TTS produced a 172,870-byte WAV in 648.80 ms.
 - A four-turn live text session passed a neutral greeting, a Mumbai heavy-
@@ -52,6 +52,9 @@ or wait for the free-tier pools to reset.
 - A final combined synthetic voice turn transcribed correctly in 231.74 ms,
   then exhausted every LLM fallback with HTTP 429. It is therefore recorded as
   a failed end-to-end attempt, not an audio-ready measurement.
+- After Groq key rotation was added, the exact `my bidget is 20 lakhs` case
+  passed its executable evaluation: action `search`, `budget_max=2000000`,
+  grounded results present, 1/1.
 
 ## Commands
 

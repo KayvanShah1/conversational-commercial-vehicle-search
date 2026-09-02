@@ -29,11 +29,12 @@ Text and voice share the same `VehicleSearchSession` and conversation state.
 Voice adds transcription before the text turn, then splits long responses into
 Groq's 200-character TTS requests and stitches the returned WAV audio.
 
-Model calls start with Groq's 120B model and fall back in order to Groq 20B,
-Qwen 3.6 27B, Qwen 3.8 27B, and—when `OPENROUTER__API_KEY` is configured—the
-two Gemma models listed in `example.env`. A provider failure changes both the
-model and its API client; short rate-limit cooldowns are retried only after the
-last model.
+`GROQ__API_KEYS` is a JSON list. Model calls try every configured key for Groq's
+120B model before moving to Groq 20B, Qwen 3.6 27B, Qwen 3.8 27B, and—when
+`OPENROUTER__API_KEY` is configured—the two Gemma models in `example.env`.
+Speech requests rotate through the same Groq keys when a key returns HTTP 429.
+The route list itself is the retry bound; no separate retry-count setting can
+silently leave configured routes unused.
 
 Run the focused tests:
 
@@ -41,7 +42,7 @@ Run the focused tests:
 uv run pytest tests/vehicle_search_agent -q
 ```
 
-Run the 21-turn live evaluation (the delay avoids free-tier bursts):
+Run the 22-turn live evaluation (the delay avoids free-tier bursts):
 
 ```powershell
 uv run --package agents python evals/evaluate_agent.py --delay-seconds 10

@@ -9,12 +9,13 @@ returned records.
 ## Run in under 10 minutes
 
 Prerequisites: Python 3.13, [uv](https://docs.astral.sh/uv/), a MotherDuck token,
-and a Groq API key. An OpenRouter key is optional and enables two additional
-fallback models.
+and at least one Groq API key. Additional Groq keys are optional and are tried
+before the agent changes models. An OpenRouter key enables two more fallbacks.
 
 ```powershell
 Copy-Item example.env .env
-# Fill MOTHERDUCK__TOKEN and GROQ__API_KEY in .env.
+# Fill MOTHERDUCK__TOKEN and GROQ__API_KEYS in .env.
+# GROQ__API_KEYS is a JSON list: ["primary-key","secondary-key"]
 # Optionally fill OPENROUTER__API_KEY.
 
 uv sync --all-packages --dev

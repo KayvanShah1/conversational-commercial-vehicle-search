@@ -84,11 +84,12 @@ a catalog service rather than opening unlimited connections.
 
 ## Model fallback and failure behavior
 
-Each turn starts from Groq 120B, then can move through Groq 20B, two Qwen 27B
-models, and two optional OpenRouter Gemma models. This protects a live turn from
-a single model outage, but free models do not guarantee independent capacity;
-the two Gemma entries currently share Google's upstream pool. The UI reports a
-recoverable error instead of inventing a vehicle when all providers fail.
+Each turn tries every configured Groq key for the 120B model, then repeats that
+bounded key rotation for Groq 20B and two Qwen 27B models before trying two
+optional OpenRouter Gemma models. Speech requests rotate Groq keys on HTTP 429
+as well. This protects a live turn from one exhausted account, but free models
+do not guarantee independent upstream capacity. The UI reports a recoverable
+error instead of inventing a vehicle when every route fails.
 
 ## What breaks first at 100,000 conversations per month
 

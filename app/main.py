@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+from html import escape
 from uuid import uuid4
 
 import streamlit as st
@@ -140,37 +141,87 @@ def _metric_label(name: str) -> str:
     }.get(name, name.replace("_ms", "").replace("_", " ").title())
 
 
+def _hud() -> str:
+    cells = "".join(
+        f'<div class="hud-cell"><span>{escape(_metric_label(name))}</span><strong>{value:,.0f}</strong><small>ms</small></div>'
+        for name, value in st.session_state.metrics.items()
+    )
+    return f'<div class="hud-grid">{cells}</div>'
+
+
+def _slots() -> str:
+    return "".join(
+        f'<span class="slot"><small>{escape(SLOT_LABELS.get(name, name))}</small>{escape(_display_value(name, value))}</span>'
+        for name, value in st.session_state.filters.items()
+    )
+
+
 _initialize_state()
 
 st.markdown(
     """
     <style>
-      .stApp { background: #f5f6f9; color: #171925; }
+      .stApp { background: #f7f7f8; color: #202123; }
       [data-testid="stHeader"] { background: transparent; }
-      .block-container { max-width: 1440px; padding-top: 1.5rem; }
-      h1 { color: #2929a8; letter-spacing: -0.04em; margin-bottom: 0; }
-      [data-testid="stAudioInput"] { border: 1px solid #dfe2ea; border-radius: 12px; padding: 1rem; background: white; }
-      [data-testid="stChatMessage"], [data-testid="stDataFrame"], [data-testid="stMetric"] {
-        border: 1px solid #dfe2ea; border-radius: 10px; background: white;
+      .block-container { max-width: 1180px; padding-top: 1rem; padding-bottom: 1.5rem; }
+      .vivi-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .8rem; }
+      .vivi-name { font-size: 1.75rem; font-weight: 750; letter-spacing: -.04em; }
+      .vivi-name span { color: #5b5bd6; }
+      .online { font-size: .7rem; letter-spacing: .08em; color: #247a55; }
+      .online::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #31a46c; margin-right: 6px; }
+      .section-label { color: #6b6f7b; font-size: .72rem; font-weight: 700; letter-spacing: .08em; margin: .15rem 0 .55rem; text-transform: uppercase; }
+      .st-key-chat_panel { background: #fff; border: 1px solid #e2e2e6 !important; border-radius: 14px; }
+      .st-key-chat_panel [data-testid="stChatMessage"] { background: transparent; padding: .6rem .8rem; }
+      [data-testid="stChatInput"] { border-color: #d9d9df; border-radius: 14px; }
+      [data-testid="stAudioInput"] { background: #fff; border: 1px solid #e2e2e6; border-radius: 12px; padding: .55rem .75rem; }
+      .slot-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1rem; }
+      .slot { background: #ececf4; border-radius: 8px; color: #30303b; font-size: .78rem; padding: 6px 8px; }
+      .slot small { color: #777986; display: block; font-size: .56rem; letter-spacing: .05em; text-transform: uppercase; }
+      .hud-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 1rem; }
+      .hud-cell { background: #191a22; border: 1px solid #30313c; border-radius: 8px; color: #f5f5f7; padding: 7px 8px; }
+      .hud-cell span { color: #9b9da9; display: block; font-size: .56rem; letter-spacing: .05em; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+      .hud-cell strong { font-size: .9rem; font-variant-numeric: tabular-nums; }
+      .hud-cell small { color: #858895; font-size: .58rem; margin-left: 2px; }
+      .match-title { margin-bottom: 0 !important; }
+      [data-testid="stExpander"] { background: #fff; border-color: #e2e2e6; }
+      @media (max-width: 760px) {
+        .block-container { padding-left: .8rem; padding-right: .8rem; }
+        .hud-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
-      [data-testid="stMetric"] { padding: .75rem 1rem; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-title_col, status_col = st.columns([4, 1])
-with title_col:
-    st.title("Vivi")
-    st.caption("Find the right commercial vehicle")
-with status_col:
-    st.success("Catalog ready")
+st.markdown(
+    '<div class="vivi-header"><div><div class="vivi-name"><span>V</span>ivi</div>'
+    '<div style="color:#777986;font-size:.82rem">Commercial vehicle assistant</div></div>'
+    '<div class="online">CATALOG ONLINE</div></div>',
+    unsafe_allow_html=True,
+)
 
-main_col, side_col = st.columns([2.2, 1], gap="large")
+chat_col, info_col = st.columns([3, 2], gap="large")
 
-with main_col:
-    st.subheader("Hold to talk")
-    recording = st.audio_input("Record your requirement in English or Hinglish")
+with chat_col:
+    st.markdown('<div class="section-label">Conversation</div>', unsafe_allow_html=True)
+    conversation = st.container(height=520, border=True, key="chat_panel")
+    with conversation:
+        if not st.session_state.messages:
+            with st.chat_message("assistant"):
+                st.write("Hi, I'm Vivi. What do you need to carry, and what budget are you working with?")
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.write(message["content"])
+
+    prompt = st.chat_input("Message Vivi", key="text_message")
+    recording = st.audio_input(
+        "Or record in English or Hinglish",
+        label_visibility="visible",
+        key="voice_message",
+    )
+    if prompt:
+        _run_text(prompt)
+        st.rerun()
     if recording is not None:
         audio_bytes = recording.getvalue()
         fingerprint = hashlib.sha256(audio_bytes).hexdigest()
@@ -178,46 +229,35 @@ with main_col:
             st.session_state.processed_audio = fingerprint
             _run_voice(audio_bytes, recording.name)
             st.rerun()
-
-    prompt = st.chat_input("Type your requirement or a follow-up question")
-    if prompt:
-        _run_text(prompt)
-        st.rerun()
-
     if st.session_state.error:
         st.error(st.session_state.error)
 
-    conversation = st.container(height=260, border=True)
-    with conversation:
-        if not st.session_state.messages:
-            st.caption("Start with a requirement, ask what is available, or simply say hi.")
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
-
-    st.subheader("Top matches")
-    if st.session_state.vehicles:
-        st.dataframe(st.session_state.vehicles, hide_index=True, use_container_width=True)
+with info_col:
+    st.markdown('<div class="section-label">Current search</div>', unsafe_allow_html=True)
+    if st.session_state.filters:
+        st.markdown(f'<div class="slot-row">{_slots()}</div>', unsafe_allow_html=True)
     else:
-        st.info("Grounded catalog results will appear here after a search.")
+        st.caption("Your budget, city, fuel and vehicle needs will appear here.")
 
-    st.subheader("Play response")
+    st.markdown('<div class="section-label">Top matches</div>', unsafe_allow_html=True)
+    if st.session_state.vehicles:
+        for row in st.session_state.vehicles:
+            with st.container(border=True):
+                st.markdown(f'**{row["Make / Model"]}** · {row["Year"]}', help=row["Why this match"])
+                st.caption(
+                    f'INR {row["Price (INR)"]:,.0f}  ·  {row["Fuel"]}  ·  '
+                    f'{row["Payload (kg)"] or "—"} kg payload  ·  {row["City"]}'
+                )
+        with st.expander("All catalog fields"):
+            st.dataframe(st.session_state.vehicles, hide_index=True, use_container_width=True)
+    else:
+        st.caption("Grounded catalog matches will appear after a search.")
+
+    st.markdown('<div class="section-label">Performance</div>', unsafe_allow_html=True)
+    if st.session_state.metrics:
+        st.markdown(_hud(), unsafe_allow_html=True)
+    else:
+        st.caption("Per-stage timing appears after the first turn.")
+
     if st.session_state.reply_audio:
         st.audio(st.session_state.reply_audio, format=f"audio/{st.session_state.audio_format}", autoplay=True)
-    else:
-        st.caption("A spoken reply appears here after a voice turn.")
-
-with side_col:
-    st.subheader("Current understanding")
-    if st.session_state.filters:
-        for name, value in st.session_state.filters.items():
-            st.metric(SLOT_LABELS.get(name, name.replace("_", " ").title()), _display_value(name, value))
-    else:
-        st.caption("Waiting for a requirement. Slots remain visible here on every turn.")
-
-    st.subheader("Latency")
-    if st.session_state.metrics:
-        for name, value in st.session_state.metrics.items():
-            st.metric(_metric_label(name), f"{value:,.0f} ms")
-    else:
-        st.caption("Stage timings appear after the first turn.")
