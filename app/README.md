@@ -2,8 +2,8 @@
 
 The app is a single-process Streamlit page for the assignment's live path:
 microphone capture, transcription, agent search, grounded response, speech
-synthesis, and browser audio playback. Text input uses the same session and is
-available as a fallback during the demo.
+synthesis, and browser audio playback. The native bottom chat composer combines
+text, microphone, and send controls; both input modes use the same session.
 
 From the repository root:
 

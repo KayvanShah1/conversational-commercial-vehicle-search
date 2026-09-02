@@ -2,22 +2,30 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-APP_PATH = Path(__file__).resolve().parents[2] / "app" / "main.py"
+ROOT = Path(__file__).resolve().parents[2]
+APP_PATH = ROOT / "app" / "main.py"
 
 
-def test_streamlit_app_has_required_demo_controls() -> None:
+def test_streamlit_app_uses_native_unified_composer() -> None:
     source = APP_PATH.read_text(encoding="utf-8")
 
-    assert 'chat_col, info_col = st.columns([3, 2]' in source
-    assert 'st.audio_input(' in source
-    assert 'st.chat_input("Message Vivi"' in source
-    assert 'class="hud-grid"' in source
-    assert "All catalog fields" in source
+    assert "st.audio_input(" not in source
+    assert "st.chat_input(" in source
+    assert "accept_audio=True" in source
+    assert "_render_sidebar()" in source
+    assert "Compare every catalog field" in source
+    assert "st.columns([3, 2]" not in source
+
+
+def test_streamlit_app_uses_dark_theme() -> None:
+    config = (ROOT / ".streamlit" / "config.toml").read_text(encoding="utf-8")
+
+    assert 'base = "dark"' in config
 
 
 def test_streamlit_app_renders_without_framework_error() -> None:
     app = AppTest.from_file(APP_PATH).run()
 
     assert not app.exception
-    assert app.chat_input[0].placeholder == "Message Vivi"
+    assert app.chat_input[0].placeholder == "Describe a vehicle need or ask a follow-up"
     assert any("Hi, I'm Vivi" in markdown.value for markdown in app.markdown)

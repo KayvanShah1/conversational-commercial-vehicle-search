@@ -72,12 +72,13 @@ telemetry, not more prompt rules.
 ## Verification result
 
 1. Ruff passed over source, app, evals, and tests.
-2. The full unit suite passed: 75 passed and 1 opt-in integration test skipped.
-3. Both datasets parsed (21 core + 18 focused cases), the verified summary
-   parsed, and the committed catalog contains 1,000 rows.
-4. Chrome displayed the Streamlit microphone, text, state, result, latency, and
-   playback sections correctly.
+2. The full unit suite passed: 81 passed and 1 opt-in integration test skipped.
+3. Both live datasets passed (22 core + 18 focused cases), and the committed
+   catalog contains 1,000 rows.
+4. Streamlit AppTest rendered the native text-and-microphone composer, sidebar,
+   results, and empty states without a framework exception. Browser screenshot
+   QA could not be repeated because the browser-control connection timed out.
 5. Live STT and TTS passed. A four-turn text smoke passed greeting, heavy-
    machinery search, plural weight lookup, and unsafe data-access refusal.
-6. The verified 18/18 record is preserved separately from the later provider-
-   limited 9/18 attempt and the final quota-blocked combined voice attempt.
+6. Key and model rotation recovered from intermittent rate limits during both
+   complete live evaluation runs.

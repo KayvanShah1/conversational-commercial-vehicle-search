@@ -7,9 +7,9 @@ libraries, hosted models, and official documentation:
   for the bounded agent loop, typed function tools, sessions, and tracing.
 - [OpenAI Agents SDK: function tools](https://openai.github.io/openai-agents-python/tools/)
   for schema generation and tool-call validation.
-- [Streamlit `st.audio_input`](https://docs.streamlit.io/develop/api-reference/widgets/st.audio_input)
-  for browser microphone capture at the speech-recognition-oriented 16 kHz
-  default sample rate.
+- [Streamlit `st.chat_input`](https://docs.streamlit.io/develop/api-reference/chat/st.chat_input)
+  for a single text composer with built-in browser microphone capture at a
+  speech-recognition-oriented 16 kHz sample rate.
 - [Groq speech-to-text documentation](https://console.groq.com/docs/speech-to-text)
   for Whisper transcription formats, limits, and audio guidance.
 - [Groq Orpheus text-to-speech documentation](https://console.groq.com/docs/text-to-speech/orpheus)

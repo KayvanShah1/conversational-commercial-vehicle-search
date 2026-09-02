@@ -11,23 +11,27 @@ facts. Answers may be naturally rephrased; catalog values may not change.
 The datasets are under `evals/`, not `data/`. Generated reports belong under
 `data/evaluation/`.
 
-## Verified focused run
+## Complete live run on 2026-09-03
 
-- Timestamp: 2026-09-02T19:32:39.594085+00:00
-- Dataset: `evals/vehicle_variant_cases.json`
-- Result: 18/18, 100%
-- Mean understanding: 1,519.29 ms
-- Mean search: 441.79 ms
-- Mean total: 1,960.88 ms
-- Local suite at the same checkpoint: 65 passed, 1 opt-in integration skipped
+- Core dataset: `evals/agent_cases.json`
+- Core result: 22/22, 100%
+- Core mean understanding: 847.67 ms
+- Core mean search: 529.24 ms
+- Core mean total: 1,303.63 ms
+- Variant dataset: `evals/vehicle_variant_cases.json`
+- Variant result: 18/18, 100%
+- Variant mean understanding: 725.21 ms
+- Variant mean search: 444.67 ms
+- Variant mean total: 1,169.72 ms
+- Local suite: 81 passed, 1 opt-in integration skipped
 
-The original JSON was overwritten during later experiments. The concise
-archived record in `data/evaluation/verified_variant_summary.json` was recovered
-from the retained command output and contains the original per-case model and
-total latency values. It is labeled as a recovered summary rather than passed
-off as the original JSON.
+Both complete runs used the live agent and MotherDuck search path. The first
+Groq route was intermittently rate-limited; bounded key/model rotation found an
+available Groq route and every case completed. The raw reports are
+`data/evaluation/latest_results.json` and
+`data/evaluation/vehicle_variant_results.json`.
 
-## Confirmation run on 2026-09-03
+## Earlier provider-limited confirmation
 
 The exact recovered code was rerun against the same 18 cases. The first nine
 cases all passed, including search, pagination, all-option weights, full vehicle
@@ -36,14 +40,13 @@ free-tier model returned HTTP 429, so the raw run ended at 9/18. None of the
 nine failures produced a logic mismatch; they failed before an action or filter
 could be returned.
 
-This is an availability limitation, not evidence for claiming a fresh 100%
-score. For a live evaluator run, use provider capacity with a sufficient quota
-or wait for the free-tier pools to reset.
+That earlier result remains useful evidence of the free-tier availability risk,
+but it has been superseded by the complete live runs above.
 
 ## Final submission smoke on 2026-09-03
 
 - Ruff passed across `agents`, `app`, `evals`, and `tests`.
-- The full local suite passed: 80 passed, 1 opt-in integration skipped.
+- The full local suite passed: 81 passed, 1 opt-in integration skipped.
 - Live STT transcribed the sample correctly in 843.71 ms.
 - Live TTS produced a 172,870-byte WAV in 648.80 ms.
 - A four-turn live text session passed a neutral greeting, a Mumbai heavy-

@@ -23,10 +23,10 @@ uv run python -m vehicle_catalog_generator.load
 uv run --package app streamlit run app/main.py
 ```
 
-Open <http://localhost:8501>. Press the microphone control, speak, stop the
-recording, and allow browser audio playback. The text box uses the same
-conversation state and is the supported fallback if microphone permission or a
-voice provider is unavailable.
+Open <http://localhost:8501>. The bottom composer includes text, microphone,
+and send controls. Record and submit a voice turn, then allow browser audio
+playback. Text uses the same conversation state and remains available if
+microphone permission or a voice provider is unavailable.
 
 The repository includes the deterministic 1,000-row catalog at
 `data/generated/vehicles.csv`. Loading is idempotent by default; set
@@ -51,10 +51,11 @@ uv run --package agents python analysis/agent_chat.py
 
 ## Evaluation
 
-The focused evaluation contains 18 turns spanning every size class, all body
-variants, both fuels, three catalog categories, budget ranges, payload
-conversion, pagination, all-result weight lookup, full details, and a general
-commercial-vehicle question.
+The core evaluation contains 22 conversational, safety, intent, slot, search,
+correction, and follow-up cases. A second 18-case dataset covers every vehicle
+size, all body variants, both fuels, three catalog categories, budget ranges,
+payload conversion, pagination, all-result weight lookup, full details, and a
+general commercial-vehicle question.
 
 ```powershell
 uv run --package agents python evals/evaluate_agent.py `
@@ -63,24 +64,39 @@ uv run --package agents python evals/evaluate_agent.py `
   --output data/evaluation/vehicle_variant_results.json
 ```
 
-The recovered agent checkpoint produced **18/18 (100%)** on 2026-09-02, with
-mean understanding, search, and total times of 1,519.29 ms, 441.79 ms, and
-1,960.88 ms. A later confirmation run passed its first 9/9 executed cases, then
-ended at 9/18 after every free-tier fallback returned HTTP 429. The archived
-verified summary is in `data/evaluation/verified_variant_summary.json`; details
-and the exact interpretation are in [docs/EVALUATION.md](docs/EVALUATION.md).
+The complete live run on 2026-09-03 passed **22/22 core cases (100%)** with a
+mean total time of 1,303.63 ms, and **18/18 variant cases (100%)** with a mean
+total time of 1,169.72 ms. Reports are written to `data/evaluation/`; the
+datasets and scoring logic remain under `evals/`. See
+[docs/EVALUATION.md](docs/EVALUATION.md) for the exact checks and latency
+breakdown.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    UI["1. Streamlit voice interface\nmic, text, playback"] --> STT["2. STT\nGroq transcription"]
-    STT --> UNDERSTAND["3. Understanding\nAgents SDK typed tools"]
-    UNDERSTAND <--> STATE["6. Conversation state\nSQLite plus typed slots"]
-    UNDERSTAND --> SEARCH["4. Catalog and search\nMotherDuck hard filters plus ranking"]
-    SEARCH --> RESPONSE["5. Response and TTS\ngrounded validation plus speech"]
-    RESPONSE --> UI
-    EVAL["7. Evaluation harness\nexpected filters plus latency"] -.-> UNDERSTAND
+    subgraph EXPERIENCE["Buyer experience"]
+        UI["1. Streamlit interface<br/>text, microphone, playback"]
+    end
+
+    subgraph AGENT["Agent runtime"]
+        STT["2. Speech to text<br/>Groq Whisper"]
+        UNDERSTAND["3. Understanding<br/>intent and typed slots"]
+        SEARCH["4. Catalog search<br/>hard filters and ranking"]
+        RESPONSE["5. Grounded response<br/>validation and TTS"]
+        STATE["6. Conversation state<br/>SQLite and result references"]
+    end
+
+    subgraph QUALITY["Quality loop"]
+        EVAL["7. Evaluation harness<br/>expected behavior and latency"]
+    end
+
+    UI -->|voice| STT --> UNDERSTAND
+    UI -->|text| UNDERSTAND
+    UNDERSTAND <--> STATE
+    UNDERSTAND -->|typed tool call| SEARCH
+    SEARCH -->|catalog records| RESPONSE --> UI
+    EVAL -.-> UNDERSTAND
     EVAL -.-> SEARCH
     EVAL -.-> RESPONSE
 ```
@@ -90,6 +106,35 @@ owns deterministic queries and ranking, `response.py` owns the anti-
 hallucination check, and `runner.py` owns state and timings. MotherDuck opens
 one read-only connection per catalog operation, reuses it within that operation,
 and closes it through the shared context manager.
+
+## General workflow
+
+```mermaid
+flowchart TB
+    INPUT["Buyer sends text or voice"] --> VOICE{"Voice input?"}
+    VOICE -->|yes| TRANSCRIBE["Transcribe audio"]
+    VOICE -->|no| INTERPRET["Identify intent and update slots"]
+    TRANSCRIBE --> INTERPRET
+
+    INTERPRET --> INTENT{"What does the buyer need?"}
+    INTENT -->|greeting or general question| BOUNDED["Answer within the commercial-vehicle scope"]
+    INTENT -->|catalog options| OPTIONS["Return available cities, types, fuels or bodies"]
+    INTENT -->|search or correction| FILTER["Apply parameterized filters and rank matches"]
+    INTENT -->|follow-up details| DETAILS["Resolve vehicles from saved result IDs"]
+
+    FILTER --> FOUND{"Any matches?"}
+    FOUND -->|no| RELAX["Explain the constraint and suggest a safe relaxation"]
+    FOUND -->|yes| VALIDATE["Validate every vehicle fact against returned records"]
+    DETAILS --> VALIDATE
+    OPTIONS --> FINAL["Compose the response"]
+    BOUNDED --> FINAL
+    RELAX --> FINAL
+    VALIDATE --> FINAL
+    FINAL --> SPEAK{"Voice turn?"}
+    SPEAK -->|yes| TTS["Generate and play speech"]
+    SPEAK -->|no| SHOW["Show the text response and current search context"]
+    TTS --> SHOW
+```
 
 See [docs/TECHNICAL_DECISIONS.md](docs/TECHNICAL_DECISIONS.md) for component
 trade-offs, rejected alternatives, limitations, and the 100,000-conversation
