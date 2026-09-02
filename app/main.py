@@ -190,9 +190,14 @@ def _render_sidebar() -> None:
         st.divider()
         st.subheader("Turn timing")
         if st.session_state.metrics:
-            with st.container(horizontal=True, wrap=True):
-                for name, value in st.session_state.metrics.items():
-                    st.badge(f"{_metric_label(name)} {value:,.0f} ms", color="gray")
+            rows = [
+                f"| {_metric_label(name)} | {value:,.0f} ms |"
+                for name, value in st.session_state.metrics.items()
+                if name != "total_ms"
+            ]
+            if total := st.session_state.metrics.get("total_ms"):
+                rows.append(f"| **Total** | **{total:,.0f} ms** |")
+            st.markdown("| Stage | Time |\n|:--|--:|\n" + "\n".join(rows))
         else:
             st.caption("Stage timings appear after the first turn.")
 
@@ -261,6 +266,15 @@ st.markdown(
       }
       [data-testid="stHeader"] { background: transparent; }
       [data-testid="stChatMessage"] { padding-block: 1rem; }
+      @media (min-width: 761px) {
+        [data-testid="stSidebar"] {
+          width: 25vw !important;
+          min-width: 25vw !important;
+        }
+        [data-testid="stSidebar"] > div:first-child {
+          width: 25vw !important;
+        }
+      }
       @media (max-width: 760px) {
         .block-container { padding: .75rem .9rem 6rem; }
       }
@@ -278,12 +292,11 @@ with header:
 with status:
     st.badge("Voice + text ready", icon=":material/mic:", color="violet")
 
-if not st.session_state.messages:
-    with st.chat_message("assistant"):
-        st.write(
-            "Hi, I'm Vivi. Tell me what you need to carry, where you operate, "
-            "and your budget. I’ll help you find suitable commercial vehicles."
-        )
+with st.chat_message("assistant"):
+    st.write(
+        "Hi, I'm Vivi. Tell me what you need to carry, where you operate, "
+        "and your budget. I'll help you find suitable commercial vehicles."
+    )
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):

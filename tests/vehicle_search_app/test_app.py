@@ -19,6 +19,9 @@ def test_streamlit_app_uses_native_unified_composer() -> None:
     assert '"Brochure / specs"' in source
     assert 'lines = ["**Top match**"' in source
     assert "st.columns([3, 2]" not in source
+    assert "width: 25vw !important" in source
+    assert '| **Total** | **{total:,.0f} ms** |' in source
+    assert "if not st.session_state.messages" not in source
 
 
 def test_streamlit_app_uses_dark_theme() -> None:
@@ -33,3 +36,10 @@ def test_streamlit_app_renders_without_framework_error() -> None:
     assert not app.exception
     assert app.chat_input[0].placeholder == "Describe a vehicle need or ask a follow-up"
     assert any("Hi, I'm Vivi" in markdown.value for markdown in app.markdown)
+
+    app.session_state.messages = [{"role": "user", "content": "Show me a truck"}]
+    app.session_state.metrics = {"understanding_ms": 123, "total_ms": 456}
+    app.run()
+
+    assert any("Hi, I'm Vivi" in markdown.value for markdown in app.markdown)
+    assert any("| **Total** | **456 ms** |" in markdown.value for markdown in app.markdown)
