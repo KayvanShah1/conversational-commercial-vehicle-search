@@ -76,6 +76,7 @@ def _vehicle_rows(session: VehicleSearchSession) -> list[dict]:
             "City": ranked.vehicle.city,
             "Papers": "Verified" if ranked.vehicle.papers_verified else "Not verified",
             "Why this match": _reason(ranked, result.executed_filters.purpose),
+            "Specification source": ranked.vehicle.spec_source_url,
         }
         for ranked in result.vehicles
     ]
@@ -203,6 +204,7 @@ def _render_matches() -> None:
                 "KM": st.column_config.NumberColumn(format="%d km"),
                 "Payload (kg)": st.column_config.NumberColumn(format="%d kg"),
                 "GVW (kg)": st.column_config.NumberColumn(format="%d kg"),
+                "Specification source": st.column_config.LinkColumn(display_text="Open source"),
             },
         )
 

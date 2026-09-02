@@ -72,8 +72,8 @@ telemetry, not more prompt rules.
 ## Verification result
 
 1. Ruff passed over source, app, evals, and tests.
-2. The full unit suite passed: 81 passed and 1 opt-in integration test skipped.
-3. Both live datasets passed (22 core + 18 focused cases), and the committed
+2. The full unit suite passed: 83 passed and 1 opt-in integration test skipped.
+3. Both live datasets passed (23 core + 18 focused cases), and the committed
    catalog contains 1,000 rows.
 4. Streamlit AppTest rendered the native text-and-microphone composer, sidebar,
    results, and empty states without a framework exception. Browser screenshot

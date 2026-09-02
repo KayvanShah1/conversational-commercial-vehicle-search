@@ -28,7 +28,8 @@ def _tool_choice(transcript: str, state: ConversationState) -> str:
         return "auto"
     asks_for_facts = re.search(
         r"\b(?:details?|price|cost|year|kilometres?|mileage|fuel|payload|gvw|body|city|papers|condition|"
-        r"uses?|category|size|axles?|carry|weight|cheapest|lowest|highest)\b",
+        r"uses?|category|size|axles?|carry|weight|brochures?|spec(?:ification)?s?|source|links?|"
+        r"cheapest|lowest|highest)\b",
         transcript,
         re.IGNORECASE,
     )

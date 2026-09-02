@@ -53,6 +53,15 @@ def test_cheapest_comparison_is_explicit_and_grounded():
     assert response.fallback.endswith("Cheapest: Tata Cheap at INR 8L.")
 
 
+def test_vehicle_source_link_is_returned_as_a_grounded_detail():
+    vehicle = _priced_vehicle("Brochure", 1_000_000)
+
+    response = details_response([vehicle], [DetailField.spec_source_url], "Does it have a brochure?")
+
+    assert response.fallback == "Tata Brochure: specification source https://example.com."
+    assert response.checks == (("Tata Brochure", "https://example.com"),)
+
+
 def test_accepts_natural_framing_around_unchanged_facts():
     fact = "Tata Ace Gold, INR 5.6L, verified papers"
     grounded = GroundedResponse(

@@ -228,5 +228,20 @@
       "vehicle_category": "mini_truck"
     },
     "preserve_result_ids": true
+  },
+  {
+    "id": "followup_brochures",
+    "conversation_id": "result_followup",
+    "utterance": "Do these have any brochures?",
+    "expected_action": "details",
+    "expected_filters": {
+      "budget_max": 1000000,
+      "city": "Pune",
+      "fuel": "CNG",
+      "vehicle_category": "mini_truck"
+    },
+    "preserve_result_ids": true,
+    "expected_detail_count": 3,
+    "expected_response_contains_all": ["specification source", "https://"]
   }
 ]

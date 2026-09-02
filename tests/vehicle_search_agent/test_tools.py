@@ -104,5 +104,30 @@ def test_all_details_for_an_ordinal_returns_every_user_facing_field(monkeypatch)
 
     assert len(context.grounded_response.facts) == 1
     fact = context.grounded_response.facts[0].casefold()
-    for label in ("year", "price", "km", "payload", "gvw", "body type", "papers", "category", "size class", "axles"):
+    for label in (
+        "year",
+        "price",
+        "km",
+        "payload",
+        "gvw",
+        "body type",
+        "papers",
+        "category",
+        "size class",
+        "axles",
+        "specification source",
+    ):
         assert label in fact
+
+
+def test_brochure_question_returns_sources_for_all_results(monkeypatch):
+    context = _context("Do these have any brochures?")
+
+    def fake_lookup(listing_ids):
+        return [_vehicle(listing_id) for listing_id in listing_ids], 1.0
+
+    monkeypatch.setattr(tools_module, "get_vehicles", fake_lookup)
+    _invoke(context, {"fields": ["spec_source_url"]})
+
+    assert len(context.grounded_response.facts) == 3
+    assert all("specification source https://example.com" in fact for fact in context.grounded_response.facts)

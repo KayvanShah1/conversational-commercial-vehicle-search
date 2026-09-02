@@ -209,7 +209,7 @@ async def search_vehicles(
 )
 async def get_vehicle_details(
     ctx: RunContextWrapper[AgentContext],
-    fields: Annotated[list[DetailField], Field(min_length=1, max_length=14)] | None = None,
+    fields: Annotated[list[DetailField], Field(min_length=1, max_length=15)] | None = None,
     result_number: Annotated[int, Field(ge=1, le=3)] | None = None,
     all_details: Annotated[bool, Field(description="True when the user asks for every available vehicle attribute")] = False,
 ) -> str:
@@ -217,8 +217,10 @@ async def get_vehicle_details(
 
     Valid fields: year, price, km_driven, fuel, payload, gvw, body_type, city,
     papers_verified, condition, purpose_tags, vehicle_category, weight_class,
-    axle_count. Set all_details=true for every available attribute. For capability
-    questions use payload, gvw, body_type, and purpose_tags.
+    axle_count, spec_source_url. Set all_details=true for every available
+    attribute. For capability questions use payload, gvw, body_type, and
+    purpose_tags. For brochure, manufacturer page, specification source, or
+    reference-link questions use spec_source_url.
     Never call this once per result when the user asks about all results.
     """
     context = ctx.context

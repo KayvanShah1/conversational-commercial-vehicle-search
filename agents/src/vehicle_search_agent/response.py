@@ -110,6 +110,9 @@ def details_response(vehicles: list[VehicleRecord], fields: list[DetailField], q
                 case DetailField.axle_count:
                     values.append(f"axles {vehicle.axle_count}")
                     checks.append(str(vehicle.axle_count))
+                case DetailField.spec_source_url:
+                    values.append(f"specification source {vehicle.spec_source_url}")
+                    checks.append(vehicle.spec_source_url)
 
         facts.append(f"{vehicle.make} {vehicle.model}: " + ", ".join(values))
         check_groups.append(tuple(checks))

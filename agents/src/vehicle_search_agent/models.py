@@ -187,6 +187,7 @@ class DetailField(StrEnum):
     vehicle_category = "vehicle_category"
     weight_class = "weight_class"
     axle_count = "axle_count"
+    spec_source_url = "spec_source_url"
 
 
 class TurnMetrics(BaseModel):

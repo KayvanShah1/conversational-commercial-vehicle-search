@@ -42,7 +42,7 @@ Run the focused tests:
 uv run pytest tests/vehicle_search_agent -q
 ```
 
-Run the 22-turn live evaluation (the delay avoids free-tier bursts):
+Run the 23-turn live evaluation (the delay avoids free-tier bursts):
 
 ```powershell
 uv run --package agents python evals/evaluate_agent.py --delay-seconds 10

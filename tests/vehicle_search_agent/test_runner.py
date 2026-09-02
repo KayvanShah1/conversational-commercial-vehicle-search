@@ -10,6 +10,7 @@ def test_explicit_previous_result_facts_force_the_details_tool():
     state = ConversationState(session_id="test", last_result_ids=["VEH-001"])
 
     assert _tool_choice("Give me all details for the first one", state) == "get_vehicle_details"
+    assert _tool_choice("Do these have any brochures?", state) == "get_vehicle_details"
     assert _tool_choice("What does GVW mean?", state) == "auto"
     assert _tool_choice("Why is the first one better?", state) == "auto"
 
