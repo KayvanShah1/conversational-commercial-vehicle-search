@@ -1,39 +1,63 @@
 from pathlib import Path
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, field_validator
 from vehicle_search_utils.settings import PROJECT_ROOT, CommonSettings
 
 
 class GroqConfig(BaseModel):
-    api_key: SecretStr = SecretStr("<API_KEY>")
+    api_key: SecretStr
     base_url: str = "https://api.groq.com/openai/v1"
 
     # Language Model Configuration
     primary_model: str = "openai/gpt-oss-120b"
-    fallback_model: str = "openai/gpt-oss-20b"
+    fallback_models: list[str] = Field(
+        default_factory=lambda: ["openai/gpt-oss-20b", "qwen/qwen3.6-27b", "qwen/qwen3.8-27b"],
+        min_length=1,
+    )
 
     # Speech-to-Text (STT) Configuration
     stt_model: str = "whisper-large-v3-turbo"
 
     # Text-to-Speech (TTS) Configuration
     tts_model: str = "canopylabs/orpheus-v1-english"
-    tts_voice: str = "daniel"
+    tts_voice: str = "troy"
     tts_format: str = "wav"
-    tts_max_chars: int = 200  # Current Orpheus English request limit.
+    tts_max_chars: int = 200  # Per-request limit; longer replies are split before synthesis.
+
+    @field_validator("api_key")
+    @classmethod
+    def validate_api_key(cls, api_key: SecretStr) -> SecretStr:
+        value = api_key.get_secret_value().strip()
+        if not value or value == "<API_KEY>":
+            raise ValueError("GROQ__API_KEY is not configured.")
+        return SecretStr(value)
 
 
 class OpenRouterConfig(BaseModel):
-    api_key: SecretStr = SecretStr("<API_KEY>")
+    api_key: SecretStr | None = None
     base_url: str = "https://openrouter.ai/api/v1"
+    fallback_models: list[str] = Field(
+        default_factory=lambda: ["google/gemma-4-26b-a4b-it:free", "google/gemma-4-31b-it:free"],
+        min_length=1,
+    )
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def normalize_optional_api_key(cls, api_key: SecretStr | str | None) -> SecretStr | None:
+        if api_key is None:
+            return None
+        value = api_key.get_secret_value() if isinstance(api_key, SecretStr) else api_key
+        value = value.strip()
+        if not value or value == "<API_KEY>":
+            return None
+        return SecretStr(value)
 
 
 class AgentRuntimeConfig(BaseModel):
-    top_k: int = Field(default=3, ge=1, le=3)
-    max_turns: int = Field(default=10, ge=2, le=10)
-    max_search_candidates: int = 50
+    max_turns: int = Field(default=6, ge=2, le=10)
     model_timeout_seconds: float = Field(default=8.0, gt=0)
-    model_max_retries: int = Field(default=1, ge=0, le=3)
-    tool_timeout_seconds: float = Field(default=5.0, gt=0)
+    model_max_retries: int = Field(default=7, ge=0, le=7)
+    tool_timeout_seconds: float = Field(default=15.0, gt=0)
 
     # Agent Tracing Configuration
     tracing_enabled: bool = False
@@ -46,7 +70,6 @@ class AgentSettings(CommonSettings):
     # Agent Session and Conversation State Storage
     session_data_path: Path = PROJECT_ROOT / "data" / "sessions"
     session_db_path: Path = session_data_path / "agent_sessions.sqlite"
-    conversation_state_path: Path = session_data_path / "conversation_state.sqlite"
 
     # Agent Configuration
     groq: GroqConfig = Field(default_factory=GroqConfig)

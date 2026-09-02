@@ -1,3 +1,8 @@
+import io
+import re
+import wave
+from functools import lru_cache
+
 from openai import OpenAI
 from pydantic import BaseModel
 from vehicle_search_utils import OperationLogContext, get_logger
@@ -19,37 +24,108 @@ class TranscriptionResult(BaseModel):
     duration_ms: float
 
 
+@lru_cache(maxsize=1)
 def _speech_client() -> OpenAI:
-    api_key = settings.groq.api_key.get_secret_value()
-
-    if not api_key or api_key == "<API_TOKEN>":
-        raise ValueError("Speech API key is not configured.")
-
     return OpenAI(
-        api_key=api_key,
+        api_key=settings.groq.api_key.get_secret_value(),
         base_url=settings.groq.base_url,
     )
 
 
+def _text_chunks(text: str, max_chars: int) -> list[str]:
+    chunks: list[str] = []
+    current = ""
+
+    for part in re.split(r"(?<=[.!?;,])\s+", text.strip()):
+        if len(part) > max_chars:
+            words = part.split()
+            for word in words:
+                candidate = f"{current} {word}".strip()
+                if len(candidate) <= max_chars:
+                    current = candidate
+                else:
+                    if current:
+                        chunks.append(current)
+                    if len(word) > max_chars:
+                        raise ValueError("A single word exceeds the TTS request limit.")
+                    current = word
+            continue
+
+        candidate = f"{current} {part}".strip()
+        if len(candidate) <= max_chars:
+            current = candidate
+        else:
+            if current:
+                chunks.append(current)
+            current = part
+
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _stitch_wav(audio_chunks: list[bytes]) -> bytes:
+    if len(audio_chunks) == 1:
+        return audio_chunks[0]
+
+    output = io.BytesIO()
+    expected_format: tuple[int, int, int, str] | None = None
+    frames: list[bytes] = []
+
+    for audio in audio_chunks:
+        with wave.open(io.BytesIO(audio), "rb") as reader:
+            audio_format = (
+                reader.getnchannels(),
+                reader.getsampwidth(),
+                reader.getframerate(),
+                reader.getcomptype(),
+            )
+            if expected_format is None:
+                expected_format = audio_format
+            elif audio_format != expected_format:
+                raise ValueError("TTS chunks returned incompatible WAV formats.")
+            frames.append(reader.readframes(reader.getnframes()))
+
+    assert expected_format is not None
+    channels, sample_width, frame_rate, compression = expected_format
+    with wave.open(output, "wb") as writer:
+        writer.setnchannels(channels)
+        writer.setsampwidth(sample_width)
+        writer.setframerate(frame_rate)
+        writer.setcomptype(compression, "not compressed")
+        writer.writeframes(b"".join(frames))
+    return output.getvalue()
+
+
 def synthesize_speech(text: str) -> SpeechResult:
+    if not text.strip():
+        raise ValueError("Text-to-speech input cannot be empty.")
+
     operation = OperationLogContext(operation="text_to_speech")
+    chunks = _text_chunks(text, settings.groq.tts_max_chars)
     log_context = {
         "model": settings.groq.tts_model,
         "voice": settings.groq.tts_voice,
         "character_count": len(text),
+        "chunk_count": len(chunks),
     }
     tts_logger.info(
         "tts_started",
         extra=operation.started_extra(status="started", **log_context),
     )
 
-    response = _speech_client().audio.speech.create(
-        model=settings.groq.tts_model,
-        voice=settings.groq.tts_voice,
-        input=text,
-        response_format=settings.groq.tts_format,
-    )
-    audio = response.content
+    audio_chunks = [
+        _speech_client()
+        .audio.speech.create(
+            model=settings.groq.tts_model,
+            voice=settings.groq.tts_voice,
+            input=chunk,
+            response_format=settings.groq.tts_format,
+        )
+        .content
+        for chunk in chunks
+    ]
+    audio = _stitch_wav(audio_chunks)
 
     completed_context = operation.completed_extra(status="succeeded", **log_context)
 
