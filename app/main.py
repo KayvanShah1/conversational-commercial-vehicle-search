@@ -26,6 +26,13 @@ SLOT_LABELS = {
     "papers_verified": "Verified papers",
 }
 
+TOOL_NAMES = {
+    "conversation": "None",
+    "search": "search_vehicles",
+    "details": "get_vehicle_details",
+    "catalog_options": "list_catalog_options",
+}
+
 
 def _initialize_state() -> None:
     defaults = {
@@ -35,6 +42,7 @@ def _initialize_state() -> None:
         "filters": {},
         "vehicles": [],
         "metrics": {},
+        "last_tool": None,
         "reply_audio": None,
         "audio_format": "wav",
         "processed_audio": None,
@@ -94,6 +102,7 @@ def _save_result(result, session: VehicleSearchSession) -> None:
     if new_vehicles:
         st.session_state.vehicles = new_vehicles
     st.session_state.metrics = result.metrics.model_dump(mode="json", exclude_none=True)
+    st.session_state.last_tool = TOOL_NAMES[result.action.value]
     st.session_state.error = None
 
 
@@ -118,7 +127,7 @@ def _display_response(result, session: VehicleSearchSession) -> str:
 
 def _run_text(message: str) -> None:
     try:
-        with st.spinner("Vivi is checking the catalog..."):
+        with st.spinner("Vivi is thinking..."):
             session = _session()
             result = asyncio.run(session.run_text_turn(message))
         _save_result(result, session)
@@ -128,7 +137,7 @@ def _run_text(message: str) -> None:
 
 def _run_voice(audio_bytes: bytes, filename: str) -> None:
     try:
-        with st.spinner("Vivi is listening and checking the catalog..."):
+        with st.spinner("Vivi is listening..."):
             session = _session()
             result = asyncio.run(session.run_voice_turn(audio_bytes, filename=filename))
         _save_result(result, session)
@@ -167,8 +176,9 @@ def _reset_conversation() -> None:
 
 def _render_sidebar() -> None:
     with st.sidebar:
-        st.title("Vivi")
-        st.caption("Commercial vehicle assistant")
+        with st.container(key="sidebar_header"):
+            st.title("Vivi")
+            st.caption("Commercial vehicle assistant")
         st.badge("Catalog connected", icon=":material/database:", color="green")
         st.button(
             "New conversation",
@@ -197,7 +207,8 @@ def _render_sidebar() -> None:
             ]
             if total := st.session_state.metrics.get("total_ms"):
                 rows.append(f"| **Total** | **{total:,.0f} ms** |")
-            st.markdown("| Stage | Time |\n|:--|--:|\n" + "\n".join(rows))
+            with st.container(key="timing_table"):
+                st.markdown("| Stage | Time |\n|:--|--:|\n" + "\n".join(rows))
         else:
             st.caption("Stage timings appear after the first turn.")
 
@@ -210,13 +221,18 @@ def _render_matches() -> None:
     columns = st.columns(len(st.session_state.vehicles), gap="medium")
     for column, vehicle in zip(columns, st.session_state.vehicles, strict=True):
         with column, st.container(border=True, height=390):
-            st.markdown(f"#### {vehicle['Make / Model']}")
+            title, verification = st.columns([5, 1], vertical_alignment="center")
+            with title:
+                st.markdown(f"#### {vehicle['Make / Model']}")
+            with verification:
+                if vehicle["Papers"] == "Verified":
+                    st.badge("✓", color="green")
             st.caption(f"{vehicle['Year']} · {vehicle['City']} · {vehicle['Body'].title()} body")
             st.metric("Price", f"₹{vehicle['Price (INR)']:,.0f}")
             st.write(f"**Fuel:** {vehicle['Fuel']}")
             st.write(f"**Payload:** {vehicle['Payload (kg)'] or '—'} kg")
             st.write(f"**GVW:** {vehicle['GVW (kg)'] or '—'} kg")
-            st.caption(f"{vehicle['Papers']} · Match: {vehicle['Why this match']}")
+            st.caption(f"Match: {vehicle['Why this match']}")
             st.link_button(
                 "Brochure / specs",
                 vehicle["Specification source"],
@@ -266,6 +282,17 @@ st.markdown(
       }
       [data-testid="stHeader"] { background: transparent; }
       [data-testid="stChatMessage"] { padding-block: 1rem; }
+      .st-key-sidebar_header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--secondary-background-color);
+        padding-bottom: .35rem;
+      }
+      .st-key-timing_table table { font-size: .78rem; }
+      .st-key-timing_table th, .st-key-timing_table td {
+        padding: .2rem .35rem;
+      }
       @media (min-width: 761px) {
         [data-testid="stSidebar"] {
           width: 25vw !important;
@@ -273,6 +300,9 @@ st.markdown(
         }
         [data-testid="stSidebar"] > div:first-child {
           width: 25vw !important;
+        }
+        [data-testid="stSidebarContent"] {
+          overflow-y: hidden;
         }
       }
       @media (max-width: 760px) {
@@ -291,6 +321,8 @@ with header:
     st.caption("Chat naturally in English or Hinglish. Your results are grounded in the catalog.")
 with status:
     st.badge("Voice + text ready", icon=":material/mic:", color="violet")
+    if st.session_state.last_tool:
+        st.caption(f"Tool: `{st.session_state.last_tool}`")
 
 with st.chat_message("assistant"):
     st.write(

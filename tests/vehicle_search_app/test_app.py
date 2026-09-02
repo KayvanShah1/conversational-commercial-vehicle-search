@@ -20,8 +20,14 @@ def test_streamlit_app_uses_native_unified_composer() -> None:
     assert 'lines = ["**Top match**"' in source
     assert "st.columns([3, 2]" not in source
     assert "width: 25vw !important" in source
+    assert "overflow-y: hidden" in source
+    assert "font-size: .78rem" in source
     assert '| **Total** | **{total:,.0f} ms** |' in source
     assert "if not st.session_state.messages" not in source
+    assert 'st.spinner("Vivi is thinking...")' in source
+    assert 'st.spinner("Vivi is listening...")' in source
+    assert 'st.badge("✓", color="green")' in source
+    assert 'st.caption(f"Tool: `{st.session_state.last_tool}`")' in source
 
 
 def test_streamlit_app_uses_dark_theme() -> None:
