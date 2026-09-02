@@ -165,7 +165,6 @@ def _metric_label(name: str) -> str:
         "response_ms": "Response",
         "tts_ms": "TTS",
         "total_ms": "Total",
-        "speech_end_to_audio_ready_ms": "Speech to audio",
     }.get(name, name.replace("_ms", "").replace("_", " ").title())
 
 
@@ -203,7 +202,7 @@ def _render_sidebar() -> None:
             rows = [
                 f"| {_metric_label(name)} | {value:,.0f} ms |"
                 for name, value in st.session_state.metrics.items()
-                if name != "total_ms"
+                if name not in {"total_ms", "speech_end_to_audio_ready_ms"}
             ]
             if total := st.session_state.metrics.get("total_ms"):
                 rows.append(f"| **Total** | **{total:,.0f} ms** |")

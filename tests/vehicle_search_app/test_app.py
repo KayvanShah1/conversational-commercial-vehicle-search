@@ -44,8 +44,13 @@ def test_streamlit_app_renders_without_framework_error() -> None:
     assert any("Hi, I'm Vivi" in markdown.value for markdown in app.markdown)
 
     app.session_state.messages = [{"role": "user", "content": "Show me a truck"}]
-    app.session_state.metrics = {"understanding_ms": 123, "total_ms": 456}
+    app.session_state.metrics = {
+        "understanding_ms": 123,
+        "speech_end_to_audio_ready_ms": 455,
+        "total_ms": 456,
+    }
     app.run()
 
     assert any("Hi, I'm Vivi" in markdown.value for markdown in app.markdown)
     assert any("| **Total** | **456 ms** |" in markdown.value for markdown in app.markdown)
+    assert all("Speech to audio" not in markdown.value for markdown in app.markdown)
