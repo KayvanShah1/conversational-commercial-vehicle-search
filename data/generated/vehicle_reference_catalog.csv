@@ -1,0 +1,30 @@
+make,model,fuel,vehicle_category,weight_class,body_type,axle_count,payload_kg,gvw_kg,new_vehicle_price_anchor_inr,purpose_tags,spec_source_url,payload_is_estimated
+Tata,Ace Gold,CNG,mini_truck,light,box,2,660,1630,650000,city_delivery|last_mile|fmcg|vegetable_delivery,https://smalltrucks.tatamotors.com/assets/smalltrucks/files/2025-01/ACE%20GOLD%20CNG.pdf,false
+Tata,Ace Gold,Diesel,mini_truck,light,open,2,900,1835,700000,city_delivery|logistics|construction,https://smalltrucks.tatamotors.com/tata-ace-gold-diesel,false
+Tata,Intra V10,Diesel,mini_truck,light,flatbed,2,1000,2120,750000,city_delivery|market_transport|logistics,https://smalltruckstest.tatamotors.com/tata-intra-v10,false
+Tata,Intra V30 Gold,Diesel,pickup,light,open,2,1500,2775,850000,regional_delivery|construction|logistics,https://smalltrucks.tatamotors.com/tata-intra-v30-gold,false
+Tata,Intra V50,Diesel,pickup,light,flatbed,2,1500,2940,925000,regional_delivery|construction|industrial_goods,https://smalltrucks.tatamotors.com/sites/default/files/product/brochure/Intra_V50%20Brochure%20Low%20res.pdf,false
+Mahindra,Jeeto Strong Diesel,Diesel,mini_truck,light,box,2,815,1605,525000,city_delivery|last_mile|vegetable_delivery,https://mahindralastmilemobility.com/jeeto-strong-diesel-cargo,false
+Mahindra,Bolero Pik-Up,Diesel,pickup,light,open,2,1700,3490,950000,regional_delivery|agriculture|construction,https://auto.mahindra.com/on/demandware.static/-/Sites-amc-Library/en_IN/-/media/project/mahindra/dotcom/mahindra/in-news---home/pr/brochure/1st.pdf,false
+Ashok Leyland,Dost XL,Diesel,mini_truck,light,flatbed,2,1400,2625,850000,city_delivery|regional_delivery|logistics,https://www.ashokleyland.com/in/lightvehicles/smallcommercialvechicles/dost-xl/specification,false
+Ashok Leyland,Bada Dost,CNG,mini_truck,light,reefer,2,1246,2880,900000,city_delivery|fmcg|regional_delivery,https://www.ashokleyland.com/in/lightvehicles/smallcommercialvechicles/bada-dost-cng/specification,false
+Ashok Leyland,Bada Dost i4,Diesel,pickup,light,container,2,1825,3490,1000000,regional_delivery|construction|logistics,https://www.ashokleyland.com/in/lightvehicles/smallcommercialvechicles/bada-dost-i41/specification,false
+Ashok Leyland,Bada Dost i5+,Diesel,pickup,light,flatbed,2,2114,3800,1100000,heavy_delivery|construction|industrial_goods,https://www.ashokleyland.com/in/lightvehicles/smallcommercialvechicles/bada-dost-i5-lx-2/specification,false
+Ashok Leyland,Bada Dost i6,Diesel,pickup,light,open,2,2357,4100,1200000,heavy_delivery|construction|regional_delivery,https://www.ashokleyland.com/in/lightvehicles/smallcommercialvechicles/bada-dost-i6-lx/specification,false
+Tata,Ultra T.16,Diesel,rigid_truck,medium,container,2,11000,16140,2500000,regional_delivery|ecommerce|fmcg|industrial_goods,https://trucks.tatamotors.com/ultra/tata-ultra-t16,true
+Tata,Signa 4825.TK,Diesel,rigid_truck,heavy,tipper,5,38000,47500,6000000,mining|construction|coal|aggregates,https://www.tatamotors.com/press-releases/tata-motors-introduces-indias-largest-tipper-truck-the-signa-4825-tk/,false
+Tata,Signa 4932.T,Diesel,rigid_truck,heavy,flatbed,5,35300,49000,6500000,long_haul|industrial_goods|steel|market_transport,https://trucks.tatamotors.com/assets/trucks/files/2026-01/tata-signa-4932t.pdf,true
+Tata,Ultra T.9,Diesel,rigid_truck,intermediate,open,2,,9150,1800000,regional_delivery|ecommerce|fmcg|industrial_goods,https://trucks.tatamotors.com/ultra/tata-ultra-t9,false
+Ashok Leyland,Partner 6 Tyre,Diesel,rigid_truck,intermediate,open,2,4885,7490,1500000,city_delivery|regional_delivery|logistics|industrial_goods,https://www.ashokleyland.com/in/lightvehicles/smallcommercialvechicles/partner/specification?productId=1645,false
+Eicher,Pro 2059 Plus,Diesel,rigid_truck,intermediate,open,2,,7490,1400000,city_delivery|last_mile|ecommerce|fmcg,https://www.eichertrucksandbuses.com/light-medium-duty-trucks/light-duty/pro-2059,false
+BharatBenz,1015R,Diesel,rigid_truck,intermediate,box,2,,10600,2200000,regional_delivery|fmcg|cold_chain|market_transport,https://www.bharatbenz.com/trucks/mdt-specifications-1015r-41,false
+Mahindra,Furio 10,Diesel,rigid_truck,intermediate,box,2,6000,10350,2000000,regional_delivery|ecommerce|fmcg|parcel_delivery,https://www.mahindratruckandbus.com/english/pdf/icv/furio-10.pdf,false
+Mahindra,Blazo X 48,Diesel,rigid_truck,heavy,tipper,5,32000,47500,5500000,mining|construction|coal|aggregates,https://www.mahindratruckandbus.com/english/pdf/hcv/blazo_48_tipper.pdf,true
+Ashok Leyland,AVTR 4825 10x2,Diesel,rigid_truck,heavy,tipper,5,32000,47500,5900000,construction|coal|aggregates|roadwork,https://www.ashokleyland.com/in/pressrelease/ashok-leyland-launches-avtr-4825-10x2-tipper-with-tandem-dummy-axle,false
+Eicher,Pro 2118,Diesel,rigid_truck,medium,flatbed,2,12800,18000,2800000,regional_delivery|construction|industrial_goods|market_transport,https://www.eichertrucksandbuses.com/light-medium-duty-trucks/medium-duty/pro-2118,false
+Eicher,Pro 6048T,Diesel,rigid_truck,heavy,tipper,5,32500,47500,5600000,mining|construction|coal|aggregates,https://www.eichertrucksandbuses.com/heavy-duty-trucks/tipper/pro-6048T,false
+Eicher,Pro 6028TM,Diesel,rigid_truck,heavy,tipper,3,16500,28000,4800000,construction|concrete|infrastructure|roadwork,https://www.eichertrucksandbuses.com/heavy-duty-trucks/tipper/pro-6028tm-224kw,false
+Eicher,Pro 6048XP,Diesel,rigid_truck,heavy,flatbed,5,34000,47500,5300000,long_haul|industrial_goods|steel|market_transport,https://www.eichertrucksandbuses.com/heavy-duty-trucks/haulage/pro-6048xp,false
+BharatBenz,1917R,Diesel,rigid_truck,medium,tanker,2,10000,18500,3200000,regional_delivery|fuel_transport|water_transport|industrial_goods,https://www.bharatbenz.com/trucks/mdt-specifications-1917r-73,false
+BharatBenz,4828RT,Diesel,rigid_truck,heavy,tipper,5,36350,47500,5800000,mining|construction|coal|aggregates,https://www.bharatbenz.com/uploads/truck_brochure/4828rt_74.pdf,false
+BharatBenz,3528C,Diesel,rigid_truck,heavy,tipper,4,20600,35000,5100000,mining|construction|infrastructure|aggregates,https://www.bharatbenz.com/uploads/truck_brochure/3528c-truck.pdf,false

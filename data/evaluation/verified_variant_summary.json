@@ -1,0 +1,34 @@
+{
+  "source": "Recovered from retained console output after the original JSON report was overwritten",
+  "generated_at_utc": "2026-09-02T19:32:39.594085+00:00",
+  "dataset": "evals/vehicle_variant_cases.json",
+  "command": "uv run --package agents python evals/evaluate_agent.py --cases evals/vehicle_variant_cases.json --delay-seconds 8 --output data/evaluation/vehicle_variant_results.json",
+  "pass_rate": 100.0,
+  "passed": 18,
+  "total": 18,
+  "mean_timings_ms": {
+    "understanding_ms": 1519.29,
+    "search_ms": 441.79,
+    "total_ms": 1960.88
+  },
+  "cases": [
+    {"id": "variant_light_mini_reefer_cng", "model": "qwen/qwen3.6-27b", "total_ms": 6086.57},
+    {"id": "variant_light_pickup_open_diesel", "model": "qwen/qwen3.6-27b", "total_ms": 1961.19},
+    {"id": "suggest_more_options", "model": "qwen/qwen3.6-27b", "total_ms": 995.33},
+    {"id": "all_option_weights", "model": "qwen/qwen3.8-27b", "total_ms": 928.38},
+    {"id": "all_details_first_vehicle", "model": "qwen/qwen3.6-27b", "total_ms": 2259.42},
+    {"id": "variant_intermediate_rigid_box", "model": "qwen/qwen3.6-27b", "total_ms": 9947.46},
+    {"id": "variant_medium_rigid_container", "model": "openai/gpt-oss-120b", "total_ms": 622.70},
+    {"id": "attribute_price_and_year", "model": "qwen/qwen3.8-27b", "total_ms": 846.51},
+    {"id": "attribute_mileage_and_condition", "model": "qwen/qwen3.6-27b", "total_ms": 1151.79},
+    {"id": "attribute_payload_and_gvw", "model": "qwen/qwen3.8-27b", "total_ms": 874.72},
+    {"id": "attribute_fuel_body_city_papers", "model": "qwen/qwen3.6-27b", "total_ms": 1029.58},
+    {"id": "attribute_cheapest_comparison", "model": "qwen/qwen3.8-27b", "total_ms": 965.41},
+    {"id": "variant_heavy_rigid_tipper", "model": "qwen/qwen3.8-27b", "total_ms": 951.73},
+    {"id": "variant_heavy_rigid_flatbed", "model": "qwen/qwen3.6-27b", "total_ms": 1483.35},
+    {"id": "variant_medium_rigid_tanker", "model": "qwen/qwen3.8-27b", "total_ms": 904.34},
+    {"id": "budget_price_range", "model": "qwen/qwen3.6-27b", "total_ms": 1249.55},
+    {"id": "weight_two_tonne_payload", "model": "qwen/qwen3.8-27b", "total_ms": 1064.61},
+    {"id": "general_payload_vs_gvw", "model": "qwen/qwen3.6-27b", "total_ms": 1973.13}
+  ]
+}
