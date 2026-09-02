@@ -29,11 +29,13 @@ class OpenRouterConfig(BaseModel):
 
 class AgentRuntimeConfig(BaseModel):
     top_k: int = Field(default=3, ge=1, le=3)
-    max_turns: int = Field(default=6, ge=2, le=10)
+    max_turns: int = Field(default=10, ge=2, le=10)
     max_search_candidates: int = 50
     model_timeout_seconds: float = Field(default=8.0, gt=0)
     model_max_retries: int = Field(default=1, ge=0, le=3)
     tool_timeout_seconds: float = Field(default=5.0, gt=0)
+
+    # Agent Tracing Configuration
     tracing_enabled: bool = False
     trace_include_sensitive_data: bool = False
 
@@ -41,15 +43,19 @@ class AgentRuntimeConfig(BaseModel):
 class AgentSettings(CommonSettings):
     project_name: str = Field(default="vehicle-search-agent")
 
-    session_db_path: Path = Field(default=PROJECT_ROOT / "data" / "agent_sessions.sqlite")
+    # Agent Session and Conversation State Storage
+    session_data_path: Path = PROJECT_ROOT / "data" / "sessions"
+    session_db_path: Path = session_data_path / "agent_sessions.sqlite"
+    conversation_state_path: Path = session_data_path / "conversation_state.sqlite"
 
+    # Agent Configuration
     groq: GroqConfig = Field(default_factory=GroqConfig)
     openrouter: OpenRouterConfig = Field(default_factory=OpenRouterConfig)
     agent_runtime: AgentRuntimeConfig = Field(default_factory=AgentRuntimeConfig)
 
     def model_post_init(self, __context, /):
         super().model_post_init(__context)
-        self.session_db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.session_data_path.mkdir(parents=True, exist_ok=True)
 
 
 settings = AgentSettings()
