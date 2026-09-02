@@ -154,24 +154,7 @@ flowchart TB
 The generated cover prompt is retained in
 [docs/REPO_COVER_PROMPT.txt](docs/REPO_COVER_PROMPT.txt).
 
-## Disclaimer
 
-This is an engineering demonstration, not a live marketplace or purchasing
-service. The vehicle catalog, prices, availability, rankings, and recommendations
-are synthetic and must not be treated as current commercial offers. Specification
-links provide provenance for selected reference attributes; buyers should confirm
-all specifications, legal requirements, condition, pricing, and suitability with
-the manufacturer or seller before making a decision.
-
-## AI-assisted development
-
-AI tools supported implementation, refactoring, test design, documentation, and
-the repository cover image. The system boundaries, product scope, architecture,
-evaluation criteria, and final verification remained human-directed. AI-generated
-code and content were reviewed against executable tests, live evaluation cases,
-catalog-grounding checks, and the assignment requirements. This disclosure follows
-the assignment's allowance for AI coding tools while keeping every submitted
-component explainable during review.
 
 ## Verify locally
 
@@ -200,3 +183,22 @@ uv run pytest tests/vehicle_search_agent/test_motherduck_read_only_integration.p
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).
+
+### Disclaimer
+
+This is an engineering demonstration, not a live marketplace or purchasing
+service. The vehicle catalog, prices, availability, rankings, and recommendations
+are synthetic and must not be treated as current commercial offers. Specification
+links provide provenance for selected reference attributes; buyers should confirm
+all specifications, legal requirements, condition, pricing, and suitability with
+the manufacturer or seller before making a decision.
+
+### AI-assisted development
+
+AI tools supported implementation, refactoring, test design, documentation, and
+the repository cover image. The system boundaries, product scope, architecture,
+evaluation criteria, and final verification remained human-directed. AI-generated
+code and content were reviewed against executable tests, live evaluation cases,
+catalog-grounding checks, and the assignment requirements. This disclosure follows
+the assignment's allowance for AI coding tools while keeping every submitted
+component explainable during review.
