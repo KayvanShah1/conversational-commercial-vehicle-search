@@ -81,6 +81,23 @@ def _text_chunks(text: str, max_chars: int) -> list[str]:
     return chunks
 
 
+def _speech_text(text: str) -> str:
+    """Expand compact catalog prices into words that TTS reads naturally."""
+
+    def expand_lakh(match: re.Match[str]) -> str:
+        amount = float(match.group(1))
+        lakhs = int(amount)
+        thousands = round((amount - lakhs) * 100)
+        parts = []
+        if lakhs:
+            parts.append(f"{lakhs} lakh")
+        if thousands:
+            parts.append(f"{thousands} thousand")
+        return " ".join(parts) + " rupees"
+
+    return re.sub(r"\bINR\s+(\d+(?:\.\d+)?)L\b", expand_lakh, text, flags=re.IGNORECASE)
+
+
 def _stitch_wav(audio_chunks: list[bytes]) -> bytes:
     if len(audio_chunks) == 1:
         return audio_chunks[0]
@@ -119,11 +136,12 @@ def synthesize_speech(text: str) -> SpeechResult:
         raise ValueError("Text-to-speech input cannot be empty.")
 
     operation = OperationLogContext(operation="text_to_speech")
-    chunks = _text_chunks(text, settings.groq.tts_max_chars)
+    speech_text = _speech_text(text)
+    chunks = _text_chunks(speech_text, settings.groq.tts_max_chars)
     log_context = {
         "model": settings.groq.tts_model,
         "voice": settings.groq.tts_voice,
-        "character_count": len(text),
+        "character_count": len(speech_text),
         "chunk_count": len(chunks),
     }
     tts_logger.info(

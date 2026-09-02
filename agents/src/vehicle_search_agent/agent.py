@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from openai import AsyncOpenAI
@@ -76,12 +75,7 @@ def _tool_result(
             final_output="I couldn't map that request to the catalog fields. Please rephrase the vehicle requirement.",
         )
     grounded = context.grounded_response
-    needs_reasoning = context.action is AgentAction.details and re.search(
-        r"\b(?:why|better|best|compare|suitable|recommend)\b",
-        context.current_input,
-        re.IGNORECASE,
-    )
-    if grounded is not None and not needs_reasoning:
+    if grounded is not None and context.action is not AgentAction.details:
         return ToolsToFinalOutputResult(is_final_output=True, final_output=grounded.fallback)
     return ToolsToFinalOutputResult(is_final_output=False)
 

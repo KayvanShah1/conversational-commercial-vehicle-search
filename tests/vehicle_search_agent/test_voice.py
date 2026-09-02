@@ -3,7 +3,7 @@ import wave
 from types import SimpleNamespace
 
 import vehicle_search_agent.voice as voice_module
-from vehicle_search_agent.voice import _text_chunks, synthesize_speech
+from vehicle_search_agent.voice import _speech_text, _text_chunks, synthesize_speech
 
 
 def _wav(frames: bytes) -> bytes:
@@ -23,6 +23,10 @@ def test_text_chunks_stay_within_the_provider_limit():
 
     assert " ".join(chunks) == text.strip()
     assert all(len(chunk) <= 80 for chunk in chunks)
+
+
+def test_compact_lakh_prices_are_expanded_for_speech():
+    assert _speech_text("It costs INR 2.9L.") == "It costs 2 lakh 90 thousand rupees."
 
 
 def test_synthesize_speech_stitches_wav_chunks(monkeypatch):

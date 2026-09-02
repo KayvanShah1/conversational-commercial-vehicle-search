@@ -6,19 +6,20 @@ from vehicle_search_agent.runner import AgentStageTimer, VehicleSearchSession, _
 from vehicle_search_agent.tools import AgentContext
 
 
-def test_explicit_previous_result_facts_force_the_details_tool():
-    state = ConversationState(session_id="test", last_result_ids=["VEH-001"])
+def test_state_change_language_routes_any_slot_through_search():
+    state = ConversationState(session_id="test")
+    state.active_filters.city = "Mumbai"
 
-    assert _tool_choice("Give me all details for the first one", state) == "get_vehicle_details"
-    assert _tool_choice("Do these have any brochures?", state) == "get_vehicle_details"
-    assert _tool_choice("What does GVW mean?", state) == "auto"
-    assert _tool_choice("Why is the first one better?", state) == "auto"
+    assert _tool_choice("I prefer diesel", state) == "search_vehicles"
+    assert _tool_choice("Actually make it Delhi", state) == "search_vehicles"
+    assert _tool_choice("Switch to a box body", state) == "search_vehicles"
+    assert _tool_choice("Which one is cheapest?", state) == "auto"
 
 
-def test_standalone_lakh_budget_forces_search_tool():
+def test_state_change_rule_does_not_override_first_turn_intent_detection():
     state = ConversationState(session_id="test")
 
-    assert _tool_choice("my bidget is 20 lakhs", state) == "search_vehicles"
+    assert _tool_choice("I prefer diesel", state) == "auto"
 
 
 def test_agent_can_answer_side_questions_without_a_tool(monkeypatch):

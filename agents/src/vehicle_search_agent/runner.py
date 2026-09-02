@@ -19,26 +19,14 @@ logger = get_logger("VehicleSearchAgent")
 
 
 def _tool_choice(transcript: str, state: ConversationState) -> str:
-    """Force only explicit, non-reasoning references to prior vehicle facts."""
-    if re.search(r"\b\d+(?:\.\d+)?\s*(?:lakhs?|lacs?|crores?)\b", transcript, re.IGNORECASE):
-        return "search_vehicles"
-    if not state.last_result_ids or re.search(
-        r"\b(?:why|better|best|compare|suitable|recommend)\b", transcript, re.IGNORECASE
-    ):
-        return "auto"
-    asks_for_facts = re.search(
-        r"\b(?:details?|price|cost|year|kilometres?|mileage|fuel|payload|gvw|body|city|papers|condition|"
-        r"uses?|category|size|axles?|carry|weight|brochures?|spec(?:ification)?s?|source|links?|"
-        r"cheapest|lowest|highest)\b",
+    """Route an explicit state change to slot extraction, regardless of its field."""
+    has_active_search = bool(state.active_filters.model_dump(exclude_none=True))
+    changes_search = re.search(
+        r"\b(?:prefer|preference|preferred|instead|actually|change|switch|update|nahi)\b|\bmake (?:it|that)\b",
         transcript,
         re.IGNORECASE,
     )
-    references_results = state.selected_listing_id is not None or re.search(
-        r"\b(?:first|second|third|one|it|its|which|these|those|they|them|options?|vehicles?|results?|all three)\b",
-        transcript,
-        re.IGNORECASE,
-    )
-    return "get_vehicle_details" if asks_for_facts and references_results else "auto"
+    return "search_vehicles" if has_active_search and changes_search else "auto"
 
 
 class AgentStageTimer(RunHooks[AgentContext]):
@@ -84,25 +72,22 @@ class VehicleSearchSession:
         if isinstance(self.agent.model, FallbackModel):
             self.agent.model.reset()
         self.agent.model_settings.tool_choice = _tool_choice(transcript, self.context.state)
-
-        try:
-            run_result = await Runner.run(
-                self.agent,
-                transcript,
-                context=self.context,
-                session=self.sdk_session,
-                hooks=self.hooks,
-                max_turns=settings.agent_runtime.max_turns,
-                run_config=RunConfig(
-                    workflow_name="vehicle_search_turn",
-                    group_id=self.session_id,
-                    trace_metadata={"turn_number": self.context.state.turn_number, "provider": "groq"},
-                    tracing_disabled=not settings.agent_runtime.tracing_enabled,
-                    trace_include_sensitive_data=settings.agent_runtime.trace_include_sensitive_data,
-                ),
-            )
-        finally:
-            self.agent.model_settings.tool_choice = "auto"
+        run_result = await Runner.run(
+            self.agent,
+            transcript,
+            context=self.context,
+            session=self.sdk_session,
+            hooks=self.hooks,
+            max_turns=settings.agent_runtime.max_turns,
+            run_config=RunConfig(
+                workflow_name="vehicle_search_turn",
+                group_id=self.session_id,
+                trace_metadata={"turn_number": self.context.state.turn_number, "provider": "groq"},
+                tracing_disabled=not settings.agent_runtime.tracing_enabled,
+                trace_include_sensitive_data=settings.agent_runtime.trace_include_sensitive_data,
+            ),
+        )
+        self.agent.model_settings.tool_choice = "auto"
 
         grounded = self.context.grounded_response
         if grounded is None:

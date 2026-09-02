@@ -86,7 +86,7 @@ def _save_result(result, session: VehicleSearchSession) -> None:
     st.session_state.messages.extend(
         [
             {"role": "user", "content": result.transcript},
-            {"role": "assistant", "content": result.spoken_response},
+            {"role": "assistant", "content": _display_response(result, session)},
         ]
     )
     st.session_state.filters = result.active_filters.model_dump(mode="json", exclude_none=True)
@@ -95,6 +95,25 @@ def _save_result(result, session: VehicleSearchSession) -> None:
         st.session_state.vehicles = new_vehicles
     st.session_state.metrics = result.metrics.model_dump(mode="json", exclude_none=True)
     st.session_state.error = None
+
+
+def _display_response(result, session: VehicleSearchSession) -> str:
+    grounded = session.context.grounded_response
+    if grounded is None:
+        return result.spoken_response
+
+    def bullet(fact: str) -> str:
+        label, separator, value = fact.partition(":")
+        if separator:
+            return f"- **{label}:** {value.strip()}"
+        return f"- {fact}"
+
+    if result.action.value == "search" and result.last_result_ids:
+        lines = ["**Top match**", bullet(grounded.facts[0])]
+        if len(grounded.facts) > 1:
+            lines.extend(["", "**Other options**", *(bullet(fact) for fact in grounded.facts[1:])])
+        return "\n".join(lines)
+    return "\n".join(bullet(fact) for fact in grounded.facts)
 
 
 def _run_text(message: str) -> None:
@@ -185,14 +204,20 @@ def _render_matches() -> None:
     st.subheader("Current top matches")
     columns = st.columns(len(st.session_state.vehicles), gap="medium")
     for column, vehicle in zip(columns, st.session_state.vehicles, strict=True):
-        with column, st.container(border=True):
-            st.markdown(f'#### {vehicle["Make / Model"]}')
-            st.caption(f'{vehicle["Year"]} · {vehicle["City"]} · {vehicle["Body"].title()} body')
-            st.metric("Price", f'₹{vehicle["Price (INR)"]:,.0f}')
-            st.write(f'**Fuel:** {vehicle["Fuel"]}')
-            st.write(f'**Payload:** {vehicle["Payload (kg)"] or "—"} kg')
-            st.write(f'**GVW:** {vehicle["GVW (kg)"] or "—"} kg')
-            st.caption(f'{vehicle["Papers"]} · Match: {vehicle["Why this match"]}')
+        with column, st.container(border=True, height=390):
+            st.markdown(f"#### {vehicle['Make / Model']}")
+            st.caption(f"{vehicle['Year']} · {vehicle['City']} · {vehicle['Body'].title()} body")
+            st.metric("Price", f"₹{vehicle['Price (INR)']:,.0f}")
+            st.write(f"**Fuel:** {vehicle['Fuel']}")
+            st.write(f"**Payload:** {vehicle['Payload (kg)'] or '—'} kg")
+            st.write(f"**GVW:** {vehicle['GVW (kg)'] or '—'} kg")
+            st.caption(f"{vehicle['Papers']} · Match: {vehicle['Why this match']}")
+            st.link_button(
+                "Brochure / specs",
+                vehicle["Specification source"],
+                icon=":material/open_in_new:",
+                width="stretch",
+            )
 
     with st.expander("Compare every catalog field"):
         st.dataframe(
@@ -257,12 +282,15 @@ if not st.session_state.messages:
     with st.chat_message("assistant"):
         st.write(
             "Hi, I'm Vivi. Tell me what you need to carry, where you operate, "
-            "and your budget—I’ll help you find suitable commercial vehicles."
+            "and your budget. I’ll help you find suitable commercial vehicles."
         )
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        st.write(message["content"])
+        if message["role"] == "assistant":
+            st.markdown(message["content"])
+        else:
+            st.write(message["content"])
 
 if st.session_state.reply_audio:
     with st.chat_message("assistant"):

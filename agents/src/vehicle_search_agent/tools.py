@@ -151,7 +151,12 @@ async def search_vehicles(
     clear_fields: list[SearchField] | None = None,
     more_results: Annotated[bool, Field(description="True only when the user asks for more or next options")] = False,
 ) -> str:
-    """Search stated constraints. Infer size and purpose; category, body, and fuel must be explicit.
+    """Search or refine results by applying only the constraints changed in this turn.
+
+    Always use this tool when the user adds, removes, corrects, or prefers any
+    constraint, even if they also ask which previous option is best. Omitted
+    arguments preserve their current values. Infer size and purpose; category,
+    body, and fuel must be explicit.
 
     Valid category values: mini_truck, pickup, rigid_truck. Valid size values:
     light, intermediate, medium, heavy. Valid body values: open, flatbed, box,
@@ -213,7 +218,10 @@ async def get_vehicle_details(
     result_number: Annotated[int, Field(ge=1, le=3)] | None = None,
     all_details: Annotated[bool, Field(description="True when the user asks for every available vehicle attribute")] = False,
 ) -> str:
-    """Read facts for previous results; omit result_number for these/all results.
+    """Read facts for previous results when this turn does not change a constraint.
+
+    If the user adds, removes, corrects, or prefers any search constraint, use
+    search_vehicles instead. Omit result_number for these/all results.
 
     Valid fields: year, price, km_driven, fuel, payload, gvw, body_type, city,
     papers_verified, condition, purpose_tags, vehicle_category, weight_class,
@@ -227,7 +235,7 @@ async def get_vehicle_details(
     context.action = AgentAction.details
     state = context.state
 
-    if all_details or re.search(r"\b(?:all|full|every)\s+(?:the\s+)?details?\b", context.current_input, re.IGNORECASE):
+    if all_details:
         fields = list(DetailField)
     elif not fields:
         return _set_response(context, message_response("Which vehicle details would you like?"))

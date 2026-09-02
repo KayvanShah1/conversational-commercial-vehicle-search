@@ -15,6 +15,9 @@ def test_streamlit_app_uses_native_unified_composer() -> None:
     assert "_render_sidebar()" in source
     assert "Compare every catalog field" in source
     assert '"Specification source": st.column_config.LinkColumn' in source
+    assert 'st.container(border=True, height=390)' in source
+    assert '"Brochure / specs"' in source
+    assert 'lines = ["**Top match**"' in source
     assert "st.columns([3, 2]" not in source
 
 

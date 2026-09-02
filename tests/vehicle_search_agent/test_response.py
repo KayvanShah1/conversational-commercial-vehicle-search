@@ -1,5 +1,18 @@
-from vehicle_search_agent.models import DetailField, VehicleRecord
-from vehicle_search_agent.response import GroundedResponse, conversational_response, details_response, natural_response
+from vehicle_search_agent.models import (
+    DetailField,
+    RankedVehicle,
+    RankingBreakdown,
+    SearchFilters,
+    VehicleRecord,
+    VehicleSearchResult,
+)
+from vehicle_search_agent.response import (
+    GroundedResponse,
+    conversational_response,
+    details_response,
+    natural_response,
+    search_response,
+)
 
 
 def _priced_vehicle(listing_id: str, price: int) -> VehicleRecord:
@@ -23,6 +36,34 @@ def _priced_vehicle(listing_id: str, price: int) -> VehicleRecord:
         purpose_tags=["city_delivery"],
         spec_source_url="https://example.com",
     )
+
+
+def _ranked(vehicle: VehicleRecord, total: float) -> RankedVehicle:
+    score = RankingBreakdown(
+        purpose=0,
+        papers_verified=0,
+        budget=0,
+        mileage=0,
+        condition=0,
+        year=0,
+        total=total,
+    )
+    return RankedVehicle(vehicle=vehicle, score=score)
+
+
+def test_search_response_identifies_the_first_ranked_result_as_top_match():
+    result = VehicleSearchResult(
+        executed_filters=SearchFilters(),
+        changed_fields=[],
+        vehicles=[_ranked(_priced_vehicle("First", 800_000), 2), _ranked(_priced_vehicle("Second", 700_000), 1)],
+        total_matches=2,
+        search_ms=10,
+    )
+
+    response = search_response(result)
+
+    assert response.fallback.startswith("Top match: Tata First")
+    assert "Other options: Tata Second" in response.fallback
 
 
 def test_general_advice_can_use_numbered_prose_but_not_vehicle_measurements():

@@ -46,8 +46,8 @@ def test_search_result_stops_without_another_model_call():
     assert result.final_output == "Grounded search result."
 
 
-def test_comparison_details_return_to_model_for_grounded_reasoning():
-    context = AgentContext(state=ConversationState(session_id="test"), current_input="Why is the second one better?")
+def test_details_return_to_model_for_natural_grounded_response():
+    context = AgentContext(state=ConversationState(session_id="test"))
     context.action = AgentAction.details
     context.grounded_response = message_response("Grounded detail facts.")
 

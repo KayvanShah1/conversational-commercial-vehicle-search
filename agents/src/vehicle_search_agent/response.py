@@ -51,7 +51,9 @@ def search_response(result: VehicleSearchResult) -> GroundedResponse:
             )
             for ranked, reason in zip(result.vehicles, reasons, strict=True)
         )
-        response = f"I found {len(facts)} options for you: " + "; ".join(facts) + "."
+        response = f"Top match: {facts[0]}."
+        if len(facts) > 1:
+            response += " Other options: " + "; ".join(facts[1:]) + "."
 
     return GroundedResponse(response, tuple(facts), checks)
 
@@ -140,7 +142,7 @@ def details_response(vehicles: list[VehicleRecord], fields: list[DetailField], q
 
     response = ". ".join(facts) + "."
     if len(vehicles) > 1 and ({DetailField.payload, DetailField.gvw} & set(fields)):
-        response = "Fit depends on the machinery's actual weight and loading needs. Catalog specifications: " + response
+        response = "Confirm the cargo weight and loading needs before deciding. Catalog specifications: " + response
     return GroundedResponse(response, tuple(facts), tuple(check_groups))
 
 

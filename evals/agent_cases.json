@@ -88,6 +88,20 @@
     "expected_response_contains_any": ["payload", "GVW", "industrial goods", "heavy"]
   },
   {
+    "id": "heavy_machinery_diesel_preference",
+    "conversation_id": "heavy_machinery",
+    "utterance": "Which is the best one out of these? I prefer diesel.",
+    "expected_action": "search",
+    "expected_filters": {
+      "city": "Mumbai",
+      "weight_class": "heavy",
+      "purpose": "heavy_delivery",
+      "fuel": "Diesel"
+    },
+    "expected_changed_fields": ["fuel"],
+    "expect_results": true
+  },
+  {
     "id": "diesel_flatbed",
     "utterance": "Show me diesel flatbed trucks in Mumbai under 20 lakh.",
     "expected_action": "search",
@@ -201,6 +215,44 @@
       "vehicle_category": "mini_truck"
     },
     "expected_changed_fields": ["fuel"],
+    "expect_results": true
+  },
+  {
+    "id": "multi_slot_refinement_initial",
+    "conversation_id": "multi_slot_refinement",
+    "utterance": "Show me open trucks in Pune under 20 lakh.",
+    "expected_action": "search",
+    "expected_filters": {
+      "budget_max": 2000000,
+      "city": "Pune",
+      "body_type": "open"
+    },
+    "expect_results": true
+  },
+  {
+    "id": "multi_slot_refinement_city_budget",
+    "conversation_id": "multi_slot_refinement",
+    "utterance": "Actually make that Delhi and under 12 lakh.",
+    "expected_action": "search",
+    "expected_filters": {
+      "budget_max": 1200000,
+      "city": "Delhi",
+      "body_type": "open"
+    },
+    "expected_changed_fields": ["budget_max", "city"],
+    "expect_results": true
+  },
+  {
+    "id": "multi_slot_refinement_body",
+    "conversation_id": "multi_slot_refinement",
+    "utterance": "Switch to a box body.",
+    "expected_action": "search",
+    "expected_filters": {
+      "budget_max": 1200000,
+      "city": "Delhi",
+      "body_type": "box"
+    },
+    "expected_changed_fields": ["body_type"],
     "expect_results": true
   },
   {
