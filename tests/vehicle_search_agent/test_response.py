@@ -1,0 +1,108 @@
+from vehicle_search_agent.models import DetailField, VehicleRecord
+from vehicle_search_agent.response import GroundedResponse, conversational_response, details_response, natural_response
+
+
+def _priced_vehicle(listing_id: str, price: int) -> VehicleRecord:
+    return VehicleRecord(
+        listing_id=listing_id,
+        make="Tata",
+        model=listing_id,
+        year=2022,
+        price_inr=price,
+        km_driven=20_000,
+        fuel="Diesel",
+        payload_kg=2_000,
+        gvw_kg=4_000,
+        vehicle_category="pickup",
+        weight_class="light",
+        body_type="open",
+        axle_count=2,
+        city="Pune",
+        papers_verified=True,
+        condition="good",
+        purpose_tags=["city_delivery"],
+        spec_source_url="https://example.com",
+    )
+
+
+def test_general_advice_can_use_numbered_prose_but_not_vehicle_measurements():
+    advice = conversational_response("1. Choose based on your route. 2. Compare fuel access.", first_turn=False)
+    blocked = conversational_response("This truck carries 1500 kg.", first_turn=False)
+
+    assert advice.startswith("1.")
+    assert blocked == "I can help with commercial-vehicle searches and general questions about choosing one."
+
+
+def test_greeting_is_catalog_neutral_even_if_model_mentions_a_van():
+    response = conversational_response(
+        "I can help you find a truck or van.",
+        first_turn=True,
+        user_input="yo",
+    )
+
+    assert response == "Hey, I'm Vivi. Tell me what you need to transport, your budget, and where you're looking."
+
+
+def test_cheapest_comparison_is_explicit_and_grounded():
+    response = details_response(
+        [_priced_vehicle("Costly", 1_000_000), _priced_vehicle("Cheap", 800_000)],
+        [DetailField.price],
+        "Which is cheapest?",
+    )
+
+    assert response.fallback.endswith("Cheapest: Tata Cheap at INR 8L.")
+
+
+def test_accepts_natural_framing_around_unchanged_facts():
+    fact = "Tata Ace Gold, INR 5.6L, verified papers"
+    grounded = GroundedResponse(
+        fallback=f"I found this match: {fact}.",
+        facts=(fact,),
+        checks=(("Tata Ace Gold", "INR 5.6L", "verified"),),
+    )
+    response = natural_response(
+        "Good news - Tata Ace Gold is available for 5.6 L with verified papers.",
+        grounded,
+        first_turn=False,
+    )
+
+    assert response.startswith("Good news")
+
+
+def test_rejects_a_changed_catalog_fact():
+    fact = "Tata Ace Gold, INR 5.6L, verified papers"
+    fallback = f"I found this match: {fact}."
+    grounded = GroundedResponse(
+        fallback=fallback,
+        facts=(fact,),
+        checks=(("Tata Ace Gold", "INR 5.6L", "verified"),),
+    )
+
+    response = natural_response(
+        "I found Tata Ace Gold, INR 6.5L, verified papers.",
+        grounded,
+        first_turn=False,
+    )
+
+    assert response == fallback
+
+
+def test_accepts_one_shared_reason_for_all_results_and_adds_a_warm_intro():
+    facts = (
+        "Tata Ace Gold, INR 5.6L, verified papers",
+        "Mahindra Jeeto, INR 4.4L, verified papers",
+    )
+    grounded = GroundedResponse(
+        fallback="I found these matches: " + "; ".join(facts) + ".",
+        facts=facts,
+        checks=(("Tata Ace Gold", "INR 5.6L"), ("Mahindra Jeeto", "INR 4.4L"), ("verified",)),
+    )
+
+    response = natural_response(
+        "Two options stand out: Tata Ace Gold for ₹5.6 L and Mahindra Jeeto for ₹4.4 L, both verified.",
+        grounded,
+        first_turn=True,
+    )
+
+    assert response.startswith("Hi, I'm Vivi. I'll help you find the right used truck.")
+    assert "both verified" in response

@@ -1,0 +1,245 @@
+[
+  {
+    "id": "variant_light_mini_reefer_cng",
+    "utterance": "Show me light CNG mini trucks with a reefer body.",
+    "expected_action": "search",
+    "expected_filters": {
+      "fuel": "CNG",
+      "body_type": "reefer",
+      "vehicle_category": "mini_truck",
+      "weight_class": "light"
+    },
+    "expect_results": true
+  },
+  {
+    "id": "variant_light_pickup_open_diesel",
+    "conversation_id": "more_options",
+    "utterance": "Show me a light diesel pickup with an open body.",
+    "expected_action": "search",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "open",
+      "vehicle_category": "pickup",
+      "weight_class": "light"
+    },
+    "expect_results": true
+  },
+  {
+    "id": "suggest_more_options",
+    "conversation_id": "more_options",
+    "utterance": "Suggest three more options.",
+    "expected_action": "search",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "open",
+      "vehicle_category": "pickup",
+      "weight_class": "light"
+    },
+    "expect_results": true,
+    "new_result_ids": true
+  },
+  {
+    "id": "all_option_weights",
+    "conversation_id": "more_options",
+    "utterance": "What can they carry and how much weight?",
+    "expected_action": "details",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "open",
+      "vehicle_category": "pickup",
+      "weight_class": "light"
+    },
+    "preserve_result_ids": true,
+    "expected_detail_count": 3,
+    "expected_response_contains_all": ["payload", "gvw"]
+  },
+  {
+    "id": "all_details_first_vehicle",
+    "conversation_id": "more_options",
+    "utterance": "Give me all details for the first one.",
+    "expected_action": "details",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "open",
+      "vehicle_category": "pickup",
+      "weight_class": "light"
+    },
+    "preserve_result_ids": true,
+    "expected_detail_count": 1,
+    "expected_response_contains_all": [
+      "year",
+      "price",
+      "km",
+      "fuel",
+      "payload",
+      "gvw",
+      "body type",
+      "city",
+      "papers",
+      "condition",
+      "listed uses",
+      "category",
+      "size class",
+      "axles"
+    ]
+  },
+  {
+    "id": "variant_intermediate_rigid_box",
+    "utterance": "Find an intermediate-size diesel rigid truck with a box body.",
+    "expected_action": "search",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "box",
+      "vehicle_category": "rigid_truck",
+      "weight_class": "intermediate"
+    },
+    "expect_results": true
+  },
+  {
+    "id": "variant_medium_rigid_container",
+    "conversation_id": "attribute_inquiries",
+    "utterance": "Find a medium diesel rigid truck with a container body.",
+    "expected_action": "search",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "container",
+      "vehicle_category": "rigid_truck",
+      "weight_class": "medium"
+    },
+    "expect_results": true
+  },
+  {
+    "id": "attribute_price_and_year",
+    "conversation_id": "attribute_inquiries",
+    "utterance": "What are the price and year of the first one?",
+    "expected_action": "details",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "container",
+      "vehicle_category": "rigid_truck",
+      "weight_class": "medium"
+    },
+    "preserve_result_ids": true,
+    "expected_response_contains_all": ["price", "year"]
+  },
+  {
+    "id": "attribute_mileage_and_condition",
+    "conversation_id": "attribute_inquiries",
+    "utterance": "And the kilometres driven and condition of the second one?",
+    "expected_action": "details",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "container",
+      "vehicle_category": "rigid_truck",
+      "weight_class": "medium"
+    },
+    "preserve_result_ids": true,
+    "expected_response_contains_all": ["km", "condition"]
+  },
+  {
+    "id": "attribute_payload_and_gvw",
+    "conversation_id": "attribute_inquiries",
+    "utterance": "Give me the payload and GVW for all three.",
+    "expected_action": "details",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "container",
+      "vehicle_category": "rigid_truck",
+      "weight_class": "medium"
+    },
+    "preserve_result_ids": true,
+    "expected_response_contains_all": ["payload", "gvw"]
+  },
+  {
+    "id": "attribute_fuel_body_city_papers",
+    "conversation_id": "attribute_inquiries",
+    "utterance": "For the third one, tell me its fuel, body type, city and whether its papers are verified.",
+    "expected_action": "details",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "container",
+      "vehicle_category": "rigid_truck",
+      "weight_class": "medium"
+    },
+    "preserve_result_ids": true,
+    "expected_response_contains_all": ["fuel", "body type", "city", "papers"]
+  },
+  {
+    "id": "attribute_cheapest_comparison",
+    "conversation_id": "attribute_inquiries",
+    "utterance": "Which of these three is the cheapest?",
+    "expected_action": "details",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "container",
+      "vehicle_category": "rigid_truck",
+      "weight_class": "medium"
+    },
+    "preserve_result_ids": true,
+    "expected_response_contains_all": ["cheapest"]
+  },
+  {
+    "id": "variant_heavy_rigid_tipper",
+    "utterance": "Show me a heavy diesel rigid truck with a tipper body.",
+    "expected_action": "search",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "tipper",
+      "vehicle_category": "rigid_truck",
+      "weight_class": "heavy"
+    },
+    "expect_results": true
+  },
+  {
+    "id": "variant_heavy_rigid_flatbed",
+    "utterance": "Show me a heavy diesel rigid truck with a flatbed body.",
+    "expected_action": "search",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "flatbed",
+      "vehicle_category": "rigid_truck",
+      "weight_class": "heavy"
+    },
+    "expect_results": true
+  },
+  {
+    "id": "variant_medium_rigid_tanker",
+    "utterance": "Show me a medium diesel rigid truck with a tanker body.",
+    "expected_action": "search",
+    "expected_filters": {
+      "fuel": "Diesel",
+      "body_type": "tanker",
+      "vehicle_category": "rigid_truck",
+      "weight_class": "medium"
+    },
+    "expect_results": true
+  },
+  {
+    "id": "budget_price_range",
+    "utterance": "Show me diesel pickups priced from 8 lakh to 15 lakh.",
+    "expected_action": "search",
+    "expected_filters": {
+      "budget_min": 800000,
+      "budget_max": 1500000,
+      "fuel": "Diesel",
+      "vehicle_category": "pickup"
+    },
+    "expect_results": true
+  },
+  {
+    "id": "weight_two_tonne_payload",
+    "utterance": "I need a truck with a payload of at least 2 tonnes.",
+    "expected_action": "search",
+    "expected_filters": {
+      "payload_min_kg": 2000
+    },
+    "expect_results": true
+  },
+  {
+    "id": "general_payload_vs_gvw",
+    "utterance": "What is the difference between payload and GVW?",
+    "expected_action": "conversation",
+    "expected_filters": {},
+    "expected_response_contains_all": ["payload", "gvw"]
+  }
+]
