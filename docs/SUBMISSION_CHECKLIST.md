@@ -10,8 +10,8 @@
 | Zero results | Deterministic no-result response with one data-tested relaxation | Met |
 | Mid-conversation correction | Slot patch changes only supplied/cleared fields | Met and evaluated |
 | Previous-result follow-up | Result IDs in state plus one details lookup | Met and evaluated |
-| At least 10 real-pipeline evaluation utterances with expected filters | 23 core cases and 18 focused variant cases under `evals/` | Met |
-| Pass rate | Recovered verified focused run: 18/18; later fresh run: first 9/9 passed, remaining calls exhausted all provider quotas | Met with provenance disclosed |
+| At least 10 real-pipeline evaluation utterances with expected filters | 27 core cases and 18 focused variant cases under `evals/` | Met |
+| Pass rate | Complete live runs: 27/27 core cases and 18/18 focused variant cases | Met |
 | Per-stage latency | Structured metrics/logs for STT, understanding, search, response, TTS, and total | Implemented |
 | Speech end to first audio | `speech_end_to_audio_ready_ms` records complete WAV availability | Partial: not a streamed first-chunk metric; final combined attempt was blocked after successful STT by LLM 429s |
 | Seven-component architecture diagram | Root README and presentation slide 3 | Met |

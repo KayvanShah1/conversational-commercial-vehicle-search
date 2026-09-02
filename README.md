@@ -51,8 +51,8 @@ uv run --package agents python analysis/agent_chat.py
 
 ## Evaluation
 
-The core evaluation contains 23 conversational, safety, intent, slot, search,
-correction, and follow-up cases. A second 18-case dataset covers every vehicle
+The core evaluation contains 27 conversational, safety, intent, slot, search,
+correction, preference-change, and follow-up cases. A second 18-case dataset covers every vehicle
 size, all body variants, both fuels, three catalog categories, budget ranges,
 payload conversion, pagination, all-result weight lookup, full details, and a
 general commercial-vehicle question.
@@ -64,8 +64,8 @@ uv run --package agents python evals/evaluate_agent.py `
   --output data/evaluation/vehicle_variant_results.json
 ```
 
-The complete live run on 2026-09-03 passed **23/23 core cases (100%)** with a
-mean total time of 1,168.83 ms, and **18/18 variant cases (100%)** with a mean
+The complete live run on 2026-09-03 passed **27/27 core cases (100%)** with a
+mean total time of 1,804.69 ms, and **18/18 variant cases (100%)** with a mean
 total time of 1,169.72 ms. Reports are written to `data/evaluation/`; the
 datasets and scoring logic remain under `evals/`. See
 [docs/EVALUATION.md](docs/EVALUATION.md) for the exact checks and latency

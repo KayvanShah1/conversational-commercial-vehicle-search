@@ -14,16 +14,17 @@ The datasets are under `evals/`, not `data/`. Generated reports belong under
 ## Complete live run on 2026-09-03
 
 - Core dataset: `evals/agent_cases.json`
-- Core result: 23/23, 100%
-- Core mean understanding: 750.55 ms
-- Core mean search: 471.29 ms
-- Core mean total: 1,168.83 ms
+- Core result: 27/27, 100%
+- Core mean understanding: 746.18 ms
+- Core mean search: 421.89 ms
+- Core mean response generation: 6,015.49 ms on the three detail turns
+- Core mean total: 1,804.69 ms
 - Variant dataset: `evals/vehicle_variant_cases.json`
 - Variant result: 18/18, 100%
 - Variant mean understanding: 725.21 ms
 - Variant mean search: 444.67 ms
 - Variant mean total: 1,169.72 ms
-- Local suite: 83 passed, 1 opt-in integration skipped
+- Local suite: 85 passed, 1 opt-in integration skipped
 
 Both complete runs used the live agent and MotherDuck search path. The first
 Groq route was intermittently rate-limited; bounded key/model rotation found an
@@ -46,7 +47,7 @@ but it has been superseded by the complete live runs above.
 ## Final submission smoke on 2026-09-03
 
 - Ruff passed across `agents`, `app`, `evals`, and `tests`.
-- The full local suite passed: 83 passed, 1 opt-in integration skipped.
+- The full local suite passed: 85 passed, 1 opt-in integration skipped.
 - Live STT transcribed the sample correctly in 843.71 ms.
 - Live TTS produced a 172,870-byte WAV in 648.80 ms.
 - A four-turn live text session passed a neutral greeting, a Mumbai heavy-

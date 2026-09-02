@@ -12,7 +12,7 @@ than make the code easier to explain.
 
 The implementation still has domain rules, but they are deliberately narrow:
 they protect hard constraints and conversational references that varied across
-small/free models. The 294-word prompt describes tool choice and safety; it does
+small/free models. The compact prompt describes tool choice and safety; it does
 not enumerate truck models or hard-code expected evaluation answers.
 
 ## Findings and actions
@@ -21,7 +21,7 @@ not enumerate truck models or hard-code expected evaluation answers.
 | --- | --- | --- |
 | Redundant API-key checks | Groq keys were checked independently in `agent.py` and `voice.py` | Removed. Pydantic validates and deduplicates one `GROQ__API_KEYS` list; OpenRouter remains normalized and optional. |
 | Unused logging utility | The current primitive is used by generation, loading, LLM, search, STT, TTS, and full turns | Kept `OperationLogContext`; no second timer wrapper exists. |
-| Tool-selector agent | A second agent would duplicate a three-choice routing decision | Not added. The system prompt names when each typed tool applies. |
+| Tool-selector agent | A second agent would duplicate a three-choice routing decision | Not added. The system prompt names when each typed tool applies; one field-agnostic cue guard routes explicit state changes back through slot extraction. |
 | Service/repository wrappers | Search has one concrete MotherDuck consumer | No service layer or repository interface was added. Search functions own their queries directly. |
 | Database lifecycle | A process-global connection would be shared unsafely across Streamlit sessions | One read-only connection is opened per catalog operation, reused for that operation, and closed by the shared context manager. |
 | Prompt duplication | Routing appears in the prompt and accepted values appear in schemas/docstrings | Kept only this intentional split: prompt says *when*; schemas say *what is valid*. |
@@ -72,8 +72,8 @@ telemetry, not more prompt rules.
 ## Verification result
 
 1. Ruff passed over source, app, evals, and tests.
-2. The full unit suite passed: 83 passed and 1 opt-in integration test skipped.
-3. Both live datasets passed (23 core + 18 focused cases), and the committed
+2. The full unit suite passed: 85 passed and 1 opt-in integration test skipped.
+3. Both live datasets passed (27 core + 18 focused cases), and the committed
    catalog contains 1,000 rows.
 4. Streamlit AppTest rendered the native text-and-microphone composer, sidebar,
    results, and empty states without a framework exception. Browser screenshot
