@@ -1,87 +1,84 @@
-# Evaluation report
+# Evaluation
 
-## What is scored
+Vivi is evaluated through the real agent and MotherDuck search path. Cases define expected behavior without requiring one exact sentence, so the agent may speak naturally while catalog facts and user constraints remain testable.
 
-`evals/evaluate_agent.py` sends each utterance through the real agent and
-MotherDuck search path. It checks the expected action, active filters, changed
-slots, result presence, previous-result preservation or exclusion, detail
-record count, required response meaning, forbidden text, and grounded search
-facts. Answers may be naturally rephrased; catalog values may not change.
+For the extended rationale and failure taxonomy, see the wiki's [evaluation and observability](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Evaluation-and-Observability) page.
 
-The datasets are under `evals/`, not `data/`. Generated reports belong under
-`data/evaluation/`.
+## Latest results
 
-## Latest live runs on 2026-09-03
+| Suite | Cases | Passed | Pass rate |
+| --- | ---: | ---: | ---: |
+| Core conversation | 27 | 27 | **100%** |
+| Vehicle variants | 18 | 17 | **94.4%** |
+| Combined | 45 | 44 | **97.8%** |
 
-- Core dataset: `evals/agent_cases.json`
-- Core result: 27/27, 100%
-- Core mean understanding: 1,083.62 ms
-- Core mean search: 621.38 ms
-- Core mean response generation: 1,265.38 ms on the three detail turns
-- Core mean total: 1,793.79 ms
-- Core mean tokens: 2,143.96
-- Core mean estimated LLM list cost: INR 0.0460 per turn
-- Variant dataset: `evals/vehicle_variant_cases.json`
-- Variant result: 17/18, 94.4%
-- Variant mean understanding: 1,680.80 ms
-- Variant mean search: 797.50 ms
-- Variant mean response generation: 4,007.81 ms on detail turns
-- Variant mean total: 4,032.36 ms
-- Variant mean tokens: 3,047.72
-- Variant mean estimated LLM list cost: INR 0.0467 per turn
-- Focused regression for search, more-options, all-option weights, and all
-  details: 4/4, 100%
-- Local suite: 90 passed, 1 opt-in integration skipped
+Both complete runs were executed on 2026-09-03. The one variant failure was an evaluator vocabulary gap: the grounded response said “listed in Delhi,” while that concept initially accepted only “city,” “located in,” or “location.” The action, filters, result IDs, and vehicle facts were correct. The concept checker now accepts the natural wording; a fresh full-provider run has not been claimed.
 
-Both complete runs used the live agent and MotherDuck search path. The first
-Groq route was intermittently rate-limited; bounded key/model rotation found an
-available Groq route and every case completed. The variant suite's one failure
-was an evaluator vocabulary gap: the grounded answer said "listed in Delhi"
-while the city concept accepted only "city", "located in", or "location". The
-concept alternatives now include that natural phrasing; no agent fact, action,
-filter, or result ID was wrong. The raw JSON reports are
-`data/evaluation/latest_results.json` and
-`data/evaluation/vehicle_variant_results.json`. Every new evaluation run also
-writes a timestamped Markdown report, for example
-`data/evaluation/vehicle_variant_cases-20260903T063119Z.md`.
+## What is evaluated
 
-## Earlier provider-limited confirmation
+Every case can assert one or more of the following:
 
-The exact recovered code was rerun against the same 18 cases. The first nine
-cases all passed, including search, pagination, all-option weights, full vehicle
-details, and multiple size/category variants. After that point every configured
-free-tier model returned HTTP 429, so the raw run ended at 9/18. None of the
-nine failures produced a logic mismatch; they failed before an action or filter
-could be returned.
+- selected action or tool
+- active filters and changed slots
+- result presence or an expected zero-result outcome
+- preservation or exclusion of previous result IDs
+- detail record count
+- required response concepts and forbidden text
+- factual grounding of returned search records
+- latency, model route, token usage, and estimated cost telemetry
 
-That earlier result remains useful evidence of the free-tier availability risk,
-but it has been superseded by the complete live runs above.
+This separates expected behavior from exact prose. Rephrasing is allowed; changing catalog values or silently violating constraints is not.
 
-## Final submission smoke on 2026-09-03
+## Evaluation suites
 
-- Ruff passed across `agents`, `app`, `evals`, and `tests`.
-- The full local suite passed: 85 passed, 1 opt-in integration skipped.
-- Live STT transcribed the sample correctly in 843.71 ms.
-- Live TTS produced a 172,870-byte WAV in 648.80 ms.
-- A four-turn live text session passed a neutral greeting, a Mumbai heavy-
-  machinery search, a one-lookup payload answer for all three options, and a
-  refusal to expose raw catalog data or SQL.
-- A final combined synthetic voice turn transcribed correctly in 231.74 ms,
-  then exhausted every LLM fallback with HTTP 429. It is therefore recorded as
-  a failed end-to-end attempt, not an audio-ready measurement.
-- After Groq key rotation was added, the exact `my bidget is 20 lakhs` case
-  passed its executable evaluation: action `search`, `budget_max=2000000`,
-  grounded results present, 1/1.
+### Core conversation
 
-## Commands
+[`evals/agent_cases.json`](../evals/agent_cases.json) contains 27 cases covering:
 
-Core conversational suite:
+- greetings and bounded general questions
+- natural budget, fuel, body, city, payload, and use-case constraints
+- intent and typed slot extraction
+- search, catalog options, and vehicle-detail actions
+- cross-turn correction and preference changes
+- previous-result references
+- zero-result handling
+- unsafe requests for raw data or SQL
+
+### Vehicle variants
+
+[`evals/vehicle_variant_cases.json`](../evals/vehicle_variant_cases.json) contains 18 cases covering:
+
+- light, intermediate, medium, and heavy vehicles
+- mini truck, pickup, and rigid truck categories
+- open, flatbed, box, container, tipper, tanker, and reefer bodies
+- diesel and CNG
+- budget ranges and payload-unit conversion
+- pagination and requests for more options
+- all-result weight lookup and complete vehicle details
+- general commercial-vehicle questions
+
+## Mean turn telemetry
+
+| Metric | Core | Vehicle variants |
+| --- | ---: | ---: |
+| Understanding | 1,083.62 ms | 1,680.80 ms |
+| Catalog search or lookup | 621.38 ms | 797.50 ms |
+| Grounded response generation¹ | 1,265.38 ms | 4,007.81 ms |
+| Total | 1,793.79 ms | 4,032.36 ms |
+| Tokens | 2,143.96 | 3,047.72 |
+| Estimated LLM list cost | INR 0.0460 | INR 0.0467 |
+
+¹ Response-generation means are calculated only for turns that use the optional post-tool natural-language pass. Straight grounded searches stop after deterministic composition.
+
+## Run the suites
+
+Run the primary suite first:
 
 ```powershell
 uv run --package agents python evals/evaluate_agent.py --delay-seconds 10
 ```
 
-Focused variants:
+Then run the breadth suite:
 
 ```powershell
 uv run --package agents python evals/evaluate_agent.py `
@@ -89,38 +86,49 @@ uv run --package agents python evals/evaluate_agent.py `
   --delay-seconds 10
 ```
 
-Use `--case CASE_ID` repeatedly for a focused diagnosis. Do not combine selected
-passes from repeated attempts into a claimed single-run score. By default, the
-JSON and Markdown filenames use the dataset name and the same UTC timestamp.
-Pass `--output` only when a stable JSON filename is intentionally required.
+Use `--case CASE_ID` repeatedly for focused diagnosis. Do not combine selected passes from different attempts into a claimed single-run score.
 
-One real voice turn (use only audio you are authorized to send to the configured
-STT provider):
+Each run writes JSON and Markdown reports under `data/evaluation/`. By default, both filenames contain the dataset name and the same UTC timestamp; `--output` is available when a stable JSON filename is intentionally required.
+
+## Voice latency
+
+Run one real voice turn with an audio sample you are authorized to send to the configured STT provider:
 
 ```powershell
 uv run --package agents python evals/measure_voice_latency.py `
   --audio path/to/authorized-sample.wav
 ```
 
-This writes `data/evaluation/voice_latency_results.json` and a timestamped
-`voice-latency-*.md` report.
+The report includes STT, understanding, search or lookup, optional response generation, TTS, total time, and `speech_end_to_audio_ready_ms`.
 
-## Latency boundary
+With Streamlit’s built-in microphone composer, the server receives audio only after browser recording and upload complete. The measurement therefore starts when the completed recording reaches the server and ends when the full synthesized WAV is ready for playback. It is a repeatable server-side proxy, not exact browser speech-stop to first streamed audio byte.
 
-Text turns record understanding, search or lookup, optional grounded-response
-generation, and total time. Voice turns additionally record STT, TTS, and
-speech-end-to-audio-ready time. With Streamlit's default microphone composer,
-the server timestamp begins when the completed browser recording reaches the
-app, not at the browser's exact speech-stop event. Because the TTS API returns
-a complete WAV rather than a stream, "audio ready" is when that full playable
-WAV exists. The UI and logs label this boundary directly; exact browser
-speech-stop to first streamed byte requires a custom client event and streaming
-transport.
+## Usage and cost
 
-## Usage and cost boundary
+Per turn, the harness stores:
 
-Per turn, the harness stores LLM request count, input, cached-input, output,
-reasoning, and total tokens. Voice turns additionally store audio duration and
-TTS characters. Estimated INR is based on public list prices for the successful
-model route plus configured STT/TTS list rates. It is not an invoice, excludes
-database/hosting spend, and may exceed actual free-tier spend.
+- LLM request count
+- input, cached-input, output, reasoning, and total tokens
+- successful provider and model route
+- audio duration and synthesized characters for voice turns
+- equivalent public-list-price estimates in USD and INR
+
+The estimate is not an invoice. Free-tier spend can be zero, and database, hosting, retries, discounts, and production pricing are outside the calculation. The USD/INR assumption and provider references are documented in [architecture and technical decisions](TECHNICAL_DECISIONS.md#usage-and-cost-telemetry) and [sources](SOURCES.md).
+
+## Local verification
+
+The latest local verification reported:
+
+- 90 unit tests passed
+- 1 live MotherDuck integration test skipped by default
+- Ruff passed across source, app, evaluations, and tests
+- Streamlit AppTest rendered the conversation, result, state, and metric surfaces
+- live STT and TTS smoke checks produced valid transcript and WAV output
+
+Provider-backed evaluation and voice tests are intentionally separate from the default unit suite because they consume external quota and transmit configured inputs.
+
+## Known boundaries
+
+1. Free-tier provider pools can all return HTTP 429. Bounded route rotation improves demo resilience but does not guarantee capacity.
+2. The current voice endpoint returns complete WAV files, so the measured endpoint is playable audio rather than first streamed bytes.
+3. Natural-response validation guarantees grounded numeric and catalog facts; it does not prove that subjective buying advice is globally optimal.

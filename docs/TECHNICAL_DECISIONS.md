@@ -1,8 +1,10 @@
 # Architecture and technical decisions
 
+This is the concise submission-facing design record. The wiki contains the deeper [architecture narrative](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Architecture-and-Technical-Decisions) and [agent behavior walkthrough](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Agent-Behavior-and-Grounding).
+
 ## Seven identifiable components
 
-| Assignment component | Implementation | Hidden complexity | Production replacement |
+| System component | Implementation | Hidden complexity | Production replacement |
 | --- | --- | --- | --- |
 | Voice interface | `app/main.py` Streamlit microphone, text fallback, result/state display, audio playback | Browser capture and reruns | Product web client with streaming media |
 | Speech to text | `voice.py:transcribe_audio` | Multipart audio and provider timing | Streaming STT with noisy-audio adaptation |
@@ -11,6 +13,24 @@
 | Response and TTS | `response.py` plus `voice.py` | Grounded composition, value validation, WAV batching | Streaming response and TTS gateway |
 | Conversation state | Typed `ConversationState` plus SDK `SQLiteSession` | Slot merging and result references | Redis or durable session service |
 | Evaluation and latency | `evals/evaluate_agent.py` and structured operation logs | Semantic checks and stage timing | CI evaluation service plus observability |
+
+## Code organization and quality review
+
+The implementation is separated by failure boundary rather than by framework pattern. The largest files remain cohesive modules: `tools.py` validates model-facing inputs, `search.py` owns parameterized queries and ranking, `response.py` owns grounded composition, and `runner.py` owns turns, state, retries, and telemetry. Splitting these into one-use classes would add navigation without isolating another responsibility.
+
+| Review concern | Resolution |
+| --- | --- |
+| Repeated API-key checks | Pydantic settings validate and deduplicate Groq keys; OpenRouter is normalized once as an optional provider. |
+| Unused logging wrappers | One `OperationLogContext` records monotonic duration and structured fields across catalog, model, tool, STT, TTS, and turn operations. |
+| Tool-selector or critic agent | Not added. Three typed operations do not justify another model call or state hand-off. |
+| Generic service/repository layer | Not added. Search is the only MotherDuck consumer and owns its parameterized queries directly. |
+| Process-global database connection | Not used. Each catalog operation owns one scoped read-only connection and reuses it for that operation. |
+| Prompt and schema duplication | The prompt explains *when* to use a tool; schemas and docstrings describe *which values* are accepted. |
+| TTS batching | Retained because the provider caps each request at 200 characters; application code chunks text and stitches compatible WAV responses. |
+| Model fallback adapter | Retained because the SDK accepts one model interface while the demo needs bounded key, model, and provider failover. |
+| Rechecking database results | Retained as the hard-filter invariant that detects a violated user constraint before a result is shown. |
+
+Deliberately absent: generated SQL, a raw database tool, multi-agent routing, generic repositories, prompt-encoded vehicle inventories, expected-answer matching, and a framework-specific wrapper around the conversation session.
 
 ## Decision 1: typed tools and deterministic SQL
 
@@ -141,7 +161,7 @@ than a provider-billing claim.
 
 Cached-input tokens are displayed as context reuse, not operating-system RAM.
 Conversation memory itself is the small typed slot/result state plus the SDK's
-SQLite history. Process-memory profiling is not part of the assignment metric
+SQLite history. Process-memory profiling is not part of the required metrics
 and should be added under load testing rather than conflated with token usage.
 
 ## Q&A defence

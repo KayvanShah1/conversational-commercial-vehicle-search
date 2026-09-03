@@ -1,8 +1,10 @@
 # Vehicle Catalog Generation
 
+This page is the repository overview. The wiki contains the complete [catalog-generation design](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Synthetic-Catalog-Generation), including distributions, pricing assumptions, schema, validation, provenance, and storage decisions.
+
 ## Purpose
 
-The assignment requires a synthetic catalog of at least 100 used commercial-vehicle listings with:
+The project uses a synthetic catalog of at least 100 used commercial-vehicle listings with:
 
 - make and model
 - year
@@ -138,7 +140,7 @@ Pydantic models validate generated records, while the generator tests cover:
 - reference source availability
 - valid Parquet and CSV serialization
 
-This keeps the catalog predictable enough for the assignment's hard-filter and evaluation requirements without adding a separate data-processing pipeline.
+This keeps the catalog predictable enough for hard-filter and evaluation requirements without adding a separate data-processing pipeline.
 
 ## Scope
 

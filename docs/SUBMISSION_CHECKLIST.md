@@ -1,34 +1,33 @@
-# Assignment compliance checklist
+# Requirements compliance
+
+This matrix maps each requirement to inspectable implementation or evaluation evidence. The [original specification](assignment/README.md) remains authoritative.
 
 | Requirement | Evidence | Status |
 | --- | --- | --- |
-| Microphone to STT to understanding to search to response to TTS to playback | `app/main.py`, `runner.py`, `voice.py` | Implemented; final live run depends on provider quota and browser permission |
-| At least 100 catalog rows and required fields | `data/generated/vehicles.csv` has 1,000 listings plus its header | Met |
-| Intent and required slots | Three typed tools, `SlotPatch`, visible Streamlit state | Met |
-| Strict filter enforcement | Parameterized SQL plus `_matches` invariant | Met |
-| Grounded top-three response | `GroundedResponse`, numeric/fact validation, deterministic fallback | Met |
-| Zero results | Deterministic no-result response with one data-tested relaxation | Met |
-| Mid-conversation correction | Slot patch changes only supplied/cleared fields | Met and evaluated |
-| Previous-result follow-up | Result IDs in state plus one details lookup | Met and evaluated |
-| At least 10 real-pipeline evaluation utterances with expected filters | 27 core cases and 18 focused variant cases under `evals/` | Met |
-| Pass rate | Latest live runs: 27/27 core and 17/18 variant cases (94.4%); one semantic-check vocabulary miss, no behavior mismatch | Met: both exceed 90% |
-| Per-stage latency | Structured metrics/logs for STT, understanding, search, response, TTS, and total; latest core means are documented | Implemented |
-| Speech end to first audio | `speech_end_to_audio_ready_ms` is shown per voice turn and logged | Implemented as a server-receipt-to-playable-WAV proxy; exact browser speech-stop/first-byte needs a custom streaming client |
-| Token and estimated cost telemetry | SDK request/input/cached/output/reasoning/total tokens plus voice duration/characters and route-aware list-cost estimate | Implemented |
-| Explainable ranking | UI table exposes the numeric per-listing ranking components | Implemented |
-| Seven-component architecture diagram | Root README and presentation slide 3 | Met |
-| Three decisions and rejected alternatives | `docs/TECHNICAL_DECISIONS.md` and presentation slide 7 | Met |
-| 100,000 conversations/month answer | `docs/TECHNICAL_DECISIONS.md` and presentation slide 8 | Met |
-| README runs in under 10 minutes | Root README setup and demo path | Met |
-| Presentation slides in PDF | `output/pdf/vivi-vehicle-search-presentation.pdf` | Met |
-| Cite external sources | `docs/SOURCES.md` | Met |
+| Microphone → STT → understanding → search → response → TTS → playback | [Streamlit app](../app/main.py), [runner](../agents/src/vehicle_search_agent/runner.py), [voice pipeline](../agents/src/vehicle_search_agent/voice.py) | Met; live execution depends on provider quota and browser permission |
+| At least 100 catalog rows and required fields | [Generated catalog](../data/generated/vehicles.csv) contains 1,000 listings | Met |
+| Intent and required slots | [Typed tools](../agents/src/vehicle_search_agent/tools.py), [state models](../agents/src/vehicle_search_agent/models.py), visible UI state | Met |
+| Strict filter enforcement | [Parameterized search and invariants](../agents/src/vehicle_search_agent/search.py) | Met |
+| Grounded top-three response | [Response validation](../agents/src/vehicle_search_agent/response.py) and deterministic fallback | Met |
+| Zero-result behavior | Data-tested constraint relaxation in [search](../agents/src/vehicle_search_agent/search.py) | Met and evaluated |
+| Mid-conversation correction | Slot patches change only supplied or explicitly cleared values | Met and evaluated |
+| Previous-result follow-up | Saved result IDs plus one bounded details lookup | Met and evaluated |
+| At least 10 real-pipeline evaluation utterances | [27 core cases](../evals/agent_cases.json) and [18 variant cases](../evals/vehicle_variant_cases.json) | Met |
+| Evaluation pass rate | [Evaluation report](EVALUATION.md): 27/27 core and 17/18 variants | Met; both suites exceed 90% |
+| Per-stage latency | Structured STT, understanding, search, response, TTS, and total metrics | Met |
+| Speech end → first audio | [Voice latency harness](../evals/measure_voice_latency.py) | Server-receipt-to-playable-WAV proxy; exact browser/stream boundary is stated |
+| Token and estimated cost telemetry | SDK usage, voice units, successful route, and list-cost estimate | Met |
+| Explainable ranking | Streamlit table exposes the numeric `RankingBreakdown` for each result | Met |
+| Seven identifiable components | [Architecture](TECHNICAL_DECISIONS.md#seven-identifiable-components) and presentation | Met |
+| Three decisions and rejected alternatives | [Technical decisions](TECHNICAL_DECISIONS.md) | Met |
+| 100,000 conversations/month discussion | [Scale plan](TECHNICAL_DECISIONS.md#what-breaks-first-at-100000-conversations-per-month) | Met |
+| README runs in under 10 minutes | [Quick start](../README.md#quick-start) and [setup guide](SETUP.md) | Met |
+| Presentation PDF | [Evaluator walkthrough](../output/pdf/vivi-vehicle-search-presentation.pdf) | Met |
+| External references | [Sources and acknowledgements](SOURCES.md) | Met |
 
-## Submission risks to state, not hide
+## Declared limitations
 
-1. Free-tier model pools can all return HTTP 429; the UI fails closed and asks
-   for a retry instead of inventing a vehicle.
-2. The TTS endpoint returns complete WAV responses. The current latency metric
-   is therefore speech-end-to-playable-audio, not first streamed audio bytes.
-3. The INR figure is an equivalent public-list-price estimate, not a provider
-   billing amount. Free-tier spend can be zero, and database/hosting costs are
-   outside the turn estimate.
+- Free-tier provider capacity can be exhausted; the agent fails closed instead of inventing results.
+- TTS returns a complete WAV. The reported voice metric is not first-byte streaming latency.
+- INR values are reproducible public-list-price estimates, not provider invoices.
+- The vehicle inventory and listing prices are synthetic demonstration data.
