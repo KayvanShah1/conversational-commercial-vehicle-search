@@ -70,7 +70,7 @@ class VehicleSearchSession:
         self.context.current_input = transcript
         self.context.state.turn_number += 1
         if isinstance(self.agent.model, FallbackModel):
-            self.agent.model.reset()
+            self.agent.model.start_turn()
         self.agent.model_settings.tool_choice = _tool_choice(transcript, self.context.state)
         run_result = await Runner.run(
             self.agent,
@@ -130,7 +130,11 @@ class VehicleSearchSession:
             last_result_ids=self.context.state.last_result_ids,
             changed_fields=search_result.changed_fields if search_result else [],
             executed_filters=search_result.executed_filters if search_result else None,
-            model_used=str(self.agent.model.model),
+            model_used=(
+                self.agent.model.route
+                if isinstance(self.agent.model, FallbackModel)
+                else str(self.agent.model.model)
+            ),
             metrics=metrics,
         )
 

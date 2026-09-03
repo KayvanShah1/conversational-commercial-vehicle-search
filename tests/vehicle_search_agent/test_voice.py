@@ -50,15 +50,19 @@ def test_synthesize_speech_stitches_wav_chunks(monkeypatch):
 
 
 def test_speech_request_rotates_after_rate_limit(monkeypatch):
+    calls = {"limited": 0, "working": 0}
+
     class TestRateLimitError(Exception):
         pass
 
     class RateLimitedSpeechApi:
         def create(self, **kwargs):
+            calls["limited"] += 1
             raise TestRateLimitError
 
     class WorkingSpeechApi:
         def create(self, **kwargs):
+            calls["working"] += 1
             return SimpleNamespace(content=_wav(b"\x02"))
 
     clients = (
@@ -67,8 +71,12 @@ def test_speech_request_rotates_after_rate_limit(monkeypatch):
     )
     monkeypatch.setattr(voice_module, "RateLimitError", TestRateLimitError)
     monkeypatch.setattr(voice_module, "_speech_clients", lambda: clients)
+    monkeypatch.setattr(voice_module, "_speech_key_index", 0)
 
-    result = synthesize_speech("Use the second key.")
+    first = synthesize_speech("Use the second key.")
+    second = synthesize_speech("Keep using the second key.")
 
-    with wave.open(io.BytesIO(result.audio), "rb") as reader:
-        assert reader.readframes(reader.getnframes()) == b"\x02"
+    assert calls == {"limited": 1, "working": 2}
+    for result in (first, second):
+        with wave.open(io.BytesIO(result.audio), "rb") as reader:
+            assert reader.readframes(reader.getnframes()) == b"\x02"

@@ -33,6 +33,7 @@ class FallbackModel(Model):
         self.models = models
         self.routes = routes
         self.index = 0
+        self._turn_advances = 0
 
     @property
     def model(self) -> str:
@@ -43,13 +44,15 @@ class FallbackModel(Model):
         return self.routes[self.index]
 
     def advance(self) -> str | None:
-        if self.index == len(self.models) - 1:
+        if self._turn_advances == len(self.models) - 1:
             return None
-        self.index += 1
+        self.index = (self.index + 1) % len(self.models)
+        self._turn_advances += 1
         return self.route
 
-    def reset(self) -> None:
-        self.index = 0
+    def start_turn(self) -> None:
+        """Keep the last successful route but restore this turn's retry budget."""
+        self._turn_advances = 0
 
     def get_retry_advice(self, request: Any) -> Any:
         return self.models[self.index].get_retry_advice(request)

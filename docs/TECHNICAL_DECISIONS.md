@@ -84,12 +84,13 @@ a catalog service rather than opening unlimited connections.
 
 ## Model fallback and failure behavior
 
-Each turn tries every configured Groq key for the 120B model, then repeats that
-bounded key rotation for Groq 20B and two Qwen 27B models before trying two
-optional OpenRouter Gemma models. Speech requests rotate Groq keys on HTTP 429
-as well. This protects a live turn from one exhausted account, but free models
-do not guarantee independent upstream capacity. The UI reports a recoverable
-error instead of inventing a vehicle when every route fails.
+The agent starts each turn on the last successful route. On a retryable failure,
+it makes one bounded pass through every configured Groq key and model before the
+optional OpenRouter Gemma routes. Speech requests likewise remember the last
+successful Groq key and rotate on HTTP 429. This protects later turns from
+repeatedly hitting a known-exhausted key, but free models do not guarantee
+independent upstream capacity. The UI reports a recoverable error instead of
+inventing a vehicle when every route fails.
 
 ## What breaks first at 100,000 conversations per month
 

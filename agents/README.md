@@ -32,9 +32,9 @@ Groq's 200-character TTS requests and stitches the returned WAV audio.
 `GROQ__API_KEYS` is a JSON list. Model calls try every configured key for Groq's
 120B model before moving to Groq 20B, Qwen 3.6 27B, Qwen 3.8 27B, and—when
 `OPENROUTER__API_KEY` is configured—the two Gemma models in `example.env`.
-Speech requests rotate through the same Groq keys when a key returns HTTP 429.
-The route list itself is the retry bound; no separate retry-count setting can
-silently leave configured routes unused.
+Agent and speech requests keep the last successful route as the next request's
+starting point. Retryable model failures and speech HTTP 429 responses rotate
+through the configured routes once; the route list itself is the retry bound.
 
 Run the focused tests:
 

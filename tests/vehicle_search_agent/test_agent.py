@@ -10,16 +10,18 @@ from vehicle_search_agent.tools import AgentContext, retry_tool_error
 from agents import ModelRetryNormalizedError, RetryPolicyContext
 
 
-def test_fallback_model_restarts_for_a_new_user_turn():
+def test_fallback_model_keeps_the_successful_route_for_a_new_user_turn():
     model = FallbackModel(
         [SimpleNamespace(model="first"), SimpleNamespace(model="second")],
         ["first-route", "second-route"],
     )
     model.advance()
 
-    model.reset()
+    model.start_turn()
 
-    assert model.model == "first"
+    assert model.model == "second"
+    assert model.advance() == "first-route"
+    assert model.advance() is None
 
 
 def test_tool_validation_retries_are_bounded_at_three():

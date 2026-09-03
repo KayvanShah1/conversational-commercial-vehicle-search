@@ -27,7 +27,7 @@ not enumerate truck models or hard-code expected evaluation answers.
 | Prompt duplication | Routing appears in the prompt and accepted values appear in schemas/docstrings | Kept only this intentional split: prompt says *when*; schemas say *what is valid*. |
 | Literal safeguard helpers | `_mentioned` and `_explicit` are tiny, but protect explicit fuel/body/category constraints from model drift | Kept. Inlining them three times would be longer and less clear. |
 | TTS chunking | Orpheus accepts at most 200 characters per request | Kept `_text_chunks` and `_stitch_wav`; they are provider-bound behavior with focused tests, not generic abstraction. |
-| Fallback wrapper | The SDK model interface accepts one model while the demo needs key and cross-provider failover | Kept the small adapter. It walks the finite model/key routes only on retryable failures and resets per user turn. |
+| Fallback wrapper | The SDK model interface accepts one model while the demo needs key and cross-provider failover | Kept the small adapter. It remembers the last successful route and makes at most one bounded pass through every configured route per user turn. |
 | Grounded response structures | `GroundedResponse` carries fallback text and validation checks | Kept. This is the code-level anti-hallucination boundary required by the assignment. |
 | Deterministic result duplication | SQL filters are checked again against returned records | Kept intentionally. The second check detects a violated hard-filter invariant. |
 

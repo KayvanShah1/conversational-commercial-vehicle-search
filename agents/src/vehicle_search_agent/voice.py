@@ -3,6 +3,7 @@ import re
 import wave
 from collections.abc import Callable
 from functools import lru_cache
+from threading import Lock
 
 from openai import OpenAI, RateLimitError
 from pydantic import BaseModel
@@ -13,6 +14,8 @@ from vehicle_search_agent.settings import settings
 tts_logger = get_logger("TextToSpeech")
 stt_logger = get_logger("SpeechToText")
 provider_logger = get_logger("SpeechProvider")
+_speech_key_index = 0
+_speech_key_lock = Lock()
 
 
 class SpeechResult(BaseModel):
@@ -35,17 +38,30 @@ def _speech_clients() -> tuple[OpenAI, ...]:
 
 
 def _request_with_key_rotation[ResponseT](request: Callable[[OpenAI], ResponseT]) -> ResponseT:
+    global _speech_key_index
+
     clients = _speech_clients()
-    for key_index, client in enumerate(clients):
+    with _speech_key_lock:
+        start_index = _speech_key_index % len(clients)
+
+    for offset in range(len(clients)):
+        key_index = (start_index + offset) % len(clients)
         try:
-            return request(client)
+            response = request(clients[key_index])
         except RateLimitError:
-            if key_index == len(clients) - 1:
+            if offset == len(clients) - 1:
                 raise
+            next_index = (key_index + 1) % len(clients)
+            with _speech_key_lock:
+                _speech_key_index = next_index
             provider_logger.warning(
                 "speech_key_rotated",
-                extra={"previous_key_number": key_index + 1, "next_key_number": key_index + 2},
+                extra={"previous_key_number": key_index + 1, "next_key_number": next_index + 1},
             )
+        else:
+            with _speech_key_lock:
+                _speech_key_index = key_index
+            return response
     raise RuntimeError("No Groq speech client is configured.")
 
 
