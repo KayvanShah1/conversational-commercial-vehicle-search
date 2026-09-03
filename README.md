@@ -1,181 +1,126 @@
-# Vivi: Voice-first commercial vehicle search
+# Vivi: Voice-first Commercial Vehicle search
+
+[![Evaluation: 44/45](https://img.shields.io/badge/evaluation-44%2F45_passed-22c55e?style=flat-square)](docs/EVALUATION.md)
+[![Catalog: 1,000 listings](https://img.shields.io/badge/catalog-1%2C000_listings-2563eb?style=flat-square)](docs/DATA_GENERATION.md)
+[![Input: voice and text](https://img.shields.io/badge/input-voice_%2B_text-7c3aed?style=flat-square)](docs/SETUP.md)
+[![Grounding: validated](https://img.shields.io/badge/catalog_facts-validated-0f766e?style=flat-square)](docs/TECHNICAL_DECISIONS.md#decision-3-deterministic-facts-with-optional-natural-rephrasing)
+[![License: MIT](https://img.shields.io/badge/license-MIT-334155?style=flat-square)](LICENSE)
 
 ![Vivi voice-first commercial vehicle search](assets/vivi-repo-cover.png)
 
-Vivi is a localhost voice assistant for finding used commercial vehicles. It
-accepts microphone or text input, extracts inspectable search constraints,
-applies parameterized hard filters to a 1,000-row catalog, ranks matching
-vehicles, and speaks a top-three response whose facts are validated against the
-returned records.
+Vivi is a conversational assistant for finding used commercial vehicles through voice or text. It turns natural requests into inspectable constraints, applies deterministic filters and ranking to a MotherDuck catalog, and validates vehicle facts before returning or speaking a recommendation.
 
-## Run in under 10 minutes
+## Highlights
 
-Prerequisites: Python 3.13, [uv](https://docs.astral.sh/uv/), a MotherDuck token,
-and at least one Groq API key. Additional Groq keys are optional and are tried
-before the agent changes models. An OpenRouter key enables two more fallbacks.
+- **Natural conversation:** understands budgets, payloads, vehicle sizes, fuels, body types, locations, corrections, and follow-up questions.
+- **Grounded recommendations:** the model never writes SQL, and catalog facts are checked against returned records before they reach the user.
+- **Inspectable decisions:** active filters, ranked results, ranking components, tool calls, model route, latency, tokens, and estimated cost are visible in the demo.
+- **Resilient voice path:** Groq handles speech and primary model inference, with bounded key/model rotation and optional OpenRouter fallbacks.
+- **Executable evaluation:** 45 cases cover conversation, safety, all vehicle sizes, body variants, attribute lookup, pagination, and preference changes.
+
+## Quick start
+
+You need [uv](https://docs.astral.sh/uv/), a MotherDuck token, and at least one Groq API key.
 
 ```powershell
 Copy-Item example.env .env
-# Fill MOTHERDUCK__TOKEN and GROQ__API_KEYS in .env.
-# GROQ__API_KEYS is a JSON list: ["primary-key","secondary-key"]
-# Optionally fill OPENROUTER__API_KEY.
+# Add MOTHERDUCK__TOKEN and GROQ__API_KEYS to .env.
 
 uv sync --all-packages --dev
 uv run python -m vehicle_catalog_generator.load
 uv run --package app streamlit run app/main.py
 ```
 
-Open <http://localhost:8501>. The bottom composer includes text, microphone,
-and send controls. Record and submit a voice turn, then allow browser audio
-playback. Text uses the same conversation state and remains available if
-microphone permission or a voice provider is unavailable.
+Open <http://localhost:8501>. The bottom composer accepts text or microphone input, and both modes share the same conversation state.
 
-The repository includes the deterministic 1,000-row catalog at
-`data/generated/vehicles.csv`. Loading is idempotent by default; set
-`DATA_GENERATION__REPLACE=true` only when intentionally replacing an existing
-MotherDuck table.
+See the [setup guide](docs/SETUP.md) for prerequisites, credential links, every environment variable, troubleshooting, and verification commands.
 
-## Demo path
+## Try the conversation
 
-Use these four turns in one session:
+Use these turns in one session:
 
 1. `Chhota truck chahiye, 5 lakh ke andar, city delivery ke liye.`
 2. `Nahi, diesel nahi, CNG.`
-3. Ask an intentionally impossible combination to show zero-result relaxation.
+3. Ask for an impossible combination to see a grounded zero-result relaxation.
 4. `Second one ka payload aur GVW kya hai?`
 
-The page keeps active slots, grounded results, ranking components, per-stage
-latency, token usage, and estimated list cost visible.
-For a terminal-only fallback:
+For a terminal-only conversation:
 
 ```powershell
 uv run --package agents python analysis/agent_chat.py
 ```
 
-## Evaluation
-
-The core evaluation contains 27 conversational, safety, intent, slot, search,
-correction, preference-change, and follow-up cases. A second 18-case dataset
-covers every vehicle size, all body variants, both fuels, three catalog
-categories, budget ranges, payload conversion, pagination, all-result weight
-lookup, full details, and a general commercial-vehicle question.
-
-Run the primary core suite first:
-
-```powershell
-uv run --package agents python evals/evaluate_agent.py `
-  --delay-seconds 10
-```
-
-Then run the broader vehicle-variant suite:
-
-```powershell
-uv run --package agents python evals/evaluate_agent.py `
-  --cases evals/vehicle_variant_cases.json `
-  --delay-seconds 10
-```
-
-To measure the real voice path with an audio sample you are authorized to send
-to the configured STT provider:
-
-```powershell
-uv run --package agents python evals/measure_voice_latency.py `
-  --audio path/to/authorized-sample.wav
-```
-
-The latest live runs on 2026-09-03 passed **27/27 core cases (100%)** with a
-mean total time of 1,793.79 ms, and **17/18 variant cases (94.4%)** with a mean
-total time of 4,032.36 ms. The lone variant mismatch was a response-concept
-vocabulary gap ("listed in Delhi"), not a wrong fact, filter, action, or result
-ID; the checker now accepts that natural phrasing. Each run writes
-machine-readable JSON plus a
-timestamped Markdown report to `data/evaluation/`; the datasets and scoring
-logic remain under `evals/`. See
-[docs/EVALUATION.md](docs/EVALUATION.md) for the exact checks and latency
-breakdown.
-
-## Architecture
+## System overview
 
 ```mermaid
 flowchart LR
-    subgraph EXPERIENCE["Buyer experience"]
-        UI["1. Streamlit interface<br/>text, microphone, playback"]
-    end
-
-    subgraph AGENT["Agent runtime"]
-        STT["2. Speech to text<br/>Groq Whisper"]
-        UNDERSTAND["3. Understanding<br/>intent and typed slots"]
-        SEARCH["4. Catalog search<br/>hard filters and ranking"]
-        RESPONSE["5. Grounded response<br/>validation and TTS"]
-        STATE["6. Conversation state<br/>SQLite and result references"]
-    end
-
-    subgraph QUALITY["Quality loop"]
-        EVAL["7. Evaluation harness<br/>expected behavior and latency"]
-    end
-
-    UI -->|voice| STT --> UNDERSTAND
-    UI -->|text| UNDERSTAND
-    UNDERSTAND <--> STATE
-    UNDERSTAND -->|typed tool call| SEARCH
-    SEARCH -->|catalog records| RESPONSE --> UI
-    EVAL -.-> UNDERSTAND
-    EVAL -.-> SEARCH
-    EVAL -.-> RESPONSE
+    NEED["Buyer need<br/>load, route, budget"] --> EXPERIENCE["Voice or text<br/>conversation"]
+    EXPERIENCE --> ASSIST["Vivi<br/>intent, preferences, memory"]
+    ASSIST -->|typed tools| MATCH["Eligible matches<br/>hard filters and ranking"]
+    MATCH <--> CATALOG[("Vehicle catalog<br/>specifications and sources")]
+    MATCH --> TRUST["Trust layer<br/>fact validation and rationale"]
+    TRUST --> OPTIONS["Grounded options<br/>cards, speech and metrics"]
+    OPTIONS -->|compare or refine| EXPERIENCE
+    QUALITY["Quality loop<br/>evaluation, latency and cost"] -.-> ASSIST
+    QUALITY -.-> TRUST
 ```
 
-The model never writes SQL. `tools.py` owns the typed boundary, `search.py`
-owns deterministic queries and ranking, `response.py` owns the anti-
-hallucination check, and `runner.py` owns state and timings. MotherDuck opens
-one read-only connection per catalog operation, reuses it within that operation,
-and closes it through the shared context manager.
+The buyer gets a natural conversation and comparable options; the application turns requirements into decision support; and deterministic search, typed tools, provenance, and response validation keep the underlying facts controlled. See the wiki for the detailed [component architecture](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Architecture-and-Technical-Decisions) and [conversation, tool, state, and grounding workflow](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Agent-Behavior-and-Grounding).
 
-## General workflow
+## Evaluation
 
-```mermaid
-flowchart TB
-    INPUT["Buyer sends text or voice"] --> VOICE{"Voice input?"}
-    VOICE -->|yes| TRANSCRIBE["Transcribe audio"]
-    VOICE -->|no| INTERPRET["Identify intent and update slots"]
-    TRANSCRIBE --> INTERPRET
+| Suite | Coverage | Latest live result |
+| --- | --- | ---: |
+| Core | Conversation, intent, slots, safety, corrections, and follow-ups | **27/27 (100%)** |
+| Vehicle variants | Sizes, bodies, fuels, categories, attributes, and pagination | **17/18 (94.4%)** |
+| Combined | All executable cases | **44/45 (97.8%)** |
 
-    INTERPRET --> INTENT{"What does the buyer need?"}
-    INTENT -->|greeting or general question| BOUNDED["Answer within the commercial-vehicle scope"]
-    INTENT -->|catalog options| OPTIONS["Return available cities, types, fuels or bodies"]
-    INTENT -->|search or correction| FILTER["Apply parameterized filters and rank matches"]
-    INTENT -->|follow-up details| DETAILS["Resolve vehicles from saved result IDs"]
+The remaining variant mismatch was an evaluator vocabulary gap, not an incorrect fact, filter, action, or result ID. The checker has since been updated to accept the natural phrasing. Full commands, checks, timings, token usage, and cost boundaries are in the [evaluation report](docs/EVALUATION.md).
 
-    FILTER --> FOUND{"Any matches?"}
-    FOUND -->|no| RELAX["Explain the constraint and suggest a safe relaxation"]
-    FOUND -->|yes| VALIDATE["Validate every vehicle fact against returned records"]
-    DETAILS --> VALIDATE
-    OPTIONS --> FINAL["Compose the response"]
-    BOUNDED --> FINAL
-    RELAX --> FINAL
-    VALIDATE --> FINAL
-    FINAL --> SPEAK{"Voice turn?"}
-    SPEAK -->|yes| TTS["Generate and play speech"]
-    SPEAK -->|no| SHOW["Show the text response and current search context"]
-    TTS --> SHOW
-```
+## Tech stack
+
+[![Python](https://img.shields.io/badge/Python_3.13-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![OpenAI Agents SDK](https://img.shields.io/badge/OpenAI_Agents_SDK-412991?style=flat-square&logo=openai&logoColor=white)](https://openai.github.io/openai-agents-python/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![MotherDuck](https://img.shields.io/badge/MotherDuck-FFF000?style=flat-square&logo=duckdb&logoColor=111827)](https://motherduck.com/)
+[![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?style=flat-square&logo=duckdb&logoColor=111827)](https://duckdb.org/)
+[![Pydantic](https://img.shields.io/badge/Pydantic-E92063?style=flat-square&logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
+[![Groq](https://img.shields.io/badge/Groq-111827?style=flat-square)](https://groq.com/)
+[![Polars](https://img.shields.io/badge/Polars-CD792C?style=flat-square&logo=polars&logoColor=white)](https://pola.rs/)
+[![uv](https://img.shields.io/badge/uv-DE5FE9?style=flat-square&logo=uv&logoColor=white)](https://docs.astral.sh/uv/)
+[![pytest](https://img.shields.io/badge/pytest-0A9EDC?style=flat-square&logo=pytest&logoColor=white)](https://pytest.org/)
 
 ## Documentation
 
-| Document | Purpose |
+### Start here
+
+| If you want to… | Read |
 | --- | --- |
-| [Assignment](docs/ASSIGNMENT.md) | Original requirements and scoring rubric |
-| [Architecture and decisions](docs/TECHNICAL_DECISIONS.md) | Component seams, rejected alternatives, limitations, and scale plan |
-| [Evaluation report](docs/EVALUATION.md) | Executable checks, pass rates, latency, tokens, cost, and provider limitations |
-| [Agent code review](docs/AGENT_CODE_REVIEW.md) | Simplification decisions and remaining intentional complexity |
-| [Catalog generation](docs/DATA_GENERATION.md) | Synthetic-data method, validation, and provenance |
-| [Sources](docs/SOURCES.md) | Libraries, providers, and external technical references |
-| [Submission checklist](docs/SUBMISSION_CHECKLIST.md) | Requirement-by-requirement evidence |
-| [Presentation PDF](output/pdf/vivi-vehicle-search-presentation.pdf) | Evaluator-facing walkthrough |
+| Browse all repository documentation | [Documentation index](docs/README.md) |
+| Install and run Vivi | [Setup guide](docs/SETUP.md) |
+| Review the original specification | [Source brief](docs/assignment/README.md) or [PDF](docs/assignment/voice-search-assignment.pdf) |
+| Understand the system boundaries | [Architecture and technical decisions](docs/TECHNICAL_DECISIONS.md) |
+| Inspect scores and telemetry | [Evaluation report](docs/EVALUATION.md) |
+| Check requirement coverage | [Submission checklist](docs/SUBMISSION_CHECKLIST.md) |
+| Review catalog construction | [Catalog generation](docs/DATA_GENERATION.md) |
+| Audit external references | [Sources and acknowledgements](docs/SOURCES.md) |
+| Explore implementation detail | [Project wiki](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki) |
+| View the evaluator walkthrough | [Presentation PDF](output/pdf/vivi-vehicle-search-presentation.pdf) |
 
-The generated cover prompt is retained in
-[docs/REPO_COVER_PROMPT.txt](docs/REPO_COVER_PROMPT.txt).
+The repository documentation is optimized for setup and assessment. The wiki contains deeper design, behavior, data-generation, evaluation, and operational explanations.
 
+## Repository layout
 
+```text
+agents/                       Agent, tools, search, response, state and voice
+app/                          Streamlit voice-and-text demo
+vehicle-catalog-generator/    Reproducible synthetic catalog pipeline
+utils/                        Shared settings, logging and database access
+evals/                        Evaluation datasets and executable harnesses
+tests/                        Unit and opt-in integration tests
+docs/                         Setup, design, evaluation and reference documentation
+data/                         Generated catalog and evaluation artifacts
+```
 
 ## Verify locally
 
@@ -184,42 +129,16 @@ uv run ruff check agents app evals tests
 uv run pytest -q
 ```
 
-The MotherDuck integration test is opt-in:
-
-```powershell
-$env:RUN_MOTHERDUCK_INTEGRATION_TESTS = "1"
-uv run pytest tests/vehicle_search_agent/test_motherduck_read_only_integration.py -q
-```
-
-## Project map
-
-- `app/`: Streamlit push-to-talk demo
-- `agents/`: agent, tools, deterministic search/response, voice, state
-- `vehicle-catalog-generator/`: reproducible catalog generation and QA
-- `utils/`: shared settings, logging, and MotherDuck connection context
-- `evals/`: evaluation datasets and executable harness
-- `tests/`: unit and opt-in integration tests
-- `docs/`: assignment, evaluation notes, architecture decisions, presentation
+The live MotherDuck integration test is opt-in. See [Verification](docs/SETUP.md#verification) before enabling it.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE).
+Licensed under the [MIT License](LICENSE).
 
 ### Disclaimer
 
-This is an engineering demonstration, not a live marketplace or purchasing
-service. The vehicle catalog, prices, availability, rankings, and recommendations
-are synthetic and must not be treated as current commercial offers. Specification
-links provide provenance for selected reference attributes; buyers should confirm
-all specifications, legal requirements, condition, pricing, and suitability with
-the manufacturer or seller before making a decision.
+<sub>This is an engineering demonstration, not a live marketplace or purchasing service. The catalog, prices, availability, rankings, and recommendations are synthetic and must not be treated as current commercial offers. Specification links provide provenance for selected reference attributes; confirm specifications, legal requirements, condition, pricing, and suitability with the manufacturer or seller before making a decision.</sub>
 
 ### AI-assisted development
 
-AI tools supported implementation, refactoring, test design, documentation, and
-the repository cover image. The system boundaries, product scope, architecture,
-evaluation criteria, and final verification remained human-directed. AI-generated
-code and content were reviewed against executable tests, live evaluation cases,
-catalog-grounding checks, and the assignment requirements. This disclosure follows
-the assignment's allowance for AI coding tools while keeping every submitted
-component explainable during review.
+<sub>AI tools supported implementation, refactoring, test design, documentation, and the repository cover image. Product scope, system boundaries, architecture, evaluation criteria, and final verification remained human-directed. AI-generated code and content were reviewed against executable tests, live evaluation cases, catalog-grounding checks, and the documented requirements.</sub>

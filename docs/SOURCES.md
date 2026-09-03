@@ -1,6 +1,6 @@
 # Sources and acknowledgements
 
-The implementation is original for this assignment. It uses the following
+The implementation is original to this project. It uses the following
 libraries, hosted models, and official documentation:
 
 - [OpenAI Agents SDK: agents and tool-result behavior](https://openai.github.io/openai-agents-python/agents/)

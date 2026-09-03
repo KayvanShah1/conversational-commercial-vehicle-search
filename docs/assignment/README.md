@@ -1,6 +1,8 @@
-# Vyngo Take-Home Assignment: Voice-Based Vehicle Search
+# Take-Home Assignment: Voice-Based Vehicle Search
 
 > Build a working voice-search demo. Present the architecture. Defend the trade-offs.
+
+This Markdown copy is provided for searchable review. The original supplied brief is preserved as [`voice-search-assignment.pdf`](voice-search-assignment.pdf).
 
 ## Assignment overview
 - **Time budget:** Approximately 12–16 focused hours over 5–7 days

@@ -40,3 +40,7 @@ uv run python -m vehicle_catalog_generator.load
 ```
 
 Copy `example.env` to `.env`, configure `MOTHERDUCK__TOKEN`, and set `DATA_GENERATION__REPLACE=true` when existing generated files should be replaced before loading.
+
+See the repository [setup guide](../docs/SETUP.md) for credential sources and
+the complete environment reference. The wiki contains the detailed
+[catalog-generation design](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Synthetic-Catalog-Generation).
