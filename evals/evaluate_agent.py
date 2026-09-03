@@ -16,14 +16,18 @@ from vehicle_search_agent.runner import VehicleSearchSession
 sys.stdout.reconfigure(encoding="utf-8")
 console = Console()
 DEFAULT_CASES = Path("evals/agent_cases.json")
-DEFAULT_OUTPUT = Path("data/evaluation/latest_results.json")
+DEFAULT_OUTPUT_DIR = Path("data/evaluation")
 
 
 def _arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate live agent intent, slots, results, and latency.")
     parser.add_argument("--cases", type=Path, default=DEFAULT_CASES)
     parser.add_argument("--case", action="append", dest="case_ids", help="Run only this case ID; repeat as needed")
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional JSON path; defaults to data/evaluation/<dataset>-<UTC timestamp>.json",
+    )
     parser.add_argument("--min-pass-rate", type=float, default=90.0)
     parser.add_argument("--delay-seconds", type=float, default=0.0, help="Pause between cases for provider rate limits")
     return parser.parse_args()
@@ -268,10 +272,12 @@ def main() -> None:
         },
         "cases": rows,
     }
-    arguments.output.parent.mkdir(parents=True, exist_ok=True)
-    arguments.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    console.print(f"Saved: {arguments.output}", style="dim")
-    markdown_output = arguments.output.parent / f"{arguments.cases.stem}-{generated_at:%Y%m%dT%H%M%SZ}.md"
+    timestamp = f"{generated_at:%Y%m%dT%H%M%SZ}"
+    output = arguments.output or DEFAULT_OUTPUT_DIR / f"{arguments.cases.stem}-{timestamp}.json"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    console.print(f"Saved: {output}", style="dim")
+    markdown_output = output.parent / f"{arguments.cases.stem}-{timestamp}.md"
     markdown_output.write_text(_markdown_report(report, arguments.cases), encoding="utf-8")
     console.print(f"Saved: {markdown_output}", style="dim")
 

@@ -63,8 +63,7 @@ lookup, full details, and a general commercial-vehicle question.
 ```powershell
 uv run --package agents python evals/evaluate_agent.py `
   --cases evals/vehicle_variant_cases.json `
-  --delay-seconds 10 `
-  --output data/evaluation/vehicle_variant_results.json
+  --delay-seconds 10
 ```
 
 To measure the real voice path with an audio sample you are authorized to send

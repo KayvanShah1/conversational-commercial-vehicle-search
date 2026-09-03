@@ -86,12 +86,13 @@ Focused variants:
 ```powershell
 uv run --package agents python evals/evaluate_agent.py `
   --cases evals/vehicle_variant_cases.json `
-  --delay-seconds 10 `
-  --output data/evaluation/vehicle_variant_results.json
+  --delay-seconds 10
 ```
 
 Use `--case CASE_ID` repeatedly for a focused diagnosis. Do not combine selected
-passes from repeated attempts into a claimed single-run score.
+passes from repeated attempts into a claimed single-run score. By default, the
+JSON and Markdown filenames use the dataset name and the same UTC timestamp.
+Pass `--output` only when a stable JSON filename is intentionally required.
 
 One real voice turn (use only audio you are authorized to send to the configured
 STT provider):
