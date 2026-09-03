@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+import vehicle_search_agent.tools as tools_module
 from pydantic import SecretStr
 from vehicle_search_agent.agent import FallbackModel, _tool_result, build_agent
 from vehicle_search_agent.models import AgentAction, ConversationState
@@ -24,9 +25,11 @@ def test_fallback_model_keeps_the_successful_route_for_a_new_user_turn():
     assert model.advance() is None
 
 
-def test_tool_validation_retries_are_bounded_at_three():
+def test_tool_validation_retries_are_bounded_at_three(monkeypatch):
+    logs = []
     context = AgentContext(state=ConversationState(session_id="test"))
-    wrapper = SimpleNamespace(context=context)
+    wrapper = SimpleNamespace(context=context, tool_name="search_vehicles")
+    monkeypatch.setattr(tools_module.logger, "warning", lambda message, *, extra: logs.append((message, extra)))
 
     for _ in range(2):
         retry_tool_error(wrapper, ValueError("bad arguments"))
@@ -35,6 +38,8 @@ def test_tool_validation_retries_are_bounded_at_three():
     retry_tool_error(wrapper, ValueError("bad arguments"))
 
     assert _tool_result(wrapper, []).is_final_output
+    assert [message for message, _ in logs] == ["tool_input_rejected"] * 3
+    assert all(extra["tool"] == "search_vehicles" for _, extra in logs)
 
 
 def test_search_result_stops_without_another_model_call():

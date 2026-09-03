@@ -171,7 +171,10 @@ def search_catalog(
     exclude_listing_ids: list[str] | None = None,
 ) -> VehicleSearchResult:
     operation = OperationLogContext("catalog_search")
-    logger.info("search_started", extra=operation.started_extra(filters=filters.model_dump(exclude_none=True)))
+    logger.info(
+        "search_started",
+        extra=operation.started_extra(tool="search_vehicles", filters=filters.model_dump(exclude_none=True)),
+    )
 
     where_sql, parameters = _build_where(filters)
     sql = f"SELECT {VEHICLE_COLUMNS} FROM vehicles {where_sql} ORDER BY listing_id"
@@ -189,6 +192,7 @@ def search_catalog(
     top_vehicles = ranked[:3]
     completed = operation.completed_extra(
         status="succeeded",
+        tool="search_vehicles",
         filters=filters.model_dump(exclude_none=True),
         total_matches=len(vehicles),
         result_ids=[item.vehicle.listing_id for item in top_vehicles],
@@ -215,7 +219,12 @@ def get_vehicles(listing_ids: list[str]) -> tuple[list[VehicleRecord], float]:
 
     by_id = {vehicle.listing_id: vehicle for vehicle in vehicles}
     vehicles = [by_id[listing_id] for listing_id in listing_ids if listing_id in by_id]
-    completed = operation.completed_extra(status="succeeded", listing_ids=listing_ids, found=len(vehicles))
+    completed = operation.completed_extra(
+        status="succeeded",
+        tool="get_vehicle_details",
+        listing_ids=listing_ids,
+        found=len(vehicles),
+    )
     logger.info("lookup_completed", extra=completed)
     return vehicles, completed["duration_ms"]
 
@@ -236,6 +245,7 @@ def get_catalog_options(topics: list[CatalogTopic]) -> tuple[dict[CatalogTopic, 
 
     completed = operation.completed_extra(
         status="succeeded",
+        tool="list_catalog_options",
         topics=[topic.value for topic in topics],
     )
     logger.info("catalog_options_completed", extra=completed)

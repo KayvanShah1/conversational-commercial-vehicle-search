@@ -88,7 +88,12 @@ def retry_tool_error(ctx: RunContextWrapper[AgentContext], error: Exception) -> 
     ctx.context.tool_failures += 1
     logger.warning(
         "tool_input_rejected",
-        extra={"attempt": ctx.context.tool_failures, "error_type": type(error).__name__, "error": str(error)},
+        extra={
+            "tool": getattr(ctx, "tool_name", "unknown"),
+            "attempt": ctx.context.tool_failures,
+            "error_type": type(error).__name__,
+            "error": str(error),
+        },
     )
     return f"Tool arguments were invalid. Correct them using the declared schema and retry. Validation: {error}"
 
@@ -166,6 +171,7 @@ async def search_vehicles(
     last_mile, logistics, long_haul, market_transport, mining, parcel_delivery,
     regional_delivery, roadwork, vegetable_delivery, water_transport.
     """
+    logger.info("tool_called", extra={"tool": "search_vehicles"})
     body_type = _explicit(get_args(BodyType), ctx.context.current_input)
     fuel = _explicit(get_args(Fuel), ctx.context.current_input)
     category = _explicit(tuple(value.value for value in VehicleCategory), ctx.context.current_input)
@@ -231,6 +237,7 @@ async def get_vehicle_details(
     reference-link questions use spec_source_url.
     Never call this once per result when the user asks about all results.
     """
+    logger.info("tool_called", extra={"tool": "get_vehicle_details"})
     context = ctx.context
     context.action = AgentAction.details
     state = context.state
@@ -285,6 +292,7 @@ async def list_catalog_options(
     include_makes: bool = False,
 ) -> str:
     """List distinct cities, vehicle categories, body types, fuels, or makes available in the catalog."""
+    logger.info("tool_called", extra={"tool": "list_catalog_options"})
     context = ctx.context
     context.action = AgentAction.catalog_options
     requested = {

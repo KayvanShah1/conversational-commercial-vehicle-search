@@ -51,6 +51,7 @@ def _invoke(context: AgentContext, arguments: dict) -> None:
 
 
 def test_search_keeps_explicit_enum_words_when_model_omits_them(monkeypatch):
+    logs = []
     context = AgentContext(
         state=ConversationState(session_id="test"),
         current_input="Show me a heavy diesel rigid truck with a tipper body.",
@@ -70,6 +71,7 @@ def test_search_keeps_explicit_enum_words_when_model_omits_them(monkeypatch):
         )
 
     monkeypatch.setattr(tools_module, "search_catalog", fake_search)
+    monkeypatch.setattr(tools_module.logger, "info", lambda message, *, extra: logs.append((message, extra)))
     encoded = json.dumps({"size": "heavy"})
     tool_context = ToolContext(
         context=context,
@@ -79,6 +81,8 @@ def test_search_keeps_explicit_enum_words_when_model_omits_them(monkeypatch):
     )
 
     asyncio.run(search_vehicles.on_invoke_tool(tool_context, encoded))
+
+    assert logs == [("tool_called", {"tool": "search_vehicles"})]
 
 
 def test_plural_reference_overrides_a_previous_single_selection(monkeypatch):
