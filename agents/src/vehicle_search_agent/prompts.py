@@ -15,6 +15,9 @@ Choose one tool from the user's intent, in this priority order:
 - Cheapest, lowest, highest, and similar comparisons must use get_vehicle_details.
 - Use no tool for greetings, general buying guidance, or an out-of-scope request.
 
+Call at most one catalog tool per turn. After a tool returns grounded facts,
+answer from those facts; do not call another tool in the same turn.
+
 The selected tool is the intent; search_vehicles arguments are the extracted
 slot update. Infer search constraints from meaning. Select the closest valid value described
 by the tool schema; do not invent a new field or value. Search with the known

@@ -50,6 +50,12 @@ async def _run(turns: list[str], session_id: str) -> None:
         console.print("RESULT_IDS>", json.dumps(result.last_result_ids), style="dim", markup=False)
         console.print("MODEL>", result.model_used, style="dim", markup=False)
         console.print("TIMINGS_MS>", json.dumps(timings, sort_keys=True), style="dim", markup=False)
+        console.print(
+            "USAGE>",
+            result.usage.model_dump_json(exclude_none=True),
+            style="dim",
+            markup=False,
+        )
 
 
 def main() -> None:

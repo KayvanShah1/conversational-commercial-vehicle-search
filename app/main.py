@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+from time import perf_counter
 from uuid import uuid4
 
 import streamlit as st
@@ -42,6 +43,7 @@ def _initialize_state() -> None:
         "filters": {},
         "vehicles": [],
         "metrics": {},
+        "usage": {},
         "last_tool": None,
         "reply_audio": None,
         "audio_format": "wav",
@@ -102,6 +104,7 @@ def _save_result(result, session: VehicleSearchSession) -> None:
     if new_vehicles:
         st.session_state.vehicles = new_vehicles
     st.session_state.metrics = result.metrics.model_dump(mode="json", exclude_none=True)
+    st.session_state.usage = result.usage.model_dump(mode="json", exclude_none=True)
     st.session_state.last_tool = TOOL_NAMES[result.action.value]
     st.session_state.error = None
 
@@ -135,11 +138,13 @@ def _run_text(message: str) -> None:
         st.session_state.error = f"Text turn failed: {type(error).__name__}. Check the terminal logs and retry."
 
 
-def _run_voice(audio_bytes: bytes, filename: str) -> None:
+def _run_voice(audio_bytes: bytes, filename: str, speech_ended_at: float) -> None:
     try:
         with st.spinner("Vivi is listening..."):
             session = _session()
-            result = asyncio.run(session.run_voice_turn(audio_bytes, filename=filename))
+            result = asyncio.run(
+                session.run_voice_turn(audio_bytes, filename=filename, speech_ended_at=speech_ended_at)
+            )
         _save_result(result, session)
         st.session_state.reply_audio = result.audio
         st.session_state.audio_format = result.audio_format
@@ -164,6 +169,7 @@ def _metric_label(name: str) -> str:
         "search_ms": "Search",
         "response_ms": "Response",
         "tts_ms": "TTS",
+        "speech_end_to_audio_ready_ms": "Speech end to audio ready",
         "total_ms": "Total",
     }.get(name, name.replace("_ms", "").replace("_", " ").title())
 
@@ -202,7 +208,7 @@ def _render_sidebar() -> None:
             rows = [
                 f"| {_metric_label(name)} | {value:,.0f} ms |"
                 for name, value in st.session_state.metrics.items()
-                if name not in {"total_ms", "speech_end_to_audio_ready_ms"}
+                if name != "total_ms"
             ]
             if total := st.session_state.metrics.get("total_ms"):
                 rows.append(f"| **Total** | **{total:,.0f} ms** |")
@@ -210,6 +216,29 @@ def _render_sidebar() -> None:
                 st.markdown("| Stage | Time |\n|:--|--:|\n" + "\n".join(rows))
         else:
             st.caption("Stage timings appear after the first turn.")
+
+        st.subheader("Turn usage")
+        if st.session_state.usage:
+            usage = st.session_state.usage
+            usage_rows = [
+                f"| LLM requests | {usage['llm_requests']:,} |",
+                f"| Context / input tokens | {usage['input_tokens']:,} |",
+                f"| Cached context tokens | {usage.get('cached_input_tokens', 0):,} |",
+                f"| Output tokens | {usage['output_tokens']:,} |",
+                f"| Reasoning tokens | {usage.get('reasoning_tokens', 0):,} |",
+                f"| **Total tokens** | **{usage['total_tokens']:,}** |",
+            ]
+            if (seconds := usage.get("audio_input_seconds")) is not None:
+                usage_rows.append(f"| Audio input | {seconds:.2f} s |")
+            if (characters := usage.get("tts_characters")) is not None:
+                usage_rows.append(f"| TTS characters | {characters:,} |")
+            if (cost := usage.get("estimated_list_cost_inr")) is not None:
+                usage_rows.append(f"| Estimated list cost | ₹{cost:.4f} |")
+            with st.container(key="usage_table"):
+                st.markdown("| Metric | Value |\n|:--|--:|\n" + "\n".join(usage_rows))
+            st.caption("List-price estimate; free-tier spend may be zero.")
+        else:
+            st.caption("Token usage appears after the first turn.")
 
 
 def _render_matches() -> None:
@@ -253,8 +282,37 @@ def _render_matches() -> None:
             },
         )
 
+    session = _session()
+    result = session.context.last_search_result
+    if result is not None and result.vehicles:
+        ranking_rows = [
+            {
+                "Vehicle": f"{item.vehicle.make} {item.vehicle.model}",
+                "Total": item.score.total,
+                "Purpose": item.score.purpose,
+                "Papers": item.score.papers_verified,
+                "Budget": item.score.budget,
+                "Mileage": item.score.mileage,
+                "Condition": item.score.condition,
+                "Year": item.score.year,
+            }
+            for item in result.vehicles
+        ]
+        with st.expander("Why these ranked first"):
+            st.dataframe(
+                ranking_rows,
+                hide_index=True,
+                width="stretch",
+                column_config={
+                    name: st.column_config.NumberColumn(format="%.3f")
+                    for name in ranking_rows[0]
+                    if name != "Vehicle"
+                },
+            )
+
 
 def _handle_submission(submission) -> None:
+    submitted_at = perf_counter()
     if isinstance(submission, str):
         if submission.strip():
             _run_text(submission.strip())
@@ -265,7 +323,7 @@ def _handle_submission(submission) -> None:
         fingerprint = hashlib.sha256(audio_bytes).hexdigest()
         if fingerprint != st.session_state.processed_audio:
             st.session_state.processed_audio = fingerprint
-            _run_voice(audio_bytes, submission.audio.name)
+            _run_voice(audio_bytes, submission.audio.name, submitted_at)
     elif submission.text.strip():
         _run_text(submission.text.strip())
 
@@ -290,6 +348,10 @@ st.markdown(
       }
       .st-key-timing_table table { font-size: .78rem; }
       .st-key-timing_table th, .st-key-timing_table td {
+        padding: .2rem .35rem;
+      }
+      .st-key-usage_table table { font-size: .78rem; }
+      .st-key-usage_table th, .st-key-usage_table td {
         padding: .2rem .35rem;
       }
       @media (min-width: 761px) {

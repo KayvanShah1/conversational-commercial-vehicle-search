@@ -69,6 +69,8 @@ class AgentContext:
     response_ms: float | None = None
     understanding_ms: float | None = None
     llm_operation: OperationLogContext | None = None
+    llm_list_cost_usd: float = 0.0
+    pricing_complete: bool = True
     tool_failures: int = 0
 
     def reset_turn(self) -> None:
@@ -80,6 +82,8 @@ class AgentContext:
         self.response_ms = None
         self.understanding_ms = None
         self.llm_operation = None
+        self.llm_list_cost_usd = 0.0
+        self.pricing_complete = True
         self.tool_failures = 0
 
 

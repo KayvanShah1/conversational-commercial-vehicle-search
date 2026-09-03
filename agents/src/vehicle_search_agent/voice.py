@@ -22,11 +22,13 @@ class SpeechResult(BaseModel):
     audio: bytes
     duration_ms: float
     format: str
+    character_count: int
 
 
 class TranscriptionResult(BaseModel):
     text: str
     duration_ms: float
+    audio_seconds: float | None = None
 
 
 @lru_cache(maxsize=1)
@@ -147,6 +149,14 @@ def _stitch_wav(audio_chunks: list[bytes]) -> bytes:
     return output.getvalue()
 
 
+def _wav_duration_seconds(audio: bytes) -> float | None:
+    try:
+        with wave.open(io.BytesIO(audio), "rb") as reader:
+            return reader.getnframes() / reader.getframerate()
+    except (EOFError, wave.Error):
+        return None
+
+
 def synthesize_speech(text: str) -> SpeechResult:
     if not text.strip():
         raise ValueError("Text-to-speech input cannot be empty.")
@@ -189,6 +199,7 @@ def synthesize_speech(text: str) -> SpeechResult:
         audio=audio,
         duration_ms=completed_context["duration_ms"],
         format=settings.groq.tts_format,
+        character_count=len(speech_text),
     )
 
 
@@ -232,4 +243,5 @@ def transcribe_audio(
     return TranscriptionResult(
         text=text,
         duration_ms=completed_context["duration_ms"],
+        audio_seconds=_wav_duration_seconds(audio_bytes),
     )

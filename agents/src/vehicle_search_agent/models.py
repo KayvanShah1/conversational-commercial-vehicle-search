@@ -200,6 +200,19 @@ class TurnMetrics(BaseModel):
     total_ms: float | None = None
 
 
+class TurnUsage(BaseModel):
+    llm_requests: int = Field(default=0, ge=0)
+    input_tokens: int = Field(default=0, ge=0)
+    cached_input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    reasoning_tokens: int = Field(default=0, ge=0)
+    total_tokens: int = Field(default=0, ge=0)
+    audio_input_seconds: float | None = Field(default=None, ge=0)
+    tts_characters: int | None = Field(default=None, ge=0)
+    estimated_list_cost_usd: float | None = Field(default=None, ge=0)
+    estimated_list_cost_inr: float | None = Field(default=None, ge=0)
+
+
 class AgentTurnResult(BaseModel):
     session_id: str
     turn_number: int
@@ -212,6 +225,7 @@ class AgentTurnResult(BaseModel):
     executed_filters: SearchFilters | None = None
     model_used: str
     metrics: TurnMetrics
+    usage: TurnUsage
 
 
 class VoiceTurnResult(AgentTurnResult):

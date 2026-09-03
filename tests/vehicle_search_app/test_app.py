@@ -49,8 +49,23 @@ def test_streamlit_app_renders_without_framework_error() -> None:
         "speech_end_to_audio_ready_ms": 455,
         "total_ms": 456,
     }
+    app.session_state.usage = {
+        "llm_requests": 1,
+        "input_tokens": 100,
+        "cached_input_tokens": 40,
+        "output_tokens": 20,
+        "reasoning_tokens": 5,
+        "total_tokens": 120,
+        "audio_input_seconds": 2.5,
+        "tts_characters": 42,
+        "estimated_list_cost_inr": 0.001,
+    }
     app.run()
 
     assert any("Hi, I'm Vivi" in markdown.value for markdown in app.markdown)
     assert any("| **Total** | **456 ms** |" in markdown.value for markdown in app.markdown)
-    assert all("Speech to audio" not in markdown.value for markdown in app.markdown)
+    assert any("Speech end to audio ready" in markdown.value for markdown in app.markdown)
+    assert any("**120**" in markdown.value for markdown in app.markdown)
+    assert any("Cached context tokens" in markdown.value for markdown in app.markdown)
+    assert any("Reasoning tokens" in markdown.value for markdown in app.markdown)
+    assert any("2.50 s" in markdown.value for markdown in app.markdown)

@@ -3,7 +3,7 @@ import wave
 from types import SimpleNamespace
 
 import vehicle_search_agent.voice as voice_module
-from vehicle_search_agent.voice import _speech_text, _text_chunks, synthesize_speech
+from vehicle_search_agent.voice import _speech_text, _text_chunks, _wav_duration_seconds, synthesize_speech
 
 
 def _wav(frames: bytes) -> bytes:
@@ -29,6 +29,11 @@ def test_compact_lakh_prices_are_expanded_for_speech():
     assert _speech_text("It costs INR 2.9L.") == "It costs 2 lakh 90 thousand rupees."
 
 
+def test_wav_duration_is_measured_from_frames():
+    assert _wav_duration_seconds(_wav(bytes(8_000))) == 1.0
+    assert _wav_duration_seconds(b"not a wav") is None
+
+
 def test_synthesize_speech_stitches_wav_chunks(monkeypatch):
     calls: list[str] = []
 
@@ -45,6 +50,7 @@ def test_synthesize_speech_stitches_wav_chunks(monkeypatch):
 
     assert len(calls) == 2
     assert all(len(chunk) <= 30 for chunk in calls)
+    assert result.character_count == len("The first sentence is here. The second sentence is here.")
     with wave.open(io.BytesIO(result.audio), "rb") as reader:
         assert reader.readframes(reader.getnframes()) == b"\x01\x02"
 
