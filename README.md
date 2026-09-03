@@ -60,6 +60,15 @@ covers every vehicle size, all body variants, both fuels, three catalog
 categories, budget ranges, payload conversion, pagination, all-result weight
 lookup, full details, and a general commercial-vehicle question.
 
+Run the primary core suite first:
+
+```powershell
+uv run --package agents python evals/evaluate_agent.py `
+  --delay-seconds 10
+```
+
+Then run the broader vehicle-variant suite:
+
 ```powershell
 uv run --package agents python evals/evaluate_agent.py `
   --cases evals/vehicle_variant_cases.json `
