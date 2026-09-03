@@ -116,7 +116,7 @@ agents/                       Agent, tools, search, response, state and voice
 app/                          Streamlit voice-and-text demo
 vehicle-catalog-generator/    Reproducible synthetic catalog pipeline
 utils/                        Shared settings, logging and database access
-evals/                        Evaluation datasets and executable harnesses
+evals/                        Evaluation package, configuration and datasets
 tests/                        Unit and opt-in integration tests
 docs/                         Setup, design, evaluation and reference documentation
 data/                         Generated catalog and evaluation artifacts

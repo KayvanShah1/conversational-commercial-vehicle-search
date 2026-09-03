@@ -33,7 +33,7 @@ This separates expected behavior from exact prose. Rephrasing is allowed; changi
 
 ### Core conversation
 
-[`evals/agent_cases.json`](../evals/agent_cases.json) contains 27 cases covering:
+[`evals/datasets/agent_cases.json`](../evals/datasets/agent_cases.json) contains 27 cases covering:
 
 - greetings and bounded general questions
 - natural budget, fuel, body, city, payload, and use-case constraints
@@ -46,7 +46,7 @@ This separates expected behavior from exact prose. Rephrasing is allowed; changi
 
 ### Vehicle variants
 
-[`evals/vehicle_variant_cases.json`](../evals/vehicle_variant_cases.json) contains 18 cases covering:
+[`evals/datasets/vehicle_variant_cases.json`](../evals/datasets/vehicle_variant_cases.json) contains 18 cases covering:
 
 - light, intermediate, medium, and heavy vehicles
 - mini truck, pickup, and rigid truck categories
@@ -75,14 +75,14 @@ This separates expected behavior from exact prose. Rephrasing is allowed; changi
 Run the primary suite first:
 
 ```powershell
-uv run --package agents python evals/evaluate_agent.py --delay-seconds 10
+uv run --package evals python -m evals.evaluate_agent --delay-seconds 10
 ```
 
 Then run the breadth suite:
 
 ```powershell
-uv run --package agents python evals/evaluate_agent.py `
-  --cases evals/vehicle_variant_cases.json `
+uv run --package evals python -m evals.evaluate_agent `
+  --cases evals/datasets/vehicle_variant_cases.json `
   --delay-seconds 10
 ```
 
@@ -95,7 +95,7 @@ Each run writes JSON and Markdown reports under `data/evaluation/`. By default, 
 Run one real voice turn with an audio sample you are authorized to send to the configured STT provider:
 
 ```powershell
-uv run --package agents python evals/measure_voice_latency.py `
+uv run --package evals python -m evals.measure_voice_latency `
   --audio path/to/authorized-sample.wav
 ```
 

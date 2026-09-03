@@ -12,7 +12,7 @@ This is the concise submission-facing design record. The wiki contains the deepe
 | Catalog and search | `search.py` plus MotherDuck | Parameterized filters, ranking, invariant checks | Search service with replicas and indexes |
 | Response and TTS | `response.py` plus `voice.py` | Grounded composition, value validation, WAV batching | Streaming response and TTS gateway |
 | Conversation state | Typed `ConversationState` plus SDK `SQLiteSession` | Slot merging and result references | Redis or durable session service |
-| Evaluation and latency | `evals/evaluate_agent.py` and structured operation logs | Semantic checks and stage timing | CI evaluation service plus observability |
+| Evaluation and latency | `evals.evaluate_agent` and structured operation logs | Semantic checks and stage timing | CI evaluation service plus observability |
 
 ## Code organization and quality review
 

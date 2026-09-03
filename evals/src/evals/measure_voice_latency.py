@@ -11,6 +11,8 @@ from uuid import uuid4
 from rich.console import Console
 from vehicle_search_agent.runner import VehicleSearchSession
 
+from evals.settings import DEFAULT_VOICE_OUTPUT_PATH
+
 console = Console()
 
 
@@ -20,7 +22,7 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("data/evaluation/voice_latency_results.json"),
+        default=DEFAULT_VOICE_OUTPUT_PATH,
     )
     return parser.parse_args()
 

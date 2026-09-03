@@ -12,10 +12,10 @@ This matrix maps each requirement to inspectable implementation or evaluation ev
 | Zero-result behavior | Data-tested constraint relaxation in [search](../agents/src/vehicle_search_agent/search.py) | Met and evaluated |
 | Mid-conversation correction | Slot patches change only supplied or explicitly cleared values | Met and evaluated |
 | Previous-result follow-up | Saved result IDs plus one bounded details lookup | Met and evaluated |
-| At least 10 real-pipeline evaluation utterances | [27 core cases](../evals/agent_cases.json) and [18 variant cases](../evals/vehicle_variant_cases.json) | Met |
+| At least 10 real-pipeline evaluation utterances | [27 core cases](../evals/datasets/agent_cases.json) and [18 variant cases](../evals/datasets/vehicle_variant_cases.json) | Met |
 | Evaluation pass rate | [Evaluation report](EVALUATION.md): 27/27 core and 17/18 variants | Met; both suites exceed 90% |
 | Per-stage latency | Structured STT, understanding, search, response, TTS, and total metrics | Met |
-| Speech end → first audio | [Voice latency harness](../evals/measure_voice_latency.py) | Server-receipt-to-playable-WAV proxy; exact browser/stream boundary is stated |
+| Speech end → first audio | [Voice latency harness](../evals/src/evals/measure_voice_latency.py) | Server-receipt-to-playable-WAV proxy; exact browser/stream boundary is stated |
 | Token and estimated cost telemetry | SDK usage, voice units, successful route, and list-cost estimate | Met |
 | Explainable ranking | Streamlit table exposes the numeric `RankingBreakdown` for each result | Met |
 | Seven identifiable components | [Architecture](TECHNICAL_DECISIONS.md#seven-identifiable-components) and presentation | Met |
