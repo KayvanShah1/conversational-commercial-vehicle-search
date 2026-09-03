@@ -2,37 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
 import streamlit as st
-from vehicle_search_agent.models import RankedVehicle
+from components import display_response, render_matches, render_sidebar, render_starter_questions
+from config import CUMULATIVE_USAGE_FIELDS, TOOL_NAMES
+from vehicle_search_agent.models import AgentTurnResult
 from vehicle_search_agent.runner import VehicleSearchSession
 
 st.set_page_config(page_title="Vivi vehicle search", page_icon="🚚", layout="wide")
-
-SLOT_LABELS = {
-    "budget_min": "Minimum budget",
-    "budget_max": "Maximum budget",
-    "body_type": "Body type",
-    "fuel": "Fuel",
-    "city": "City",
-    "purpose": "Purpose",
-    "vehicle_category": "Category",
-    "weight_class": "Size",
-    "make": "Make",
-    "model": "Model",
-    "payload_min_kg": "Minimum payload",
-    "gvw_min_kg": "Minimum GVW",
-    "papers_verified": "Verified papers",
-}
-
-TOOL_NAMES = {
-    "conversation": "None",
-    "search": "search_vehicles",
-    "details": "get_vehicle_details",
-    "catalog_options": "list_catalog_options",
-}
 
 
 def _initialize_state() -> None:
@@ -40,10 +20,13 @@ def _initialize_state() -> None:
         "session_id": f"web-{uuid4().hex}",
         "vehicle_session": None,
         "messages": [],
-        "filters": {},
-        "vehicles": [],
         "metrics": {},
         "usage": {},
+        "conversation_totals": {
+            "turns": 0,
+            "total_ms": 0.0,
+            **dict.fromkeys(CUMULATIVE_USAGE_FIELDS, 0),
+        },
         "last_tool": None,
         "reply_audio": None,
         "audio_format": "wav",
@@ -61,74 +44,26 @@ def _session() -> VehicleSearchSession:
     return st.session_state.vehicle_session
 
 
-def _reason(ranked: RankedVehicle, purpose: str | None) -> str:
-    if purpose and ranked.score.purpose > 0:
-        return purpose.replace("_", " ")
-    if ranked.vehicle.papers_verified:
-        return "Verified papers"
-    return f"{ranked.vehicle.condition.title()} condition"
-
-
-def _vehicle_rows(session: VehicleSearchSession) -> list[dict]:
-    result = session.context.last_search_result
-    if result is None:
-        return []
-    return [
-        {
-            "Make / Model": f"{ranked.vehicle.make} {ranked.vehicle.model}",
-            "Year": ranked.vehicle.year,
-            "Price (INR)": ranked.vehicle.price_inr,
-            "KM": ranked.vehicle.km_driven,
-            "Fuel": ranked.vehicle.fuel,
-            "Payload (kg)": ranked.vehicle.payload_kg,
-            "GVW (kg)": ranked.vehicle.gvw_kg,
-            "Body": ranked.vehicle.body_type,
-            "City": ranked.vehicle.city,
-            "Papers": "Verified" if ranked.vehicle.papers_verified else "Not verified",
-            "Why this match": _reason(ranked, result.executed_filters.purpose),
-            "Specification source": ranked.vehicle.spec_source_url,
-        }
-        for ranked in result.vehicles
-    ]
-
-
-def _save_result(result, session: VehicleSearchSession) -> None:
-    st.session_state.messages.extend(
-        [
-            {"role": "user", "content": result.transcript},
-            {"role": "assistant", "content": _display_response(result, session)},
-        ]
-    )
-    st.session_state.filters = result.active_filters.model_dump(mode="json", exclude_none=True)
-    new_vehicles = _vehicle_rows(session)
-    if new_vehicles:
-        st.session_state.vehicles = new_vehicles
+def _save_result(result: AgentTurnResult, session: VehicleSearchSession) -> None:
+    st.session_state.messages.append({"role": "assistant", "content": display_response(result, session)})
     st.session_state.metrics = result.metrics.model_dump(mode="json", exclude_none=True)
     st.session_state.usage = result.usage.model_dump(mode="json", exclude_none=True)
+    _update_conversation_totals(result)
     st.session_state.last_tool = TOOL_NAMES[result.action.value]
     st.session_state.error = None
 
 
-def _display_response(result, session: VehicleSearchSession) -> str:
-    grounded = session.context.grounded_response
-    if grounded is None:
-        return result.spoken_response
-
-    def bullet(fact: str) -> str:
-        label, separator, value = fact.partition(":")
-        if separator:
-            return f"- **{label}:** {value.strip()}"
-        return f"- {fact}"
-
-    if result.action.value == "search" and result.last_result_ids:
-        lines = ["**Top match**", bullet(grounded.facts[0])]
-        if len(grounded.facts) > 1:
-            lines.extend(["", "**Other options**", *(bullet(fact) for fact in grounded.facts[1:])])
-        return "\n".join(lines)
-    return "\n".join(bullet(fact) for fact in grounded.facts)
+def _update_conversation_totals(result: AgentTurnResult) -> None:
+    totals = st.session_state.conversation_totals
+    totals["turns"] += 1
+    totals["total_ms"] += result.metrics.total_ms or 0
+    for field in CUMULATIVE_USAGE_FIELDS:
+        totals[field] += getattr(result.usage, field) or 0
 
 
 def _run_text(message: str) -> None:
+    st.session_state.messages.append({"role": "user", "content": message})
+    st.session_state.reply_audio = None
     try:
         with st.spinner("Vivi is thinking..."):
             session = _session()
@@ -139,12 +74,14 @@ def _run_text(message: str) -> None:
 
 
 def _run_voice(audio_bytes: bytes, filename: str, speech_ended_at: float) -> None:
+    st.session_state.reply_audio = None
     try:
         with st.spinner("Vivi is listening..."):
             session = _session()
             result = asyncio.run(
                 session.run_voice_turn(audio_bytes, filename=filename, speech_ended_at=speech_ended_at)
             )
+        st.session_state.messages.append({"role": "user", "content": result.transcript})
         _save_result(result, session)
         st.session_state.reply_audio = result.audio
         st.session_state.audio_format = result.audio_format
@@ -152,173 +89,19 @@ def _run_voice(audio_bytes: bytes, filename: str, speech_ended_at: float) -> Non
         st.session_state.error = f"Voice turn failed: {type(error).__name__}. Check the terminal logs and retry."
 
 
-def _display_value(name: str, value) -> str:
-    if name in {"budget_min", "budget_max"}:
-        return f"₹{value:,.0f}"
-    if name in {"payload_min_kg", "gvw_min_kg"}:
-        return f"{value:,.0f} kg"
-    if isinstance(value, bool):
-        return "Yes" if value else "No"
-    return str(value).replace("_", " ").title()
-
-
-def _metric_label(name: str) -> str:
-    return {
-        "stt_ms": "STT",
-        "understanding_ms": "Understanding",
-        "search_ms": "Search",
-        "response_ms": "Response",
-        "tts_ms": "TTS",
-        "speech_end_to_audio_ready_ms": "Speech end to audio ready",
-        "total_ms": "Total",
-    }.get(name, name.replace("_ms", "").replace("_", " ").title())
-
-
 def _reset_conversation() -> None:
     st.session_state.clear()
     st.rerun()
 
 
-def _render_sidebar() -> None:
-    with st.sidebar:
-        with st.container(key="sidebar_header"):
-            st.title("Vivi")
-            st.caption("Commercial vehicle assistant")
-        st.badge("Catalog connected", icon=":material/database:", color="green")
-        st.button(
-            "New conversation",
-            icon=":material/add:",
-            width="stretch",
-            on_click=_reset_conversation,
-        )
-
-        st.divider()
-        st.subheader("Current search")
-        if st.session_state.filters:
-            with st.container(horizontal=True, wrap=True):
-                for name, value in st.session_state.filters.items():
-                    label = SLOT_LABELS.get(name, name.replace("_", " ").title())
-                    st.badge(f"{label}: {_display_value(name, value)}", color="gray")
-        else:
-            st.caption("Budget, location and vehicle needs will stay visible here.")
-
-        st.divider()
-        st.subheader("Turn timing")
-        if st.session_state.metrics:
-            rows = [
-                f"| {_metric_label(name)} | {value:,.0f} ms |"
-                for name, value in st.session_state.metrics.items()
-                if name != "total_ms"
-            ]
-            if total := st.session_state.metrics.get("total_ms"):
-                rows.append(f"| **Total** | **{total:,.0f} ms** |")
-            with st.container(key="timing_table"):
-                st.markdown("| Stage | Time |\n|:--|--:|\n" + "\n".join(rows))
-        else:
-            st.caption("Stage timings appear after the first turn.")
-
-        st.subheader("Turn usage")
-        if st.session_state.usage:
-            usage = st.session_state.usage
-            usage_rows = [
-                f"| LLM requests | {usage['llm_requests']:,} |",
-                f"| Context / input tokens | {usage['input_tokens']:,} |",
-                f"| Cached context tokens | {usage.get('cached_input_tokens', 0):,} |",
-                f"| Output tokens | {usage['output_tokens']:,} |",
-                f"| Reasoning tokens | {usage.get('reasoning_tokens', 0):,} |",
-                f"| **Total tokens** | **{usage['total_tokens']:,}** |",
-            ]
-            if (seconds := usage.get("audio_input_seconds")) is not None:
-                usage_rows.append(f"| Audio input | {seconds:.2f} s |")
-            if (characters := usage.get("tts_characters")) is not None:
-                usage_rows.append(f"| TTS characters | {characters:,} |")
-            if (cost := usage.get("estimated_list_cost_inr")) is not None:
-                usage_rows.append(f"| Estimated list cost | ₹{cost:.4f} |")
-            with st.container(key="usage_table"):
-                st.markdown("| Metric | Value |\n|:--|--:|\n" + "\n".join(usage_rows))
-            st.caption("List-price estimate; free-tier spend may be zero.")
-        else:
-            st.caption("Token usage appears after the first turn.")
-
-
-def _render_matches() -> None:
-    if not st.session_state.vehicles:
-        return
-
-    st.subheader("Current top matches")
-    columns = st.columns(len(st.session_state.vehicles), gap="medium")
-    for column, vehicle in zip(columns, st.session_state.vehicles, strict=True):
-        with column, st.container(border=True, height=390):
-            title, verification = st.columns([5, 1], vertical_alignment="center")
-            with title:
-                st.markdown(f"#### {vehicle['Make / Model']}")
-            with verification:
-                if vehicle["Papers"] == "Verified":
-                    st.badge("✓", color="green")
-            st.caption(f"{vehicle['Year']} · {vehicle['City']} · {vehicle['Body'].title()} body")
-            st.metric("Price", f"₹{vehicle['Price (INR)']:,.0f}")
-            st.write(f"**Fuel:** {vehicle['Fuel']}")
-            st.write(f"**Payload:** {vehicle['Payload (kg)'] or '—'} kg")
-            st.write(f"**GVW:** {vehicle['GVW (kg)'] or '—'} kg")
-            st.caption(f"Match: {vehicle['Why this match']}")
-            st.link_button(
-                "Brochure / specs",
-                vehicle["Specification source"],
-                icon=":material/open_in_new:",
-                width="stretch",
-            )
-
-    with st.expander("Compare every catalog field"):
-        st.dataframe(
-            st.session_state.vehicles,
-            hide_index=True,
-            width="stretch",
-            column_config={
-                "Price (INR)": st.column_config.NumberColumn(format="₹%d"),
-                "KM": st.column_config.NumberColumn(format="%d km"),
-                "Payload (kg)": st.column_config.NumberColumn(format="%d kg"),
-                "GVW (kg)": st.column_config.NumberColumn(format="%d kg"),
-                "Specification source": st.column_config.LinkColumn(display_text="Open source"),
-            },
-        )
-
-    session = _session()
-    result = session.context.last_search_result
-    if result is not None and result.vehicles:
-        ranking_rows = [
-            {
-                "Vehicle": f"{item.vehicle.make} {item.vehicle.model}",
-                "Total": item.score.total,
-                "Purpose": item.score.purpose,
-                "Papers": item.score.papers_verified,
-                "Budget": item.score.budget,
-                "Mileage": item.score.mileage,
-                "Condition": item.score.condition,
-                "Year": item.score.year,
-            }
-            for item in result.vehicles
-        ]
-        with st.expander("Why these ranked first"):
-            st.dataframe(
-                ranking_rows,
-                hide_index=True,
-                width="stretch",
-                column_config={
-                    name: st.column_config.NumberColumn(format="%.3f")
-                    for name in ranking_rows[0]
-                    if name != "Vehicle"
-                },
-            )
-
-
 def _handle_submission(submission) -> None:
-    submitted_at = perf_counter()
     if isinstance(submission, str):
         if submission.strip():
             _run_text(submission.strip())
         return
 
     if submission.audio is not None:
+        submitted_at = perf_counter()
         audio_bytes = submission.audio.getvalue()
         fingerprint = hashlib.sha256(audio_bytes).hexdigest()
         if fingerprint != st.session_state.processed_audio:
@@ -330,66 +113,32 @@ def _handle_submission(submission) -> None:
 
 _initialize_state()
 
-st.markdown(
-    """
-    <style>
-      .block-container {
-        max-width: none;
-        padding: 1.25rem 2.25rem 7rem;
-      }
-      [data-testid="stHeader"] { background: transparent; }
-      [data-testid="stChatMessage"] { padding-block: 1rem; }
-      .st-key-sidebar_header {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        background: var(--secondary-background-color);
-        padding-bottom: .35rem;
-      }
-      .st-key-timing_table table { font-size: .78rem; }
-      .st-key-timing_table th, .st-key-timing_table td {
-        padding: .2rem .35rem;
-      }
-      .st-key-usage_table table { font-size: .78rem; }
-      .st-key-usage_table th, .st-key-usage_table td {
-        padding: .2rem .35rem;
-      }
-      @media (min-width: 761px) {
-        [data-testid="stSidebar"] {
-          width: 25vw !important;
-          min-width: 25vw !important;
-        }
-        [data-testid="stSidebar"] > div:first-child {
-          width: 25vw !important;
-        }
-        [data-testid="stSidebarContent"] {
-          overflow-y: hidden;
-        }
-      }
-      @media (max-width: 760px) {
-        .block-container { padding: .75rem .9rem 6rem; }
-      }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+styles = Path(__file__).with_name("styles.css").read_text(encoding="utf-8")
+st.markdown(f"<style>{styles}</style>", unsafe_allow_html=True)
 
-_render_sidebar()
+render_sidebar(_reset_conversation)
 
-header, status = st.columns([5, 1], vertical_alignment="center")
-with header:
+with st.container(key="page_header"):
     st.title("Find the right commercial vehicle")
-    st.caption("Chat naturally in English or Hinglish. Your results are grounded in the catalog.")
-with status:
-    st.badge("Voice + text ready", icon=":material/mic:", color="violet")
+    st.caption("Natural English or Hinglish, grounded in the vehicle catalog.")
+
+with st.container(key="status_rail", horizontal=True, horizontal_alignment="right", vertical_alignment="center"):
+    st.badge("Voice + text", icon=":material/mic:", color="primary")
     if st.session_state.last_tool:
-        st.caption(f"Tool: `{st.session_state.last_tool}`")
+        st.badge(
+            st.session_state.last_tool,
+            icon=(":material/check_circle:" if st.session_state.last_tool == "No tool" else ":material/build:"),
+            color="gray",
+            help="Tool used on the latest turn",
+        )
 
 with st.chat_message("assistant"):
     st.write(
         "Hi, I'm Vivi. Tell me what you need to carry, where you operate, "
         "and your budget. I'll help you find suitable commercial vehicles."
     )
+
+render_starter_questions(_run_text)
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -402,7 +151,7 @@ if st.session_state.reply_audio:
     with st.chat_message("assistant"):
         st.audio(st.session_state.reply_audio, format=f"audio/{st.session_state.audio_format}")
 
-_render_matches()
+render_matches()
 
 if st.session_state.error:
     st.error(st.session_state.error)

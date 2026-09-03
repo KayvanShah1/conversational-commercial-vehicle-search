@@ -1,0 +1,256 @@
+.block-container {
+	max-width: none;
+	padding: 0.65rem 2rem 7rem;
+}
+
+[data-testid="stHeader"] {
+	background: transparent;
+}
+
+[data-testid="stChatMessage"] {
+	padding-block: 0.7rem;
+}
+
+.st-key-page_header {
+	position: sticky;
+	top: 2.75rem;
+	z-index: 20;
+	margin-bottom: 0.35rem;
+	padding: 0.35rem 0 0.55rem;
+	border-bottom: 1px solid #29313d;
+	background: rgb(16 19 24 / 94%);
+	backdrop-filter: blur(12px);
+}
+
+.st-key-page_header h1 {
+	margin: 0;
+	padding: 0;
+	font-size: clamp(1.6rem, 2.25vw, 2.25rem);
+	line-height: 1.15;
+	letter-spacing: -0.025em;
+}
+
+.st-key-page_header [data-testid="stCaptionContainer"] {
+	margin-top: 0.15rem;
+}
+
+.st-key-status_rail {
+	position: fixed;
+	top: 3.25rem;
+	right: 2rem;
+	z-index: 50;
+	width: fit-content;
+	padding: 0.3rem 0.4rem;
+	border: 1px solid #303946;
+	border-radius: 0.65rem;
+	background: rgb(21 26 33 / 92%);
+	box-shadow: 0 0.35rem 1.1rem rgb(0 0 0 / 22%);
+	backdrop-filter: blur(12px);
+}
+
+.st-key-sidebar_header {
+	position: sticky;
+	top: 2.75rem;
+	z-index: 10;
+	background: var(--secondary-background-color);
+	border-bottom: 1px solid #29313d;
+	margin-bottom: 0.35rem;
+	padding: 0.35rem 0 0.55rem;
+	border-bottom: 1px solid #29313d;
+}
+
+.st-key-sidebar_header h1 {
+	margin: 0;
+	padding: 0;
+	font-size: 1.75rem;
+	line-height: 1.1;
+}
+
+.st-key-sidebar_header [data-testid="stCaptionContainer"] {
+	margin-top: 0.2rem;
+}
+
+[data-testid="stSidebarContent"] {
+	overflow-y: auto;
+	padding-top: 0.75rem;
+	scrollbar-gutter: stable;
+}
+
+[data-testid="stSidebarHeader"] {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	z-index: 20;
+	min-height: 2.25rem;
+	height: 2.25rem;
+}
+
+[data-testid="stSidebarUserContent"] {
+	padding-top: 0.2rem;
+}
+
+[data-testid="stSidebar"] hr {
+	margin: 0.3rem 0 0.45rem;
+}
+
+[data-testid="stSidebar"] h3 {
+	margin: 0.85rem 0 0;
+	padding: 0.15rem 0;
+	font-size: 1rem;
+}
+
+.st-key-starter_questions {
+	margin: 0.2rem 0 1rem;
+}
+
+.st-key-starter_questions [data-testid="stVerticalBlock"] {
+	gap: 0.55rem;
+}
+
+.st-key-starter_questions .stButton {
+	width: fit-content;
+	margin: 0;
+}
+
+.st-key-starter_questions .stButton button {
+	min-height: 2.4rem;
+	padding: 0.45rem 0.8rem;
+	border-color: #343d4a;
+	border-radius: 0.65rem;
+	background: #181d25;
+}
+
+.st-key-starter_questions .stButton button:hover {
+	border-color: #f59e0b;
+	color: #fbbf24;
+}
+
+[class*="st-key-vehicle_card_"] {
+	position: relative;
+	border-color: #303946 !important;
+	border-radius: 0.8rem;
+	background: #151a21;
+}
+
+[class*="st-key-vehicle_title_"] p {
+	margin: 0;
+	padding-right: 1.75rem;
+	font-size: 1.2rem;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+[class*="st-key-vehicle_title_"] [data-testid="stMarkdownContainer"] {
+	margin-bottom: 0;
+}
+
+[class*="st-key-vehicle_verified_"] {
+	position: absolute;
+	top: 0.95rem;
+	right: 0.85rem;
+	z-index: 2;
+	width: 1rem;
+}
+
+[class*="st-key-vehicle_verified_"] p {
+	margin: 0;
+	line-height: 1;
+}
+
+[class*="st-key-vehicle_card_"] [data-testid="stCaptionContainer"] {
+	margin: 0;
+}
+
+[class*="st-key-vehicle_metrics_"] [data-testid="stMetricValue"] {
+	color: #f4f6f8;
+	font-size: 1.3rem;
+	font-weight: 700;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
+	white-space: nowrap;
+}
+
+[class*="st-key-vehicle_metrics_"],
+[class*="st-key-vehicle_specs_"],
+[class*="st-key-vehicle_reason_"] {
+	min-height: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+[class*="st-key-vehicle_specs_"] [data-testid="stMetricValue"] {
+	font-size: 0.88rem;
+	font-weight: 650;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+
+[class*="st-key-vehicle_reason_"] [data-testid="stMetricValue"] {
+	overflow: visible;
+	font-size: 0.9rem;
+	line-height: 1.4;
+	white-space: normal;
+}
+
+[class*="st-key-vehicle_reason_"] [data-testid="stMetricValue"] p {
+	overflow: visible;
+	text-overflow: clip;
+	white-space: normal;
+}
+
+[class*="st-key-vehicle_card_"] .stLinkButton {
+	margin-top: 0.15rem;
+}
+
+[class*="st-key-vehicle_card_"] p {
+	line-height: 1.4;
+}
+
+.st-key-timing_table table,
+.st-key-usage_table table,
+.st-key-conversation_table table {
+	font-size: 0.78rem;
+}
+
+.st-key-timing_table th,
+.st-key-timing_table td,
+.st-key-usage_table th,
+.st-key-usage_table td,
+.st-key-conversation_table th,
+.st-key-conversation_table td {
+	padding: 0.2rem 0.35rem;
+}
+
+@media (min-width: 761px) {
+	[data-testid="stSidebar"][aria-expanded="true"] {
+		width: 25vw !important;
+		min-width: 25vw !important;
+	}
+
+	[data-testid="stSidebar"][aria-expanded="true"] > div:first-child {
+		width: 25vw !important;
+	}
+
+	[data-testid="stSidebar"][aria-expanded="false"] {
+		width: 0 !important;
+		min-width: 0 !important;
+	}
+}
+
+@media (max-width: 760px) {
+	.block-container {
+		padding: 0.5rem 0.9rem 6rem;
+	}
+
+	.st-key-page_header {
+		position: static;
+	}
+
+	.st-key-status_rail {
+		position: static;
+		width: 100%;
+		justify-content: flex-start;
+		margin-bottom: 0.5rem;
+	}
+}
