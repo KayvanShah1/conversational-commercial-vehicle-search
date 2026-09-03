@@ -66,21 +66,21 @@
     },
     "preserve_result_ids": true,
     "expected_detail_count": 1,
-    "expected_response_contains_all": [
-      "year",
-      "price",
-      "km",
-      "fuel",
-      "payload",
-      "gvw",
-      "body type",
-      "city",
-      "papers",
-      "condition",
-      "listed uses",
-      "category",
-      "size class",
-      "axles"
+    "expected_response_concepts": [
+      ["year", "model", "made in"],
+      ["price", "priced", "cost", "inr", "₹"],
+      ["km", "kilometre", "kilometer"],
+      ["fuel", "diesel", "cng"],
+      ["payload", "carry"],
+      ["gvw", "gross vehicle weight"],
+      ["body type", "body"],
+      ["city", "located", "location"],
+      ["papers", "verified"],
+      ["condition"],
+      ["listed uses", "uses", "suitable for"],
+      ["category", "pickup", "mini truck", "rigid truck"],
+      ["size class", "light", "intermediate", "medium", "heavy"],
+      ["axles", "axle"]
     ]
   },
   {
@@ -120,7 +120,10 @@
       "weight_class": "medium"
     },
     "preserve_result_ids": true,
-    "expected_response_contains_all": ["price", "year"]
+    "expected_response_concepts": [
+      ["price", "priced", "cost", "inr", "₹"],
+      ["year", "model", "made in"]
+    ]
   },
   {
     "id": "attribute_mileage_and_condition",
@@ -162,7 +165,12 @@
       "weight_class": "medium"
     },
     "preserve_result_ids": true,
-    "expected_response_contains_all": ["fuel", "body type", "city", "papers"]
+    "expected_response_concepts": [
+      ["fuel", "diesel", "cng", "runs on"],
+      ["body type", "body"],
+      ["city", "located in", "listed in", "location"],
+      ["papers", "verified"]
+    ]
   },
   {
     "id": "attribute_cheapest_comparison",

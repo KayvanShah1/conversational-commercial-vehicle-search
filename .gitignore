@@ -226,6 +226,9 @@ data/generated/*
 !data/evaluation/
 data/evaluation/*
 !data/evaluation/verified_variant_summary.json
+!data/evaluation/latest_results.json
+!data/evaluation/vehicle_variant_results.json
+!data/evaluation/*.md
 logs/
 .pytest-tmp/
 tmp/

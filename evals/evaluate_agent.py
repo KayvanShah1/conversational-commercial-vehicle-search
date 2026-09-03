@@ -62,6 +62,9 @@ def _mismatches(case: dict, result, previous_ids: list[str], grounded_facts: tup
     expected_all = [text.casefold() for text in case.get("expected_response_contains_all", [])]
     if any(text not in response for text in expected_all):
         problems.append("response_missing_required_text")
+    expected_concepts = case.get("expected_response_concepts", [])
+    if any(not any(term.casefold() in response for term in alternatives) for alternatives in expected_concepts):
+        problems.append("response_missing_expected_concept")
     if result.action.value == "search" and result.last_result_ids:
         missing_facts = [fact for fact in grounded_facts if fact.casefold() not in response]
         if missing_facts:
@@ -101,6 +104,7 @@ async def evaluate(cases: list[dict], *, delay_seconds: float = 0.0) -> list[dic
                     "result_ids": result.last_result_ids,
                     "response": result.spoken_response,
                     "timings_ms": result.metrics.model_dump(exclude_none=True),
+                    "usage": result.usage.model_dump(exclude_none=True),
                 }
             )
         except Exception as error:  # noqa: BLE001 - one failed case must not stop the evaluation run
@@ -114,6 +118,7 @@ async def evaluate(cases: list[dict], *, delay_seconds: float = 0.0) -> list[dic
                     "filters": session.context.state.active_filters.model_dump(mode="json", exclude_none=True),
                     "result_ids": session.context.state.last_result_ids,
                     "timings_ms": {},
+                    "usage": {},
                 }
             )
 
@@ -127,6 +132,8 @@ def _print_report(rows: list[dict]) -> float:
     table.add_column("Model")
     table.add_column("Result")
     table.add_column("Total ms", justify="right")
+    table.add_column("Tokens", justify="right")
+    table.add_column("Est. INR", justify="right")
     table.add_column("Mismatch")
 
     for row in rows:
@@ -136,6 +143,12 @@ def _print_report(rows: list[dict]) -> float:
             row["model"],
             "PASS" if row["passed"] else "FAIL",
             str(row["timings_ms"].get("total_ms", "-")),
+            str(row["usage"].get("total_tokens", "-")),
+            (
+                f"{row['usage']['estimated_list_cost_inr']:.4f}"
+                if row["usage"].get("estimated_list_cost_inr") is not None
+                else "-"
+            ),
             "; ".join(row["problems"]),
             style="green" if row["passed"] else "red",
         )
@@ -147,7 +160,78 @@ def _print_report(rows: list[dict]) -> float:
         values = [row["timings_ms"][stage] for row in rows if stage in row["timings_ms"]]
         if values:
             console.print(f"Mean {stage}: {mean(values):.2f}")
+    for metric in (
+        "llm_requests",
+        "input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "reasoning_tokens",
+        "total_tokens",
+        "estimated_list_cost_inr",
+    ):
+        values = [row["usage"][metric] for row in rows if metric in row["usage"]]
+        if values:
+            console.print(f"Mean {metric}: {mean(values):.4f}")
     return pass_rate
+
+
+def _markdown_report(report: dict, dataset: Path) -> str:
+    lines = [
+        "# Vehicle search agent evaluation",
+        "",
+        f"- Generated: {report['generated_at_utc']}",
+        f"- Dataset: `{dataset.as_posix()}`",
+        f"- Pass rate: **{report['pass_rate']:.1f}% ({report['passed']}/{report['total']})**",
+        "",
+        "## Mean turn telemetry",
+        "",
+        "| Metric | Mean |",
+        "| --- | ---: |",
+    ]
+    for name, value in report["mean_timings_ms"].items():
+        label = name.removesuffix("_ms").replace("_", " ").title()
+        lines.append(f"| {label} | {value:,.2f} ms |")
+    for name, value in report["mean_usage"].items():
+        unit = "INR" if name == "estimated_list_cost_inr" else "tokens"
+        precision = 4 if unit == "INR" else 2
+        label = name.replace("_", " ").title().replace("Llm", "LLM").replace("Inr", "INR")
+        if name == "llm_requests":
+            unit = "requests"
+        lines.append(f"| {label} | {value:,.{precision}f} {unit} |")
+
+    lines.extend(
+        [
+            "",
+            "## Cases",
+            "",
+            "| Case | Action | Model route | Result | Total ms | Tokens | Est. INR | Problems |",
+            "| --- | --- | --- | --- | ---: | ---: | ---: | --- |",
+        ]
+    )
+    for row in report["cases"]:
+        cost = row["usage"].get("estimated_list_cost_inr")
+        problems = "; ".join(row["problems"]).replace("|", "\\|") or "-"
+        lines.append(
+            f"| {row['id']} | {row['action'] or 'error'} | {row['model']} | "
+            f"{'PASS' if row['passed'] else 'FAIL'} | {row['timings_ms'].get('total_ms', '-')} | "
+            f"{row['usage'].get('total_tokens', '-')} | {f'{cost:.4f}' if cost is not None else '-'} | "
+            f"{problems} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Cost method",
+            "",
+            (
+                "Equivalent list-price cost uses the successful model route for each LLM call. "
+                "Actual free-tier spend may be zero. Voice turns additionally include STT audio duration and TTS characters."
+            ),
+            "The USD/INR conversion assumption is documented in `docs/TECHNICAL_DECISIONS.md`.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def main() -> None:
@@ -158,16 +242,38 @@ def main() -> None:
     rows = asyncio.run(evaluate(cases, delay_seconds=arguments.delay_seconds))
     pass_rate = _print_report(rows)
 
+    generated_at = datetime.now(UTC)
     report = {
-        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "generated_at_utc": generated_at.isoformat(),
         "pass_rate": pass_rate,
         "passed": sum(row["passed"] for row in rows),
         "total": len(rows),
+        "mean_timings_ms": {
+            stage: mean(values)
+            for stage in ("understanding_ms", "search_ms", "response_ms", "total_ms")
+            if (values := [row["timings_ms"][stage] for row in rows if stage in row["timings_ms"]])
+        },
+        "mean_usage": {
+            metric: mean(values)
+            for metric in (
+                "llm_requests",
+                "input_tokens",
+                "cached_input_tokens",
+                "output_tokens",
+                "reasoning_tokens",
+                "total_tokens",
+                "estimated_list_cost_inr",
+            )
+            if (values := [row["usage"][metric] for row in rows if metric in row["usage"]])
+        },
         "cases": rows,
     }
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     console.print(f"Saved: {arguments.output}", style="dim")
+    markdown_output = arguments.output.parent / f"{arguments.cases.stem}-{generated_at:%Y%m%dT%H%M%SZ}.md"
+    markdown_output.write_text(_markdown_report(report, arguments.cases), encoding="utf-8")
+    console.print(f"Saved: {markdown_output}", style="dim")
 
     if pass_rate < arguments.min_pass_rate:
         raise SystemExit(1)
