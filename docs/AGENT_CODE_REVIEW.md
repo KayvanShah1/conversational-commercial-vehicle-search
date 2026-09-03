@@ -30,6 +30,9 @@ not enumerate truck models or hard-code expected evaluation answers.
 | Fallback wrapper | The SDK model interface accepts one model while the demo needs key and cross-provider failover | Kept the small adapter. It remembers the last successful route and makes at most one bounded pass through every configured route per user turn. |
 | Grounded response structures | `GroundedResponse` carries fallback text and validation checks | Kept. This is the code-level anti-hallucination boundary required by the assignment. |
 | Deterministic result duplication | SQL filters are checked again against returned records | Kept intentionally. The second check detects a violated hard-filter invariant. |
+| Repeated post-tool calls | A details response could trigger another tool call, causing schema retries and result churn | Fixed with one clear agent invariant: at most one catalog tool per turn; the focused four-turn regression passed 4/4. |
+| Usage/cost wrappers | A separate telemetry service would have one consumer | Not added. SDK usage is copied directly into `TurnUsage`; compact pure functions hold the public list-rate arithmetic. |
+| Voice latency script | The assignment explicitly requires a speech-end metric | Added one focused evaluator under `evals/`; it reuses `run_voice_turn` and writes JSON plus a timestamped Markdown report. |
 
 ## Logic boundaries
 
@@ -69,12 +72,30 @@ telemetry, not more prompt rules.
 - No canned expected answer matching in the agent
 - No framework-specific UI layer around `VehicleSearchSession`
 
+## Cleanup plan and disposition
+
+1. **Configuration ownership — complete.** Pydantic settings own key
+   validation, normalization, and fallbacks.
+2. **Agent boundary — complete.** One model-facing agent and three typed tools;
+   no selector/critic sub-agents.
+3. **State and grounding — complete.** Slot patches, result references, hard
+   filters, ranking data, and output validation remain explicit and testable.
+4. **Observability — complete.** Existing operation logs now include tool name,
+   stage latency, SDK token usage, voice units, and route-aware cost estimates.
+5. **Evaluation — complete.** Natural-language concept alternatives replace
+   brittle exact-label checks; every run emits JSON and timestamped Markdown.
+6. **Submission evidence — complete with stated boundary.** README, decisions,
+   checklist, and evaluation report distinguish the server-side playable-WAV
+   latency proxy from exact browser speech-stop/first streamed bytes.
+
 ## Verification result
 
 1. Ruff passed over source, app, evals, and tests.
-2. The full unit suite passed: 85 passed and 1 opt-in integration test skipped.
-3. Both live datasets passed (27 core + 18 focused cases), and the committed
-   catalog contains 1,000 rows.
+2. The full unit suite passed: 90 passed and 1 opt-in integration test skipped.
+3. The latest live runs scored 27/27 core and 17/18 variants (94.4%). The lone
+   variant miss was a concept-check vocabulary gap, then its focused two-turn
+   rerun passed 2/2 after accepting the natural phrase “listed in Delhi.” The
+   committed catalog contains 1,000 rows.
 4. Streamlit AppTest rendered the native text-and-microphone composer, sidebar,
    results, and empty states without a framework exception. Browser screenshot
    QA could not be repeated because the browser-control connection timed out.

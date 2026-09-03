@@ -54,8 +54,25 @@ catalog boundary explicit. It cannot prove that subjective buying advice is
 optimal; it only proves the factual values are grounded.
 
 The latency mitigation already implemented is to stop immediately on ordinary
-grounded search/detail results. A second model pass is reserved for follow-ups
-that genuinely need reasoning over returned records.
+grounded search results. Detail and comparison turns use one post-tool model
+pass so Vivi can speak naturally over typed catalog facts. The prompt permits
+only one catalog tool per turn, and code validates the final values before they
+reach the user.
+
+## Where the agent reasons
+
+The model reasons only at two bounded seams: choosing one of three tools and
+extracting its typed arguments, then phrasing a detail/comparison answer over
+returned records. SQL construction, hard-filter enforcement, ranking,
+cross-turn slot merging, catalog facts, and factual validation remain
+deterministic.
+
+GPT-OSS may report reasoning tokens even without an explicit reasoning-effort
+setting. Increasing reasoning effort globally is not assumed to improve this
+system: it adds latency and tokens and can increase tool-call variability. A
+larger reasoning budget is justified only for a measured failure class such as
+a grounded multi-record explanation, and only if the evaluation gain offsets
+the latency and schema-error cost.
 
 ## Decision 4: cascaded voice pipeline
 
@@ -97,7 +114,7 @@ inventing a vehicle when every route fails.
 The first bottleneck is external model capacity: serial LLM calls, free-tier
 rate limits, and long-tail latency. Priority order:
 
-1. Purchase defined-capacity provider tiers, add circuit breakers, and record
+1. Purchase defined-capacity provider tiers, add circuit breakers, and monitor
    per-provider tokens, rupee cost, availability, and p95 latency.
 2. Stream STT and TTS and keep deterministic searches on the one-model-call
    path when no post-tool reasoning is required.
@@ -108,7 +125,68 @@ rate limits, and long-tail latency. Priority order:
 5. Run the evaluation set in CI against a pinned model and maintain a separate
    canary set for provider/model changes.
 
-No paid rupee-per-conversation figure is claimed because the submission uses
-free-tier endpoints and did not collect provider billing. Production costing
-would sum STT audio duration, input/output tokens, TTS characters, and database
-requests from the existing per-stage logs.
+## Usage and cost telemetry
+
+Each turn records LLM requests, input, cached-input, output, reasoning, and
+total tokens from the Agents SDK. Voice turns also record input-audio seconds
+and TTS characters. The UI and evaluation reports estimate equivalent list
+cost using the successful model route; actual free-tier spend can be zero.
+
+The 27-case live core run averaged 2,143.96 tokens and INR 0.0460 of estimated
+LLM list cost per text turn. At that observed mix, 100,000 text turns would be
+about INR 4,605 for the LLM portion only. Voice, database, hosting, retries, and
+production discounts are separate. USD values use an explicitly documented
+INR 95.43 exchange-rate assumption, so this is a reproducible estimate rather
+than a provider-billing claim.
+
+Cached-input tokens are displayed as context reuse, not operating-system RAM.
+Conversation memory itself is the small typed slot/result state plus the SDK's
+SQLite history. Process-memory profiling is not part of the assignment metric
+and should be added under load testing rather than conflated with token usage.
+
+## Q&A defence
+
+### If STT hears “S” instead of “Ace”
+
+The transcript reaches the same intent/slot path. If “S” is treated as a model
+filter, the deterministic search returns no exact matches; it does not silently
+substitute Ace. The missing production seam is a catalog-aware normalization
+step between STT and tool execution that can propose likely makes/models and
+ask for confirmation when confidence is low. It should not silently rewrite a
+user constraint.
+
+### Why these three ranked first
+
+The UI's **Why these ranked first** table exposes the numeric
+`RankingBreakdown` for each returned listing: purpose 30%, papers 15%, budget
+15%, mileage 15%, condition 15%, and year 10%. Signals unavailable for a query
+are zeroed and the remaining weights are normalized. This is the data behind
+the ordering, not a prose rationale generated after the fact.
+
+### First production replacement
+
+Replace the free-provider routing/capacity layer first. The agent consumes the
+Agents SDK model interface and returns typed tool arguments, so a purchased
+provider or internal gateway can replace `FallbackModel` without changing SQL,
+ranking, response validation, or the UI contract.
+
+### First 200 ms to win back
+
+In the latest 27-case core run, understanding averaged 1,083.62 ms and catalog
+search/lookup averaged 621.38 ms; detail response generation averaged 1,265.38
+ms on the three turns that used it. The first broadly available ~200 ms is in
+catalog connection setup: keep a bounded warm read-only connection pool or put
+the catalog behind a small read service. Detail turns can save more by using a
+deterministic requested-field composer when natural rephrasing is unnecessary.
+
+## Speech-end latency boundary
+
+Voice turns record `speech_end_to_audio_ready_ms`. With Streamlit's default
+audio-enabled chat input, the server first sees the recording after the browser
+has completed and uploaded it, so the start timestamp is server receipt of that
+completed recording. The end timestamp is when the full synthesized WAV is
+available for playback. This is a useful, repeatable server-side proxy, but it
+excludes browser upload time and is not first streamed audio bytes. Exact
+browser speech-stop to first-byte measurement requires a custom client event
+and streaming audio transport; that is the first voice-interface production
+upgrade, not something hidden by the reported number.

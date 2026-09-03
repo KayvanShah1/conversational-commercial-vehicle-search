@@ -44,7 +44,8 @@ Use these four turns in one session:
 3. Ask an intentionally impossible combination to show zero-result relaxation.
 4. `Second one ka payload aur GVW kya hai?`
 
-The page keeps active slots, grounded results, and per-stage latency visible.
+The page keeps active slots, grounded results, ranking components, per-stage
+latency, token usage, and estimated list cost visible.
 For a terminal-only fallback:
 
 ```powershell
@@ -66,10 +67,22 @@ uv run --package agents python evals/evaluate_agent.py `
   --output data/evaluation/vehicle_variant_results.json
 ```
 
-The complete live run on 2026-09-03 passed **27/27 core cases (100%)** with a
-mean total time of 1,804.69 ms, and **18/18 variant cases (100%)** with a mean
-total time of 1,169.72 ms. Reports are written to `data/evaluation/`; the
-datasets and scoring logic remain under `evals/`. See
+To measure the real voice path with an audio sample you are authorized to send
+to the configured STT provider:
+
+```powershell
+uv run --package agents python evals/measure_voice_latency.py `
+  --audio path/to/authorized-sample.wav
+```
+
+The latest live runs on 2026-09-03 passed **27/27 core cases (100%)** with a
+mean total time of 1,793.79 ms, and **17/18 variant cases (94.4%)** with a mean
+total time of 4,032.36 ms. The lone variant mismatch was a response-concept
+vocabulary gap ("listed in Delhi"), not a wrong fact, filter, action, or result
+ID; the checker now accepts that natural phrasing. Each run writes
+machine-readable JSON plus a
+timestamped Markdown report to `data/evaluation/`; the datasets and scoring
+logic remain under `evals/`. See
 [docs/EVALUATION.md](docs/EVALUATION.md) for the exact checks and latency
 breakdown.
 
@@ -144,7 +157,7 @@ flowchart TB
 | --- | --- |
 | [Assignment](docs/ASSIGNMENT.md) | Original requirements and scoring rubric |
 | [Architecture and decisions](docs/TECHNICAL_DECISIONS.md) | Component seams, rejected alternatives, limitations, and scale plan |
-| [Evaluation report](docs/EVALUATION.md) | Executable checks, pass rates, latency, and provider limitations |
+| [Evaluation report](docs/EVALUATION.md) | Executable checks, pass rates, latency, tokens, cost, and provider limitations |
 | [Agent code review](docs/AGENT_CODE_REVIEW.md) | Simplification decisions and remaining intentional complexity |
 | [Catalog generation](docs/DATA_GENERATION.md) | Synthetic-data method, validation, and provenance |
 | [Sources](docs/SOURCES.md) | Libraries, providers, and external technical references |
