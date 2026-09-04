@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import asyncio
-import re
 from time import perf_counter
 from typing import Any
 
 from vehicle_search_utils import OperationLogContext, get_logger
 
-from agents import Agent, RunConfig, RunContextWrapper, RunHooks, Runner, SQLiteSession
+from agents import Agent, ModelSettings, RunConfig, RunContextWrapper, RunHooks, Runner, SQLiteSession
 from vehicle_search_agent.agent import FallbackModel, build_agent
 from vehicle_search_agent.models import AgentTurnResult, ConversationState, TurnMetrics, TurnUsage, VoiceTurnResult
 from vehicle_search_agent.response import conversational_response, natural_response
 from vehicle_search_agent.settings import settings
-from vehicle_search_agent.tools import DETAIL_REQUEST_PATTERN, AgentContext
+from vehicle_search_agent.tools import AgentContext
 from vehicle_search_agent.voice import synthesize_speech, transcribe_audio
 
 logger = get_logger("VehicleSearchAgent")
@@ -47,22 +46,6 @@ def _voice_list_cost_usd(audio_seconds: float | None, characters: int) -> float 
     if audio_seconds is None or stt_rate is None or tts_rate is None:
         return None
     return audio_seconds / 3600 * stt_rate + characters / 1_000_000 * tts_rate
-
-
-def _tool_choice(transcript: str, state: ConversationState) -> str:
-    """Route explicit high-confidence intents before model selection."""
-    has_active_search = bool(state.active_filters.model_dump(exclude_none=True))
-    has_results = bool(state.last_result_ids)
-    changes_search = re.search(
-        r"\b(?:prefer|preference|preferred|instead|actually|change|switch|update|nahi)\b|\bmake (?:it|that)\b",
-        transcript,
-        re.IGNORECASE,
-    )
-    if has_active_search and changes_search:
-        return "search_vehicles"
-
-    asks_for_details = DETAIL_REQUEST_PATTERN.search(transcript)
-    return "get_vehicle_details" if has_results and asks_for_details else "auto"
 
 
 class AgentStageTimer(RunHooks[AgentContext]):
@@ -112,8 +95,36 @@ class VehicleSearchSession:
         self.context.state.turn_number += 1
         if isinstance(self.agent.model, FallbackModel):
             self.agent.model.start_turn()
-        self.agent.model_settings.tool_choice = _tool_choice(transcript, self.context.state)
-        try:
+        history_size = len(await self.sdk_session.get_items()) if self.context.state.last_result_labels else 0
+        run_config = RunConfig(
+            workflow_name="vehicle_search_turn",
+            group_id=self.session_id,
+            trace_metadata={"turn_number": self.context.state.turn_number, "provider": "groq"},
+            tracing_disabled=not settings.agent_runtime.tracing_enabled,
+            trace_include_sensitive_data=settings.agent_runtime.trace_include_sensitive_data,
+        )
+        run_result = await Runner.run(
+            self.agent,
+            transcript,
+            context=self.context,
+            session=self.sdk_session,
+            hooks=self.hooks,
+            max_turns=settings.agent_runtime.max_turns,
+            run_config=run_config,
+        )
+
+        discarded_usage = None
+        candidate = run_result.final_output if isinstance(run_result.final_output, str) else ""
+        named_catalog_answer = self.context.grounded_response is None and any(
+            label.casefold() in candidate.casefold() for label in self.context.state.last_result_labels
+        )
+        if named_catalog_answer:
+            logger.warning("ungrounded_catalog_answer_retried", extra={"tool": "get_vehicle_details"})
+            discarded_usage = run_result.context_wrapper.usage
+            new_item_count = len(await self.sdk_session.get_items()) - history_size
+            for _ in range(new_item_count):
+                await self.sdk_session.pop_item()
+            run_config.model_settings = ModelSettings(tool_choice="get_vehicle_details")
             run_result = await Runner.run(
                 self.agent,
                 transcript,
@@ -121,16 +132,8 @@ class VehicleSearchSession:
                 session=self.sdk_session,
                 hooks=self.hooks,
                 max_turns=settings.agent_runtime.max_turns,
-                run_config=RunConfig(
-                    workflow_name="vehicle_search_turn",
-                    group_id=self.session_id,
-                    trace_metadata={"turn_number": self.context.state.turn_number, "provider": "groq"},
-                    tracing_disabled=not settings.agent_runtime.tracing_enabled,
-                    trace_include_sensitive_data=settings.agent_runtime.trace_include_sensitive_data,
-                ),
+                run_config=run_config,
             )
-        finally:
-            self.agent.model_settings.tool_choice = "auto"
 
         grounded = self.context.grounded_response
         if grounded is None:
@@ -149,6 +152,9 @@ class VehicleSearchSession:
         search_result = self.context.last_search_result
         completed = operation.completed_extra(status="succeeded")
         sdk_usage = run_result.context_wrapper.usage
+        if discarded_usage is not None:
+            discarded_usage.add(sdk_usage)
+            sdk_usage = discarded_usage
         estimated_cost_usd = self.context.llm_list_cost_usd if self.context.pricing_complete else None
         usage = TurnUsage(
             llm_requests=sdk_usage.requests,
@@ -187,9 +193,7 @@ class VehicleSearchSession:
             changed_fields=search_result.changed_fields if search_result else [],
             executed_filters=search_result.executed_filters if search_result else None,
             model_used=(
-                self.agent.model.route
-                if isinstance(self.agent.model, FallbackModel)
-                else str(self.agent.model.model)
+                self.agent.model.route if isinstance(self.agent.model, FallbackModel) else str(self.agent.model.model)
             ),
             metrics=metrics,
             usage=usage,

@@ -88,7 +88,7 @@ def test_cheapest_comparison_is_explicit_and_grounded():
     response = details_response(
         [_priced_vehicle("Costly", 1_000_000), _priced_vehicle("Cheap", 800_000)],
         [DetailField.price],
-        "Which is cheapest?",
+        comparison="cheapest",
     )
 
     assert response.fallback.endswith("Cheapest: Tata Cheap at INR 8L.")
@@ -97,11 +97,21 @@ def test_cheapest_comparison_is_explicit_and_grounded():
 def test_vehicle_source_link_is_returned_as_a_grounded_detail():
     vehicle = _priced_vehicle("Brochure", 1_000_000)
 
-    response = details_response([vehicle], [DetailField.spec_source_url], "Does it have a brochure?")
+    response = details_response([vehicle], [DetailField.spec_source_url])
 
     assert response.fallback == "The specification source for Tata Brochure is https://example.com."
     assert response.checks == (("Tata Brochure", "https://example.com"),)
     assert "[View manufacturer specifications](https://example.com)" in response.display_markdown
+
+
+def test_estimated_payload_is_disclosed_in_speech_and_display():
+    vehicle = _priced_vehicle("Estimated", 1_000_000).model_copy(update={"payload_is_estimated": True})
+
+    response = details_response([vehicle], [DetailField.payload])
+
+    assert "estimated payload of approximately 2,000 kg" in response.fallback
+    assert "**Estimated payload:** approximately 2,000 kg" in response.display_markdown
+    assert "estimated" in response.checks[0]
 
 
 def test_all_details_have_natural_speech_and_structured_display():

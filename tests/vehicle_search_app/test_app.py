@@ -71,6 +71,7 @@ def test_streamlit_app_renders_without_framework_error() -> None:
                     km_driven=29_919,
                     fuel="Diesel",
                     payload_kg=815,
+                    payload_is_estimated=True,
                     gvw_kg=1_605,
                     vehicle_category="mini_truck",
                     weight_class="light",
@@ -109,3 +110,5 @@ def test_streamlit_app_renders_without_framework_error() -> None:
     assert any("12.3 s" in markdown.value for markdown in app.markdown)
     assert any("₹0.0123" in markdown.value for markdown in app.markdown)
     assert any("Mahindra Jeeto Strong Diesel" in markdown.value for markdown in app.markdown)
+    assert any(metric.label == "Estimated payload" for metric in app.metric)
+    assert any(metric.value == "Approx. 815 kg" for metric in app.metric)

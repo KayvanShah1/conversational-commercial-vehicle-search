@@ -74,6 +74,7 @@ def test_search_uses_the_models_typed_slot_extraction(monkeypatch):
     monkeypatch.setattr(tools_module.logger, "info", lambda message, *, extra: logs.append((message, extra)))
     encoded = json.dumps(
         {
+            "mode": "new",
             "size": "heavy",
             "fuel": "Diesel",
             "body_type": "tipper",
@@ -92,16 +93,49 @@ def test_search_uses_the_models_typed_slot_extraction(monkeypatch):
     assert logs == [("tool_called", {"tool": "search_vehicles"})]
 
 
-def test_plural_reference_overrides_a_previous_single_selection(monkeypatch):
+def test_more_mode_excludes_previously_shown_results(monkeypatch):
+    context = AgentContext(
+        state=ConversationState(
+            session_id="test",
+            active_filters={"fuel": "Diesel"},
+            shown_result_ids=["VEH-001", "VEH-002"],
+        )
+    )
+
+    def fake_search(filters, changed_fields, excluded_ids):
+        assert filters.fuel == "Diesel"
+        assert excluded_ids == ["VEH-001", "VEH-002"]
+        return VehicleSearchResult(
+            executed_filters=filters,
+            changed_fields=changed_fields,
+            vehicles=[],
+            total_matches=0,
+            search_ms=1,
+        )
+
+    monkeypatch.setattr(tools_module, "search_catalog", fake_search)
+    encoded = json.dumps({"mode": "more"})
+    tool_context = ToolContext(
+        context=context,
+        tool_name="search_vehicles",
+        tool_call_id="test-call",
+        tool_arguments=encoded,
+    )
+
+    asyncio.run(search_vehicles.on_invoke_tool(tool_context, encoded))
+
+
+def test_all_scope_overrides_a_previous_single_selection(monkeypatch):
     context = _context("What can they carry and how much weight?")
 
     def fake_lookup(listing_ids):
         return [_vehicle(listing_id) for listing_id in listing_ids], 1.0
 
     monkeypatch.setattr(tools_module, "get_vehicles", fake_lookup)
-    _invoke(context, {"fields": ["payload", "gvw"], "result_number": 1})
+    _invoke(context, {"scope": "all", "mode": "capability"})
 
     assert len(context.grounded_response.facts) == 3
+    assert all("payload" in fact and "GVW" in fact and "body type" in fact for fact in context.grounded_response.facts)
 
 
 def test_all_details_for_an_ordinal_returns_every_user_facing_field(monkeypatch):
@@ -111,7 +145,7 @@ def test_all_details_for_an_ordinal_returns_every_user_facing_field(monkeypatch)
         return [_vehicle(listing_id) for listing_id in listing_ids], 1.0
 
     monkeypatch.setattr(tools_module, "get_vehicles", fake_lookup)
-    _invoke(context, {"result_number": 1, "all_details": True})
+    _invoke(context, {"scope": "one", "mode": "all_details", "result_number": 1})
 
     assert len(context.grounded_response.facts) == 1
     fact = context.grounded_response.facts[0].casefold()
@@ -135,20 +169,16 @@ def test_named_details_are_limited_to_matching_previous_results(monkeypatch):
     context = _context("Give me more details about the Mahindra Jeeto.")
     context.state.selected_listing_id = None
     catalog = {
-        "VEH-001": _vehicle("VEH-001").model_copy(
-            update={"make": "Mahindra", "model": "Jeeto Strong Diesel"}
-        ),
+        "VEH-001": _vehicle("VEH-001").model_copy(update={"make": "Mahindra", "model": "Jeeto Strong Diesel"}),
         "VEH-002": _vehicle("VEH-002").model_copy(update={"make": "Tata", "model": "Ace Gold"}),
-        "VEH-003": _vehicle("VEH-003").model_copy(
-            update={"make": "Mahindra", "model": "Jeeto Strong Diesel"}
-        ),
+        "VEH-003": _vehicle("VEH-003").model_copy(update={"make": "Mahindra", "model": "Jeeto Strong Diesel"}),
     }
 
     def fake_lookup(listing_ids):
         return [catalog[listing_id] for listing_id in listing_ids], 1.0
 
     monkeypatch.setattr(tools_module, "get_vehicles", fake_lookup)
-    _invoke(context, {})
+    _invoke(context, {"scope": "one", "mode": "all_details"})
 
     assert len(context.grounded_response.facts) == 2
     assert all(fact.startswith("Mahindra Jeeto Strong Diesel") for fact in context.grounded_response.facts)
@@ -162,7 +192,7 @@ def test_brochure_question_returns_sources_for_all_results(monkeypatch):
         return [_vehicle(listing_id) for listing_id in listing_ids], 1.0
 
     monkeypatch.setattr(tools_module, "get_vehicles", fake_lookup)
-    _invoke(context, {"fields": ["spec_source_url"]})
+    _invoke(context, {"scope": "all", "mode": "facts", "fields": ["spec_source_url"]})
 
     assert len(context.grounded_response.facts) == 3
     assert all("specification source https://example.com" in fact for fact in context.grounded_response.facts)

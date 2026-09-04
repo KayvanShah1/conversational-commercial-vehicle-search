@@ -20,7 +20,7 @@ logger = get_logger("VehicleSearch")
 
 VEHICLE_COLUMNS = """
 listing_id, make, model, year, price_inr, km_driven, fuel, payload_kg,
-gvw_kg, vehicle_category, weight_class, body_type, axle_count, city,
+payload_is_estimated, gvw_kg, vehicle_category, weight_class, body_type, axle_count, city,
 papers_verified, condition, purpose_tags, spec_source_url
 """
 

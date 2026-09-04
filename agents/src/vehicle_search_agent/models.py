@@ -70,7 +70,7 @@ class FilterValues(BaseModel):
     )
     weight_class: WeightClass | None = Field(
         default=None,
-        description="Vehicle size or capacity class: light, medium, or heavy",
+        description="Vehicle size or capacity class: light, intermediate, medium, or heavy",
     )
     make: str | None = None
     model: str | None = None
@@ -93,6 +93,7 @@ class FilterValues(BaseModel):
         if value is None:
             return None
         return {"cng": "CNG", "diesel": "Diesel"}.get(value.casefold(), value)
+
 
 class SearchFilters(FilterValues):
     @model_validator(mode="after")
@@ -123,6 +124,7 @@ class ConversationState(BaseModel):
     session_id: str
     active_filters: SearchFilters = Field(default_factory=SearchFilters)
     last_result_ids: list[str] = Field(default_factory=list, max_length=3)
+    last_result_labels: list[str] = Field(default_factory=list, max_length=3)
     shown_result_ids: list[str] = Field(default_factory=list)
     selected_listing_id: str | None = None
     turn_number: int = Field(default=0, ge=0)
@@ -137,6 +139,7 @@ class VehicleRecord(BaseModel):
     km_driven: int = Field(ge=0)
     fuel: str
     payload_kg: int | None = Field(default=None, gt=0)
+    payload_is_estimated: bool = False
     gvw_kg: int = Field(gt=0)
     vehicle_category: str
     weight_class: str
