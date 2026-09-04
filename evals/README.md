@@ -35,4 +35,4 @@ uv run --package evals python -m evals.measure_voice_latency `
   --audio path/to/authorized-sample.wav
 ```
 
-JSON and Markdown reports are written under `data/evaluation/`. See the repository [evaluation guide](../docs/EVALUATION.md) for scoring, metrics, and interpretation.
+JSON and Markdown reports are written locally under `data/evaluation/` and excluded from Git. The five newest runs are retained automatically, including reports written with a custom `--output` name. See the repository [evaluation guide](../docs/EVALUATION.md) for scoring, metrics, and interpretation.

@@ -88,7 +88,7 @@ uv run --package evals python -m evals.evaluate_agent `
 
 Use `--case CASE_ID` repeatedly for focused diagnosis. Do not combine selected passes from different attempts into a claimed single-run score.
 
-Each run writes JSON and Markdown reports under `data/evaluation/`. By default, both filenames contain the dataset name and the same UTC timestamp; `--output` is available when a stable JSON filename is intentionally required.
+Each run writes local, Git-ignored JSON and Markdown reports under `data/evaluation/`. By default, both filenames contain the dataset name and the same UTC timestamp; `--output` is available when a stable JSON filename is intentionally required. The evaluator retains the five newest runs and removes older report files automatically, including reports written with custom names.
 
 ## Voice latency
 

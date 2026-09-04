@@ -31,6 +31,6 @@ docs/
     └── vivi-ui-concept.png
 ```
 
-Generated evaluation reports are stored under `data/evaluation/`. Executable harnesses remain under `evals/`, and their case files are grouped under `evals/datasets/`.
+Generated evaluation reports are stored locally under the Git-ignored `data/evaluation/` directory. Executable harnesses remain under `evals/`, and their case files are grouped under `evals/datasets/`.
 
 The repository-cover generation brief is retained as [`assets/repo-cover-prompt.txt`](assets/repo-cover-prompt.txt) for provenance.

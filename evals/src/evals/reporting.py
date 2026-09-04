@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from pathlib import Path
 from statistics import mean
@@ -6,7 +7,7 @@ from typing import Any
 from rich.console import Console
 from rich.table import Table
 
-from evals.settings import PROJECT_ROOT, REPORTS_DIR
+from evals.settings import PROJECT_ROOT, REPORT_RETENTION_COUNT, REPORTS_DIR
 
 TIMING_FIELDS = ("understanding_ms", "search_ms", "response_ms", "total_ms")
 USAGE_FIELDS = (
@@ -37,6 +38,31 @@ def report_paths(dataset: Path, generated_at: datetime, output: Path | None) -> 
     timestamp = f"{generated_at:%Y%m%dT%H%M%SZ}"
     json_path = output or REPORTS_DIR / f"{dataset.stem}-{timestamp}.json"
     return json_path, json_path.parent / f"{dataset.stem}-{timestamp}.md"
+
+
+def prune_old_reports(directory: Path) -> None:
+    report_runs: dict[str, list[Path]] = {}
+    for path in directory.iterdir():
+        if path.suffix == ".json":
+            try:
+                timestamp = json.loads(path.read_text(encoding="utf-8")).get("generated_at_utc")
+            except (json.JSONDecodeError, OSError):
+                continue
+        elif path.suffix == ".md":
+            generated_line = next(
+                (line for line in path.read_text(encoding="utf-8").splitlines() if line.startswith("- Generated: ")),
+                "",
+            )
+            timestamp = generated_line.removeprefix("- Generated: ")
+        else:
+            continue
+        if not timestamp:
+            continue
+        report_runs.setdefault(timestamp, []).append(path)
+
+    for timestamp in sorted(report_runs, reverse=True)[REPORT_RETENTION_COUNT:]:
+        for path in report_runs[timestamp]:
+            path.unlink()
 
 
 def print_report(report: dict[str, Any], console: Console) -> None:

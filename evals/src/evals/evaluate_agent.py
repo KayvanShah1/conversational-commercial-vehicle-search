@@ -12,7 +12,7 @@ from uuid import uuid4
 from rich.console import Console
 from vehicle_search_agent.runner import VehicleSearchSession
 
-from evals.reporting import build_report, markdown_report, print_report, report_paths
+from evals.reporting import build_report, markdown_report, print_report, prune_old_reports, report_paths
 from evals.settings import DEFAULT_CASES_PATH, DEFAULT_DELAY_SECONDS, DEFAULT_MIN_PASS_RATE
 
 console = Console()
@@ -167,6 +167,7 @@ def main() -> None:
     json_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     markdown_path.write_text(markdown_report(report, arguments.cases), encoding="utf-8")
+    prune_old_reports(json_path.parent)
     console.print(f"Saved: {json_path}", style="dim")
     console.print(f"Saved: {markdown_path}", style="dim")
 
