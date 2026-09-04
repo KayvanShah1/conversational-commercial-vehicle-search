@@ -2,12 +2,15 @@ from collections.abc import Callable
 
 import streamlit as st
 from config import METRIC_LABELS, SLOT_LABELS, STARTER_QUESTIONS
-from vehicle_search_agent.models import AgentTurnResult, RankedVehicle, SearchFilters
+from vehicle_search_agent.models import AgentTurnResult, RankedVehicle, SearchFilters, VehicleSearchResult
 from vehicle_search_agent.runner import VehicleSearchSession
 
 
 def display_response(result: AgentTurnResult, session: VehicleSearchSession) -> str:
     grounded = session.context.grounded_response
+    if result.action.value == "details":
+        return grounded.display_markdown if grounded and grounded.display_markdown else result.spoken_response
+
     if grounded is None or not grounded.facts:
         return result.spoken_response
 
@@ -108,12 +111,8 @@ def render_sidebar(reset_conversation: Callable[[], None]) -> None:
             st.caption("Token usage appears after the first turn.")
 
 
-def render_matches() -> None:
-    session = st.session_state.vehicle_session
-    if session is None:
-        return
-
-    vehicles = _vehicle_rows(session)
+def render_matches(result: VehicleSearchResult | None) -> None:
+    vehicles = _vehicle_rows(result)
     if not vehicles:
         return
 
@@ -170,7 +169,6 @@ def render_matches() -> None:
             },
         )
 
-    result = session.context.last_search_result
     if result is not None and result.vehicles:
         ranking_rows = [
             {
@@ -226,8 +224,7 @@ def _reason(ranked: RankedVehicle, filters: SearchFilters) -> str:
     return f"{ranked.vehicle.condition.title()} condition"
 
 
-def _vehicle_rows(session: VehicleSearchSession) -> list[dict]:
-    result = session.context.last_search_result
+def _vehicle_rows(result: VehicleSearchResult | None) -> list[dict]:
     if result is None:
         return []
     return [

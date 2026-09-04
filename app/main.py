@@ -19,6 +19,7 @@ def _initialize_state() -> None:
     defaults = {
         "session_id": f"web-{uuid4().hex}",
         "vehicle_session": None,
+        "last_search_result": None,
         "messages": [],
         "metrics": {},
         "usage": {},
@@ -46,6 +47,8 @@ def _session() -> VehicleSearchSession:
 
 def _save_result(result: AgentTurnResult, session: VehicleSearchSession) -> None:
     st.session_state.messages.append({"role": "assistant", "content": display_response(result, session)})
+    if session.context.last_search_result is not None:
+        st.session_state.last_search_result = session.context.last_search_result
     st.session_state.metrics = result.metrics.model_dump(mode="json", exclude_none=True)
     st.session_state.usage = result.usage.model_dump(mode="json", exclude_none=True)
     _update_conversation_totals(result)
@@ -151,7 +154,7 @@ if st.session_state.reply_audio:
     with st.chat_message("assistant"):
         st.audio(st.session_state.reply_audio, format=f"audio/{st.session_state.audio_format}")
 
-render_matches()
+render_matches(st.session_state.last_search_result)
 
 if st.session_state.error:
     st.error(st.session_state.error)
