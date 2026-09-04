@@ -1,6 +1,6 @@
 # Vivi: Voice-first Commercial Vehicle search
 
-[![Evaluation: 46/46](https://img.shields.io/badge/evaluation-46%2F46_passed-22c55e?style=flat-square)](docs/EVALUATION.md)
+[![Evaluation: 45/46](https://img.shields.io/badge/evaluation-45%2F46_passed-22c55e?style=flat-square)](docs/EVALUATION.md)
 [![Catalog: 1,000 listings](https://img.shields.io/badge/catalog-1%2C000_listings-2563eb?style=flat-square)](docs/DATA_GENERATION.md)
 [![Input: voice and text](https://img.shields.io/badge/input-voice_%2B_text-7c3aed?style=flat-square)](docs/SETUP.md)
 [![Grounding: validated](https://img.shields.io/badge/catalog_facts-validated-0f766e?style=flat-square)](docs/TECHNICAL_DECISIONS.md#decision-3-deterministic-facts-with-optional-natural-rephrasing)
@@ -72,10 +72,10 @@ The buyer gets a natural conversation and comparable options; the application tu
 | Suite | Coverage | Latest live result |
 | --- | --- | ---: |
 | Core | Conversation, intent, slots, safety, corrections, and follow-ups | **28/28 (100%)** |
-| Vehicle variants | Sizes, bodies, fuels, categories, attributes, and pagination | **18/18 (100%)** |
-| Combined | All executable cases | **46/46 (100%)** |
+| Vehicle variants | Sizes, bodies, fuels, categories, attributes, and pagination | **17/18 (94.4%)** |
+| Combined | All executable cases | **45/46 (97.8%)** |
 
-Both complete suites passed through the live agent and MotherDuck path on 2026-09-05. Full commands, checks, timings, token usage, and cost boundaries are in the [evaluation report](docs/EVALUATION.md).
+Both complete suites ran through the live agent and MotherDuck path on 2026-09-05 and exceeded the 90% target. Full commands, the detected miss, timings, token usage, and cost boundaries are in the [evaluation report](docs/EVALUATION.md).
 
 ## Tech stack
 

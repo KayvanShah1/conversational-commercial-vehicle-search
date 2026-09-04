@@ -34,9 +34,9 @@ Deliberately absent: generated SQL, a raw database tool, multi-agent routing, ge
 
 ## Decision 1: typed tools and deterministic SQL
 
-**Chosen:** the model identifies intent and supplies typed slot arguments;
-application code builds parameterized SQL, applies hard filters, ranks rows, and
-checks every returned record against the filters.
+**Chosen:** the model identifies intent and supplies typed operation, scope, and
+slot arguments; application code builds parameterized SQL, applies hard filters,
+ranks rows, and checks every returned record against the filters.
 
 **Rejected:** asking the model to generate SQL or giving it a general database
 tool.
@@ -78,6 +78,11 @@ grounded search results. Detail and comparison turns use one post-tool model
 pass so Vivi can speak naturally over typed catalog facts. The prompt permits
 only one catalog tool per turn, and code validates the final values before they
 reach the user.
+
+If a no-tool response names one of the current result labels, the runner drops
+that ungrounded attempt and retries once with the details tool required. This
+keeps general side questions tool-free while preventing a model from bypassing
+the catalog boundary for a specific listing. Usage includes both attempts.
 
 ## Where the agent reasons
 
@@ -152,9 +157,9 @@ total tokens from the Agents SDK. Voice turns also record input-audio seconds
 and TTS characters. The UI and evaluation reports estimate equivalent list
 cost using the successful model route; actual free-tier spend can be zero.
 
-The 27-case live core run averaged 2,143.96 tokens and INR 0.0460 of estimated
+The 28-case live core run averaged 2,163.75 tokens and INR 0.0380 of estimated
 LLM list cost per text turn. At that observed mix, 100,000 text turns would be
-about INR 4,605 for the LLM portion only. Voice, database, hosting, retries, and
+about INR 3,800 for the LLM portion only. Voice, database, hosting, retries, and
 production discounts are separate. USD values use an explicitly documented
 INR 95.43 exchange-rate assumption, so this is a reproducible estimate rather
 than a provider-billing claim.
@@ -192,8 +197,8 @@ ranking, response validation, or the UI contract.
 
 ### First 200 ms to win back
 
-In the latest 28-case core run, understanding averaged 1,017.39 ms and catalog
-search/lookup averaged 432.65 ms; detail response generation averaged 1,752.86
+In the latest 28-case core run, understanding averaged 1,053.89 ms and catalog
+search/lookup averaged 434.24 ms; detail response generation averaged 3,451.68
 ms on the three turns that used it. The first broadly available ~200 ms is in
 catalog connection setup: keep a bounded warm read-only connection pool or put
 the catalog behind a small read service. Detail turns can save more by using a
