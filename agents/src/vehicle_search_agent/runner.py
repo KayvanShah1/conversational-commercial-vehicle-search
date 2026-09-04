@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from time import perf_counter
 from typing import Any
+from unicodedata import normalize
 
 from vehicle_search_utils import OperationLogContext, get_logger
 
@@ -46,6 +47,11 @@ def _voice_list_cost_usd(audio_seconds: float | None, characters: int) -> float 
     if audio_seconds is None or stt_rate is None or tts_rate is None:
         return None
     return audio_seconds / 3600 * stt_rate + characters / 1_000_000 * tts_rate
+
+
+def _match_text(value: str) -> str:
+    """Normalize visually equivalent model text before grounding checks."""
+    return " ".join(normalize("NFKC", value).casefold().split())
 
 
 class AgentStageTimer(RunHooks[AgentContext]):
@@ -115,8 +121,9 @@ class VehicleSearchSession:
 
         discarded_usage = None
         candidate = run_result.final_output if isinstance(run_result.final_output, str) else ""
+        candidate_for_match = _match_text(candidate)
         named_catalog_answer = self.context.grounded_response is None and any(
-            label.casefold() in candidate.casefold() for label in self.context.state.last_result_labels
+            _match_text(label) in candidate_for_match for label in self.context.state.last_result_labels
         )
         if named_catalog_answer:
             logger.warning("ungrounded_catalog_answer_retried", extra={"tool": "get_vehicle_details"})

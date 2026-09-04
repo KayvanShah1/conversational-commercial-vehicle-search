@@ -99,7 +99,7 @@ def test_named_catalog_answer_is_retried_with_the_details_tool(monkeypatch):
         calls.append(kwargs["run_config"].model_settings)
         session.sdk_session.items.extend([{"role": "user"}, {"role": "assistant"}])
         if len(calls) == 1:
-            return _run_result("The Tata Ultra T.16 is in Delhi.", input_tokens=100, output_tokens=20)
+            return _run_result("The third Tata Ultra\u202fT.16 is cheapest.", input_tokens=100, output_tokens=20)
         session.context.action = AgentAction.details
         session.context.grounded_response = message_response("The grounded vehicle detail.")
         return _run_result("The grounded vehicle detail.", input_tokens=200, output_tokens=30)
