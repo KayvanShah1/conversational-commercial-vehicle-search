@@ -44,7 +44,7 @@ def _detail_summary(vehicle: VehicleRecord, fields: set[DetailField]) -> str:
     sentences: list[str] = []
     category = vehicle.vehicle_category.replace("_", " ")
     if DetailField.year in fields and DetailField.vehicle_category in fields:
-        introduction = f"{name} is a {vehicle.year} {category}"
+        introduction = f"{name} is a {vehicle.year} model in the {category} category"
     elif DetailField.year in fields:
         introduction = f"{name} is a {vehicle.year} model"
     elif DetailField.vehicle_category in fields:
@@ -126,6 +126,8 @@ def _multiple_detail_summary(vehicles: list[VehicleRecord], fields: set[DetailFi
         if DetailField.payload in fields:
             payload = f"{vehicle.payload_kg:,} kg" if vehicle.payload_kg is not None else "not listed"
             highlights.append(f"has a payload of {payload}")
+        if DetailField.gvw in fields:
+            highlights.append(f"has a GVW of {vehicle.gvw_kg:,} kg")
         sentences.append(f"{subject} {_join_naturally(highlights)}." if highlights else f"{subject} is included.")
 
     if DetailField.fuel in fields and len({vehicle.fuel for vehicle in vehicles}) == 1:

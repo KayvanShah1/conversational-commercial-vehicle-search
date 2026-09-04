@@ -108,13 +108,14 @@ def test_all_details_have_natural_speech_and_structured_display():
     vehicle = _priced_vehicle("Ace Gold", 560_000)
     response = details_response([vehicle], list(DetailField))
 
-    assert "Tata Ace Gold is a 2022 pickup and has an open body." in response.fallback
+    assert "Tata Ace Gold is a 2022 model in the pickup category and has an open body." in response.fallback
     assert "It costs INR 5.6L, has covered 20,000 km, and runs on Diesel." in response.fallback
     assert "- **Payload:** 2,000 kg" in response.display_markdown
     assert "- **GVW:** 4,000 kg" in response.display_markdown
 
     multiple = details_response([vehicle, vehicle.model_copy(update={"listing_id": "second"})], list(DetailField))
     assert multiple.fallback.startswith("I found 2 matching listings.")
+    assert "has a GVW of 4,000 kg" in multiple.fallback
     assert multiple.fallback.endswith("The full specifications and source links are shown on screen.")
 
 
