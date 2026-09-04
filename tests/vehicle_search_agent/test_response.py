@@ -99,8 +99,23 @@ def test_vehicle_source_link_is_returned_as_a_grounded_detail():
 
     response = details_response([vehicle], [DetailField.spec_source_url], "Does it have a brochure?")
 
-    assert response.fallback == "Tata Brochure: specification source https://example.com."
+    assert response.fallback == "The specification source for Tata Brochure is https://example.com."
     assert response.checks == (("Tata Brochure", "https://example.com"),)
+    assert "[View manufacturer specifications](https://example.com)" in response.display_markdown
+
+
+def test_all_details_have_natural_speech_and_structured_display():
+    vehicle = _priced_vehicle("Ace Gold", 560_000)
+    response = details_response([vehicle], list(DetailField))
+
+    assert "Tata Ace Gold is a 2022 pickup and has an open body." in response.fallback
+    assert "It costs INR 5.6L, has covered 20,000 km, and runs on Diesel." in response.fallback
+    assert "- **Payload:** 2,000 kg" in response.display_markdown
+    assert "- **GVW:** 4,000 kg" in response.display_markdown
+
+    multiple = details_response([vehicle, vehicle.model_copy(update={"listing_id": "second"})], list(DetailField))
+    assert multiple.fallback.startswith("I found 2 matching listings.")
+    assert multiple.fallback.endswith("The full specifications and source links are shown on screen.")
 
 
 def test_accepts_natural_framing_around_unchanged_facts():

@@ -12,7 +12,7 @@ from vehicle_search_agent.agent import FallbackModel, build_agent
 from vehicle_search_agent.models import AgentTurnResult, ConversationState, TurnMetrics, TurnUsage, VoiceTurnResult
 from vehicle_search_agent.response import conversational_response, natural_response
 from vehicle_search_agent.settings import settings
-from vehicle_search_agent.tools import AgentContext
+from vehicle_search_agent.tools import DETAIL_REQUEST_PATTERN, AgentContext
 from vehicle_search_agent.voice import synthesize_speech, transcribe_audio
 
 logger = get_logger("VehicleSearchAgent")
@@ -50,14 +50,19 @@ def _voice_list_cost_usd(audio_seconds: float | None, characters: int) -> float 
 
 
 def _tool_choice(transcript: str, state: ConversationState) -> str:
-    """Route an explicit state change to slot extraction, regardless of its field."""
+    """Route explicit high-confidence intents before model selection."""
     has_active_search = bool(state.active_filters.model_dump(exclude_none=True))
+    has_results = bool(state.last_result_ids)
     changes_search = re.search(
         r"\b(?:prefer|preference|preferred|instead|actually|change|switch|update|nahi)\b|\bmake (?:it|that)\b",
         transcript,
         re.IGNORECASE,
     )
-    return "search_vehicles" if has_active_search and changes_search else "auto"
+    if has_active_search and changes_search:
+        return "search_vehicles"
+
+    asks_for_details = DETAIL_REQUEST_PATTERN.search(transcript)
+    return "get_vehicle_details" if has_results and asks_for_details else "auto"
 
 
 class AgentStageTimer(RunHooks[AgentContext]):

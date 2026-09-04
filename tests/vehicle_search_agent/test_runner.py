@@ -30,11 +30,14 @@ def _run_result(output: str, *, input_tokens: int = 0, output_tokens: int = 0):
 def test_state_change_language_routes_any_slot_through_search():
     state = ConversationState(session_id="test")
     state.active_filters.city = "Mumbai"
+    state.last_result_ids = ["VEH-001"]
 
     assert _tool_choice("I prefer diesel", state) == "search_vehicles"
     assert _tool_choice("Actually make it Delhi", state) == "search_vehicles"
     assert _tool_choice("Switch to a box body", state) == "search_vehicles"
     assert _tool_choice("Which one is cheapest?", state) == "auto"
+    assert _tool_choice("Give me more details about the first one", state) == "get_vehicle_details"
+    assert _tool_choice("I need more detaila about Tata Ace", state) == "get_vehicle_details"
 
 
 def test_state_change_rule_does_not_override_first_turn_intent_detection():

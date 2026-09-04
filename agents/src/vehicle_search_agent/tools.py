@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import re
 from dataclasses import dataclass
-from typing import Annotated, Literal, get_args
+from typing import Annotated, Literal
 
 from pydantic import Field
 from vehicle_search_utils import OperationLogContext, get_logger
@@ -17,6 +17,7 @@ from vehicle_search_agent.models import (
     SearchField,
     SlotPatch,
     VehicleCategory,
+    VehicleRecord,
     VehicleSearchResult,
     WeightClass,
     merge_slot_patch,
@@ -32,6 +33,11 @@ from vehicle_search_agent.search import get_catalog_options, get_vehicles, searc
 from vehicle_search_agent.settings import settings
 
 logger = get_logger("VehicleSearchTools")
+
+DETAIL_REQUEST_PATTERN = re.compile(
+    r"\b(?:detail[a-z]*|specifications?|specs?|brochures?)\b|\bmore\s+(?:about|on)\b",
+    re.IGNORECASE,
+)
 
 BodyType = Literal["open", "flatbed", "box", "container", "tipper", "tanker", "reefer"]
 Fuel = Literal["CNG", "Diesel"]
@@ -106,8 +112,14 @@ def _mentioned(value: str, text: str) -> bool:
     return re.sub(r"[^a-z0-9]", "", value.casefold()) in re.sub(r"[^a-z0-9]", "", text.casefold())
 
 
-def _explicit(options: tuple[str, ...], text: str) -> str | None:
-    return next((option for option in options if _mentioned(option, text)), None)
+def _named_vehicles(vehicles: list[VehicleRecord], text: str) -> list[VehicleRecord]:
+    words = set(re.findall(r"[a-z0-9]+", text.casefold()))
+    matches = []
+    for vehicle in vehicles:
+        model_words = set(re.findall(r"[a-z0-9]+", vehicle.model.casefold())) - {"cng", "diesel"}
+        if _mentioned(vehicle.make, text) or model_words & words:
+            matches.append(vehicle)
+    return matches
 
 
 def _rephrase_request(response: GroundedResponse, *, first_turn: bool) -> str:
@@ -151,8 +163,12 @@ async def search_vehicles(
         Field(description="Closest stated or implied size; chhota/small means light, bada/heavy means heavy"),
     ]
     | None = None,
-    make: str | None = None,
-    model: str | None = None,
+    make: Annotated[str, Field(description="Manufacturer name only, for example Tata or Mahindra")] | None = None,
+    model: Annotated[
+        str,
+        Field(description="Full or partial model name without the manufacturer, for example Ace or Ace Gold"),
+    ]
+    | None = None,
     payload_min_kg: Annotated[int, Field(ge=0, description="Minimum payload only when a number is stated")]
     | None = None,
     gvw_min_kg: Annotated[int, Field(ge=0, description="Minimum GVW only when a number is stated")] | None = None,
@@ -176,9 +192,6 @@ async def search_vehicles(
     regional_delivery, roadwork, vegetable_delivery, water_transport.
     """
     logger.info("tool_called", extra={"tool": "search_vehicles"})
-    body_type = _explicit(get_args(BodyType), ctx.context.current_input)
-    fuel = _explicit(get_args(Fuel), ctx.context.current_input)
-    category = _explicit(tuple(value.value for value in VehicleCategory), ctx.context.current_input)
     more_results = more_results or bool(
         re.search(r"\b(?:more|next|another)\s+(?:options?|vehicles?|results?)\b", ctx.context.current_input, re.IGNORECASE)
     )
@@ -232,6 +245,8 @@ async def get_vehicle_details(
 
     If the user adds, removes, corrects, or prefers any search constraint, use
     search_vehicles instead. Omit result_number for these/all results.
+    A make or model named in the user's question is resolved against the prior
+    results when result_number is omitted.
 
     Valid fields: year, price, km_driven, fuel, payload, gvw, body_type, city,
     papers_verified, condition, purpose_tags, vehicle_category, weight_class,
@@ -246,6 +261,7 @@ async def get_vehicle_details(
     context.action = AgentAction.details
     state = context.state
 
+    all_details = all_details or (not fields and bool(DETAIL_REQUEST_PATTERN.search(context.current_input)))
     if all_details:
         fields = list(DetailField)
     elif not fields:
@@ -259,8 +275,9 @@ async def get_vehicle_details(
         context.current_input,
         re.IGNORECASE,
     )
+    vehicles: list[VehicleRecord] | None = None
     if plural_reference:
-        listing_ids = state.last_result_ids
+        listing_ids = list(state.last_result_ids)
     elif result_number is not None:
         if result_number > len(state.last_result_ids):
             return _set_response(context, message_response("I don't have that result number in the previous search."))
@@ -268,9 +285,17 @@ async def get_vehicle_details(
     elif state.selected_listing_id:
         listing_ids = [state.selected_listing_id]
     else:
-        listing_ids = state.last_result_ids
+        candidates, context.catalog_ms = await asyncio.to_thread(get_vehicles, state.last_result_ids)
+        vehicles = _named_vehicles(candidates, context.current_input)
+        if not vehicles:
+            return _set_response(
+                context,
+                message_response("Which previous result do you mean: first, second, or third?"),
+            )
+        listing_ids = [vehicle.listing_id for vehicle in vehicles]
 
-    vehicles, context.catalog_ms = await asyncio.to_thread(get_vehicles, listing_ids)
+    if vehicles is None:
+        vehicles, context.catalog_ms = await asyncio.to_thread(get_vehicles, listing_ids)
     if not vehicles:
         return _set_response(
             context,

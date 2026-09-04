@@ -72,11 +72,18 @@ def _build_where(filters: SearchFilters) -> tuple[str, list[Any]]:
             clauses.append(clause)
             parameters.append(value)
 
-    for field in ("city", "fuel", "body_type", "vehicle_category", "weight_class", "make", "model"):
+    for field in ("city", "fuel", "body_type", "vehicle_category", "weight_class"):
         value = getattr(filters, field)
         if value is not None:
             clauses.append(f"LOWER({field}) = LOWER(?)")
             parameters.append(value)
+
+    if filters.make is not None:
+        clauses.append("POSITION(LOWER(?) IN LOWER(make)) > 0")
+        parameters.append(filters.make)
+    if filters.model is not None:
+        clauses.append("POSITION(LOWER(?) IN LOWER(make || ' ' || model)) > 0")
+        parameters.append(filters.model)
 
     if filters.papers_verified is not None:
         clauses.append("papers_verified = ?")
@@ -96,10 +103,16 @@ def _matches(vehicle: VehicleRecord, filters: SearchFilters) -> bool:
     if filters.budget_max is not None and vehicle.price_inr > filters.budget_max:
         return False
 
-    for field in ("city", "fuel", "body_type", "vehicle_category", "weight_class", "make", "model"):
+    for field in ("city", "fuel", "body_type", "vehicle_category", "weight_class"):
         expected = getattr(filters, field)
         if expected is not None and getattr(vehicle, field).casefold() != expected.casefold():
             return False
+
+    if filters.make is not None and filters.make.casefold() not in vehicle.make.casefold():
+        return False
+    catalog_name = f"{vehicle.make} {vehicle.model}".casefold()
+    if filters.model is not None and filters.model.casefold() not in catalog_name:
+        return False
 
     if filters.payload_min_kg is not None and (
         vehicle.payload_kg is None or vehicle.payload_kg < filters.payload_min_kg

@@ -50,7 +50,7 @@ def _invoke(context: AgentContext, arguments: dict) -> None:
     asyncio.run(get_vehicle_details.on_invoke_tool(tool_context, encoded))
 
 
-def test_search_keeps_explicit_enum_words_when_model_omits_them(monkeypatch):
+def test_search_uses_the_models_typed_slot_extraction(monkeypatch):
     logs = []
     context = AgentContext(
         state=ConversationState(session_id="test"),
@@ -72,7 +72,14 @@ def test_search_keeps_explicit_enum_words_when_model_omits_them(monkeypatch):
 
     monkeypatch.setattr(tools_module, "search_catalog", fake_search)
     monkeypatch.setattr(tools_module.logger, "info", lambda message, *, extra: logs.append((message, extra)))
-    encoded = json.dumps({"size": "heavy"})
+    encoded = json.dumps(
+        {
+            "size": "heavy",
+            "fuel": "Diesel",
+            "body_type": "tipper",
+            "category": "rigid_truck",
+        }
+    )
     tool_context = ToolContext(
         context=context,
         tool_name="search_vehicles",
@@ -122,6 +129,30 @@ def test_all_details_for_an_ordinal_returns_every_user_facing_field(monkeypatch)
         "specification source",
     ):
         assert label in fact
+
+
+def test_named_details_are_limited_to_matching_previous_results(monkeypatch):
+    context = _context("Give me more details about the Mahindra Jeeto.")
+    context.state.selected_listing_id = None
+    catalog = {
+        "VEH-001": _vehicle("VEH-001").model_copy(
+            update={"make": "Mahindra", "model": "Jeeto Strong Diesel"}
+        ),
+        "VEH-002": _vehicle("VEH-002").model_copy(update={"make": "Tata", "model": "Ace Gold"}),
+        "VEH-003": _vehicle("VEH-003").model_copy(
+            update={"make": "Mahindra", "model": "Jeeto Strong Diesel"}
+        ),
+    }
+
+    def fake_lookup(listing_ids):
+        return [catalog[listing_id] for listing_id in listing_ids], 1.0
+
+    monkeypatch.setattr(tools_module, "get_vehicles", fake_lookup)
+    _invoke(context, {})
+
+    assert len(context.grounded_response.facts) == 2
+    assert all(fact.startswith("Mahindra Jeeto Strong Diesel") for fact in context.grounded_response.facts)
+    assert context.state.selected_listing_id is None
 
 
 def test_brochure_question_returns_sources_for_all_results(monkeypatch):

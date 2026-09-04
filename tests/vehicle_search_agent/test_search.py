@@ -15,11 +15,12 @@ def _row(
     condition: str = "fair",
     purpose: str = "logistics",
     weight_class: str = "light",
+    model: str | None = None,
 ):
     return (
         listing_id,
         "Tata",
-        f"Model {listing_id}",
+        model or f"Model {listing_id}",
         year,
         price,
         kilometres,
@@ -143,6 +144,21 @@ def test_weight_class_is_a_hard_filter(monkeypatch):
 
     assert result.total_matches == 1
     assert result.vehicles[0].vehicle.listing_id == "VEH-002"
+
+
+def test_search_accepts_a_partial_model_name_with_its_make(monkeypatch):
+    connection, _ = _install_catalog(
+        monkeypatch,
+        [_row("VEH-ACE", model="Ace Gold"), _row("VEH-INTRA", model="Intra V30")],
+    )
+
+    try:
+        result = search_module.search_catalog(SearchFilters(model="Tata Ace"), [])
+    finally:
+        connection.close()
+
+    assert result.total_matches == 1
+    assert result.vehicles[0].vehicle.model == "Ace Gold"
 
 
 def test_catalog_options_use_one_connection_and_only_requested_topics(monkeypatch):
