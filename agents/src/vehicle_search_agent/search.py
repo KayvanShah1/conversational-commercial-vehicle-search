@@ -48,12 +48,13 @@ RELAXATION_PRIORITY = (
     SearchField.budget_min,
 )
 
-CATALOG_TOPIC_COLUMNS = {
+CATALOG_TOPIC_VALUES = {
     CatalogTopic.cities: "city",
     CatalogTopic.vehicle_categories: "vehicle_category",
     CatalogTopic.body_types: "body_type",
     CatalogTopic.fuels: "fuel",
     CatalogTopic.makes: "make",
+    CatalogTopic.purposes: "UNNEST(purpose_tags)",
 }
 
 
@@ -245,9 +246,10 @@ def get_vehicles(listing_ids: list[str]) -> tuple[list[VehicleRecord], float]:
 def get_catalog_options(topics: list[CatalogTopic]) -> tuple[dict[CatalogTopic, list[str]], float]:
     operation = OperationLogContext("catalog_options")
     selections = [
-        f"SELECT '{topic.value}' AS topic, {CATALOG_TOPIC_COLUMNS[topic]} AS value FROM vehicles" for topic in topics
+        f"SELECT DISTINCT '{topic.value}' AS topic, {CATALOG_TOPIC_VALUES[topic]} AS value FROM vehicles"
+        for topic in topics
     ]
-    sql = " UNION ".join(selections) + " ORDER BY topic, value"
+    sql = " UNION ALL ".join(selections) + " ORDER BY topic, value"
 
     with get_motherduck_connection(settings.motherduck, read_only=True) as connection:
         rows = connection.execute(sql).fetchall()

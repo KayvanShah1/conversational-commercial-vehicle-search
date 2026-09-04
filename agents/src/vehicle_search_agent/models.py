@@ -27,6 +27,7 @@ class CatalogTopic(StrEnum):
     body_types = "body_types"
     fuels = "fuels"
     makes = "makes"
+    purposes = "purposes"
 
 
 class AgentAction(StrEnum):

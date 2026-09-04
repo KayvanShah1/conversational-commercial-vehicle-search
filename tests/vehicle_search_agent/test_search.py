@@ -16,6 +16,7 @@ def _row(
     purpose: str = "logistics",
     weight_class: str = "light",
     model: str | None = None,
+    city: str = "Pune",
 ):
     return (
         listing_id,
@@ -31,7 +32,7 @@ def _row(
         weight_class,
         "open",
         2,
-        "Pune",
+        city,
         papers_verified,
         condition,
         [purpose],
@@ -161,21 +162,25 @@ def test_search_accepts_a_partial_model_name_with_its_make(monkeypatch):
     assert result.vehicles[0].vehicle.model == "Ace Gold"
 
 
-def test_catalog_options_use_one_connection_and_only_requested_topics(monkeypatch):
+def test_catalog_options_use_one_connection_and_return_unique_facets(monkeypatch):
     rows = [
         _row("VEH-001"),
-        (*_row("VEH-002")[:13], "Mumbai", *_row("VEH-002")[14:]),
+        _row("VEH-002", purpose="city_delivery", city="Mumbai"),
+        _row("VEH-003"),
     ]
     connection, calls = _install_catalog(monkeypatch, rows)
 
     try:
-        options, _ = search_module.get_catalog_options([CatalogTopic.cities, CatalogTopic.fuels])
+        options, _ = search_module.get_catalog_options(
+            [CatalogTopic.cities, CatalogTopic.fuels, CatalogTopic.purposes]
+        )
     finally:
         connection.close()
 
     assert options == {
         CatalogTopic.cities: ["Mumbai", "Pune"],
         CatalogTopic.fuels: ["Diesel"],
+        CatalogTopic.purposes: ["city_delivery", "logistics"],
     }
     assert calls["count"] == 1
 
