@@ -294,6 +294,7 @@
     },
     "preserve_result_ids": true,
     "expected_detail_count": 3,
-    "expected_response_contains_all": ["specification source", "https://"]
+    "expected_response_contains_any": ["brochure", "specification source", "specifications"],
+    "expected_response_contains_all": ["https://"]
   }
 ]

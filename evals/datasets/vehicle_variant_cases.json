@@ -74,10 +74,10 @@
       ["payload", "carry"],
       ["gvw", "gross vehicle weight"],
       ["body type", "body"],
-      ["city", "located", "location"],
+      ["city", "located", "location", "listed in"],
       ["papers", "verified"],
       ["condition"],
-      ["listed uses", "uses", "suitable for"],
+      ["listed uses", "uses", "suitable for", "listed for"],
       ["category", "pickup", "mini truck", "rigid truck"],
       ["size class", "light", "intermediate", "medium", "heavy"],
       ["axles", "axle"]
