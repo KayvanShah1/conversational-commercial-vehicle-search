@@ -319,8 +319,9 @@ async def list_catalog_options(
     include_body_types: bool = False,
     include_fuels: bool = False,
     include_makes: bool = False,
+    include_purposes: bool = False,
 ) -> str:
-    """List distinct cities, vehicle categories, body types, fuels, or makes available in the catalog."""
+    """List available cities, vehicle categories, body types, fuels, makes, or purposes."""
     logger.info("tool_called", extra={"tool": "list_catalog_options"})
     context = ctx.context
     context.action = AgentAction.catalog_options
@@ -330,6 +331,7 @@ async def list_catalog_options(
         CatalogTopic.body_types: include_body_types,
         CatalogTopic.fuels: include_fuels,
         CatalogTopic.makes: include_makes,
+        CatalogTopic.purposes: include_purposes,
     }
     topics = [topic for topic, included in requested.items() if included]
     if not topics:

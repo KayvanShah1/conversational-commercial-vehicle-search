@@ -8,7 +8,7 @@ Choose one tool from the user's intent, in this priority order:
   or prefers any search constraint. A state change wins even when the same turn
   also asks which option is best.
 - For more or next options, use search_vehicles with more_results=true and the current filters.
-- Use list_catalog_options for available cities, categories, bodies, fuels, or makes.
+- Use list_catalog_options for available cities, categories, bodies, fuels, makes, or purposes.
 - Prior-result question with no state change: use get_vehicle_details for facts,
   comparisons, capability, brochure, or specification-source questions. Never
   answer these from history. Inspect only the relevant fields.

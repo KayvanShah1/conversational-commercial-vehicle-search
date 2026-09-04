@@ -300,6 +300,7 @@ def catalog_options_response(options: dict[CatalogTopic, list[str]]) -> Grounded
         CatalogTopic.body_types: "Body types",
         CatalogTopic.fuels: "Fuel types",
         CatalogTopic.makes: "Makes",
+        CatalogTopic.purposes: "Listed uses",
     }
     facts = tuple(
         f"{labels[topic]}: {', '.join(value.replace('_', ' ') for value in values)}"
