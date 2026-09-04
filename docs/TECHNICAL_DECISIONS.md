@@ -192,8 +192,8 @@ ranking, response validation, or the UI contract.
 
 ### First 200 ms to win back
 
-In the latest 27-case core run, understanding averaged 1,083.62 ms and catalog
-search/lookup averaged 621.38 ms; detail response generation averaged 1,265.38
+In the latest 28-case core run, understanding averaged 1,017.39 ms and catalog
+search/lookup averaged 432.65 ms; detail response generation averaged 1,752.86
 ms on the three turns that used it. The first broadly available ~200 ms is in
 catalog connection setup: keep a bounded warm read-only connection pool or put
 the catalog behind a small read service. Detail turns can save more by using a

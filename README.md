@@ -1,6 +1,6 @@
 # Vivi: Voice-first Commercial Vehicle search
 
-[![Evaluation: 44/45](https://img.shields.io/badge/evaluation-44%2F45_passed-22c55e?style=flat-square)](docs/EVALUATION.md)
+[![Evaluation: 46/46](https://img.shields.io/badge/evaluation-46%2F46_passed-22c55e?style=flat-square)](docs/EVALUATION.md)
 [![Catalog: 1,000 listings](https://img.shields.io/badge/catalog-1%2C000_listings-2563eb?style=flat-square)](docs/DATA_GENERATION.md)
 [![Input: voice and text](https://img.shields.io/badge/input-voice_%2B_text-7c3aed?style=flat-square)](docs/SETUP.md)
 [![Grounding: validated](https://img.shields.io/badge/catalog_facts-validated-0f766e?style=flat-square)](docs/TECHNICAL_DECISIONS.md#decision-3-deterministic-facts-with-optional-natural-rephrasing)
@@ -16,7 +16,7 @@ Vivi is a conversational assistant for finding used commercial vehicles through 
 - **Grounded recommendations:** the model never writes SQL, and catalog facts are checked against returned records before they reach the user.
 - **Inspectable decisions:** active filters, ranked results, ranking components, tool calls, model route, latency, tokens, and estimated cost are visible in the demo.
 - **Resilient voice path:** Groq handles speech and primary model inference, with bounded key/model rotation and optional OpenRouter fallbacks.
-- **Executable evaluation:** 45 cases cover conversation, safety, all vehicle sizes, body variants, attribute lookup, pagination, and preference changes.
+- **Executable evaluation:** 46 cases cover conversation, safety, catalog discovery, all vehicle sizes, body variants, attribute lookup, pagination, and preference changes.
 
 ## Quick start
 
@@ -71,11 +71,11 @@ The buyer gets a natural conversation and comparable options; the application tu
 
 | Suite | Coverage | Latest live result |
 | --- | --- | ---: |
-| Core | Conversation, intent, slots, safety, corrections, and follow-ups | **27/27 (100%)** |
-| Vehicle variants | Sizes, bodies, fuels, categories, attributes, and pagination | **17/18 (94.4%)** |
-| Combined | All executable cases | **44/45 (97.8%)** |
+| Core | Conversation, intent, slots, safety, corrections, and follow-ups | **28/28 (100%)** |
+| Vehicle variants | Sizes, bodies, fuels, categories, attributes, and pagination | **18/18 (100%)** |
+| Combined | All executable cases | **46/46 (100%)** |
 
-The remaining variant mismatch was an evaluator vocabulary gap, not an incorrect fact, filter, action, or result ID. The checker has since been updated to accept the natural phrasing. Full commands, checks, timings, token usage, and cost boundaries are in the [evaluation report](docs/EVALUATION.md).
+Both complete suites passed through the live agent and MotherDuck path on 2026-09-05. Full commands, checks, timings, token usage, and cost boundaries are in the [evaluation report](docs/EVALUATION.md).
 
 ## Tech stack
 
