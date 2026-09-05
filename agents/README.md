@@ -1,12 +1,18 @@
 # Vehicle Search Agent
 
-The package keeps the live path deliberately small:
+The package is organized by capability. Each package exposes its stable public
+API from `__init__.py`, while implementation files stay focused:
 
-1. `voice.py` transcribes audio and synthesizes the final response.
-2. `agent.py` configures Vivi and registers the typed tools in `tools.py`.
-3. `search.py` applies parameterized hard filters, ranks every matching row, and validates the returned records.
-4. `response.py` creates spoken text only from catalog records.
-5. `runner.py` retains cross-turn state and records stage timings.
+1. `agent/` defines Vivi, its prompt, provider routes, and tool registration.
+2. `models/` owns catalog, filter, enum, state, and turn schemas.
+3. `search/` separates parameterized queries, deterministic ranking, and search orchestration.
+4. `tools/` contains one module per model-facing operation plus shared turn context.
+5. `response/` renders catalog fields and comparisons, composes responses, and validates grounding.
+6. `runner/` owns conversation sessions and telemetry/cost measurement.
+7. `voice/` separates provider key rotation, transcription, and WAV synthesis.
+
+`settings.py` remains at the package root because every runtime capability
+consumes the same validated configuration.
 
 The model never writes SQL. Search and detail tools build the factual response
 from catalog records. Vivi may rephrase the surrounding language, but code
@@ -42,7 +48,7 @@ Run the focused tests:
 uv run pytest tests/vehicle_search_agent -q
 ```
 
-Run the 27-turn live evaluation (the delay avoids free-tier bursts):
+Run the 28-turn live evaluation (the delay avoids free-tier bursts):
 
 ```powershell
 uv run --package evals python -m evals.evaluate_agent --delay-seconds 10

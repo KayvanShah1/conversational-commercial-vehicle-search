@@ -1,15 +1,14 @@
 import asyncio
 from time import perf_counter
-from typing import Any
 from unicodedata import normalize
 
 from vehicle_search_utils import OperationLogContext, get_logger
 
-from agents import Agent, ModelSettings, RunConfig, RunContextWrapper, RunHooks, Runner, SQLiteSession
+from agents import ModelSettings, RunConfig, Runner, SQLiteSession
 from vehicle_search_agent.agent import FallbackModel, build_agent
 from vehicle_search_agent.models import AgentTurnResult, ConversationState, TurnMetrics, TurnUsage, VoiceTurnResult
-from vehicle_search_agent.pricing import USD_TO_INR, llm_list_cost_usd, voice_list_cost_usd
 from vehicle_search_agent.response import conversational_response, natural_response
+from vehicle_search_agent.runner.telemetry import USD_TO_INR, AgentStageTimer, voice_list_cost_usd
 from vehicle_search_agent.settings import settings
 from vehicle_search_agent.tools import AgentContext
 from vehicle_search_agent.voice import synthesize_speech, transcribe_audio
@@ -20,38 +19,6 @@ logger = get_logger("VehicleSearchAgent")
 def _match_text(value: str) -> str:
     """Normalize visually equivalent model text before grounding checks."""
     return " ".join(normalize("NFKC", value).casefold().split())
-
-
-class AgentStageTimer(RunHooks[AgentContext]):
-    async def on_llm_start(
-        self,
-        context: RunContextWrapper[AgentContext],
-        agent: Agent[AgentContext],
-        system_prompt: str | None,
-        input_items: list[Any],
-    ) -> None:
-        del agent, system_prompt, input_items
-        agent_context = context.context
-        stage = "response" if agent_context.grounded_response else "understanding"
-        agent_context.llm_operation = OperationLogContext(stage)
-
-    async def on_llm_end(
-        self, context: RunContextWrapper[AgentContext], agent: Agent[AgentContext], response: Any
-    ) -> None:
-        agent_context = context.context
-        usage = response.usage
-        cost = llm_list_cost_usd(str(agent.model.model), usage.input_tokens, usage.output_tokens)
-        if (usage.requests and not usage.total_tokens) or cost is None:
-            agent_context.pricing_complete = False
-        else:
-            agent_context.llm_list_cost_usd += cost
-        operation = agent_context.llm_operation
-        if operation is not None:
-            completed = operation.completed_extra(status="succeeded")
-            field = f"{operation.operation}_ms"
-            elapsed = (getattr(agent_context, field) or 0) + completed["duration_ms"]
-            setattr(agent_context, field, round(elapsed, 2))
-            logger.info(f"{operation.operation}_completed", extra=completed)
 
 
 class VehicleSearchSession:

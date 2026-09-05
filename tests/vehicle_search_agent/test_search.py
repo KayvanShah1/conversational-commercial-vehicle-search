@@ -2,7 +2,10 @@ from contextlib import contextmanager
 
 import duckdb
 import vehicle_search_agent.search as search_module
-from vehicle_search_agent.models import CatalogTopic, SearchFilters
+import vehicle_search_agent.search.query as query_module
+import vehicle_search_agent.search.ranking as ranking_module
+import vehicle_search_agent.search.service as service_module
+from vehicle_search_agent.models import CatalogTopic, SearchFilters, VehicleRecord
 
 
 def _row(
@@ -69,7 +72,8 @@ def _install_catalog(monkeypatch, rows):
         calls["count"] += 1
         yield connection
 
-    monkeypatch.setattr(search_module, "get_motherduck_connection", local_connection)
+    monkeypatch.setattr(query_module, "get_motherduck_connection", local_connection)
+    monkeypatch.setattr(service_module, "get_motherduck_connection", local_connection)
     return connection, calls
 
 
@@ -124,17 +128,17 @@ def test_zero_result_search_still_uses_one_connection(monkeypatch):
 
 
 def test_purpose_matching_uses_normalized_values():
-    vehicle = search_module.VehicleRecord.model_validate(
+    vehicle = VehicleRecord.model_validate(
         dict(
             zip(
-                [column.strip() for column in search_module.VEHICLE_COLUMNS.replace("\n", "").split(",")],
+                [column.strip() for column in query_module.VEHICLE_COLUMNS.replace("\n", "").split(",")],
                 _row("VEH-001", purpose="City Delivery"),
                 strict=True,
             )
         )
     )
 
-    ranked = search_module._rank([vehicle], SearchFilters(purpose="city_delivery"))
+    ranked = ranking_module.rank([vehicle], SearchFilters(purpose="city_delivery"))
 
     assert ranked[0].score.purpose > 0
 

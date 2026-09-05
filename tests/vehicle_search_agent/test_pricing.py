@@ -1,4 +1,4 @@
-from vehicle_search_agent.pricing import llm_list_cost_usd
+from vehicle_search_agent.runner.telemetry import llm_list_cost_usd
 
 
 def test_llm_list_cost_uses_input_and_output_rates():

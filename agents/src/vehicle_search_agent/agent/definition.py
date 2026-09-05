@@ -15,8 +15,8 @@ from agents import (
     RunContextWrapper,
     ToolsToFinalOutputResult,
 )
+from vehicle_search_agent.agent.prompts import SYSTEM_PROMPT
 from vehicle_search_agent.models import AgentAction
-from vehicle_search_agent.prompts import SYSTEM_PROMPT
 from vehicle_search_agent.settings import settings
 from vehicle_search_agent.tools import AgentContext, get_vehicle_details, list_catalog_options, search_vehicles
 
@@ -73,9 +73,7 @@ class FallbackModel(Model):
             await model.close()
 
 
-def _tool_result(
-    ctx: RunContextWrapper[AgentContext], _results: list[FunctionToolResult]
-) -> ToolsToFinalOutputResult:
+def _tool_result(ctx: RunContextWrapper[AgentContext], _results: list[FunctionToolResult]) -> ToolsToFinalOutputResult:
     context = ctx.context
     if context.tool_failures >= 3:
         return ToolsToFinalOutputResult(
@@ -98,8 +96,7 @@ def build_agent() -> Agent[AgentContext]:
     models: list[OpenAIChatCompletionsModel] = []
     routes: list[str] = []
     groq_clients = [
-        AsyncOpenAI(api_key=key.get_secret_value(), base_url=settings.groq.base_url)
-        for key in settings.groq.api_keys
+        AsyncOpenAI(api_key=key.get_secret_value(), base_url=settings.groq.base_url) for key in settings.groq.api_keys
     ]
     for model_name in [settings.groq.primary_model, *settings.groq.fallback_models]:
         for key_number, client in enumerate(groq_clients, start=1):

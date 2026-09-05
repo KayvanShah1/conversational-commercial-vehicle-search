@@ -7,16 +7,16 @@ This is the concise submission-facing design record. The wiki contains the deepe
 | System component | Implementation | Hidden complexity | Production replacement |
 | --- | --- | --- | --- |
 | Voice interface | `app/main.py` Streamlit microphone, text fallback, result/state display, audio playback | Browser capture and reruns | Product web client with streaming media |
-| Speech to text | `voice.py:transcribe_audio` | Multipart audio and provider timing | Streaming STT with noisy-audio adaptation |
+| Speech to text | `voice/transcription.py:transcribe_audio` | Multipart audio and provider timing | Streaming STT with noisy-audio adaptation |
 | Understanding | One Agents SDK agent with typed tools | Intent choice, slot extraction, correction | Larger capacity model with the same schemas |
-| Catalog and search | `search.py` plus MotherDuck | Parameterized filters, ranking, invariant checks | Search service with replicas and indexes |
-| Response and TTS | `response.py` plus `voice.py` | Grounded composition, value validation, WAV batching | Streaming response and TTS gateway |
+| Catalog and search | `search/` plus MotherDuck | Parameterized filters, ranking, invariant checks | Search service with replicas and indexes |
+| Response and TTS | `response/` and `voice/` | Grounded composition, value validation, WAV batching | Streaming response and TTS gateway |
 | Conversation state | Typed `ConversationState` plus SDK `SQLiteSession` | Slot merging and result references | Redis or durable session service |
 | Evaluation and latency | `evals.evaluate_agent` and structured operation logs | Semantic checks and stage timing | CI evaluation service plus observability |
 
 ## Code organization and quality review
 
-The implementation is separated by failure boundary rather than by framework pattern. The largest files remain cohesive modules: `tools.py` validates model-facing inputs, `search.py` owns parameterized queries and ranking, `response.py` owns grounded composition, and `runner.py` owns turns, state, retries, and telemetry. Splitting these into one-use classes would add navigation without isolating another responsibility.
+The implementation is separated by capability and failure boundary rather than by framework pattern. `tools/` validates model-facing inputs, `search/` owns parameterized queries and ranking, `response/` renders and validates grounded answers, `runner/` owns turns and telemetry, and `voice/` isolates speech-provider concerns. Each package re-exports a small stable API from `__init__.py`; internal modules separate responsibilities without adding one-use service, repository, or presenter classes. Presentation uses typed function registries.
 
 | Review concern | Resolution |
 | --- | --- |

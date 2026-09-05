@@ -38,7 +38,7 @@ def test_agent_can_answer_side_questions_without_a_tool(monkeypatch):
     async def fake_run(*args, **kwargs):
         return _run_result(next(responses), input_tokens=100, output_tokens=20)
 
-    monkeypatch.setattr("vehicle_search_agent.runner.Runner.run", staticmethod(fake_run))
+    monkeypatch.setattr("vehicle_search_agent.runner.session.Runner.run", staticmethod(fake_run))
 
     session = object.__new__(VehicleSearchSession)
     session.session_id = "test-session"
@@ -65,7 +65,7 @@ def test_no_tool_numeric_claim_uses_safe_fallback(monkeypatch):
     async def fake_run(*args, **kwargs):
         return _run_result("That Tata costs INR 4 lakh.")
 
-    monkeypatch.setattr("vehicle_search_agent.runner.Runner.run", staticmethod(fake_run))
+    monkeypatch.setattr("vehicle_search_agent.runner.session.Runner.run", staticmethod(fake_run))
 
     session = object.__new__(VehicleSearchSession)
     session.session_id = "test-session"
@@ -104,7 +104,7 @@ def test_named_catalog_answer_is_retried_with_the_details_tool(monkeypatch):
         session.context.grounded_response = message_response("The grounded vehicle detail.")
         return _run_result("The grounded vehicle detail.", input_tokens=200, output_tokens=30)
 
-    monkeypatch.setattr("vehicle_search_agent.runner.Runner.run", staticmethod(fake_run))
+    monkeypatch.setattr("vehicle_search_agent.runner.session.Runner.run", staticmethod(fake_run))
     session = object.__new__(VehicleSearchSession)
     session.session_id = "test-session"
     session.context = AgentContext(
@@ -142,14 +142,14 @@ def test_stage_hook_accumulates_priced_model_usage():
 
 def test_voice_turn_measures_server_receipt_to_audio_ready(monkeypatch):
     monkeypatch.setattr(
-        "vehicle_search_agent.runner.transcribe_audio",
+        "vehicle_search_agent.runner.session.transcribe_audio",
         lambda *args, **kwargs: SimpleNamespace(text="Hi", duration_ms=100.0, audio_seconds=2.0),
     )
     monkeypatch.setattr(
-        "vehicle_search_agent.runner.synthesize_speech",
+        "vehicle_search_agent.runner.session.synthesize_speech",
         lambda text: SimpleNamespace(audio=b"wav", duration_ms=200.0, format="wav", character_count=20),
     )
-    monkeypatch.setattr("vehicle_search_agent.runner.perf_counter", lambda: 10.5)
+    monkeypatch.setattr("vehicle_search_agent.runner.session.perf_counter", lambda: 10.5)
 
     async def fake_text_turn(transcript: str) -> AgentTurnResult:
         return AgentTurnResult(

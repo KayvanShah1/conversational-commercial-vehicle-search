@@ -1,7 +1,8 @@
 import asyncio
 import json
 
-import vehicle_search_agent.tools as tools_module
+import vehicle_search_agent.tools.details as details_tool_module
+import vehicle_search_agent.tools.search as search_tool_module
 from agents.tool_context import ToolContext
 from vehicle_search_agent.models import ConversationState, VehicleRecord, VehicleSearchResult
 from vehicle_search_agent.tools import AgentContext, get_vehicle_details, search_vehicles
@@ -70,8 +71,8 @@ def test_search_uses_the_models_typed_slot_extraction(monkeypatch):
             search_ms=1,
         )
 
-    monkeypatch.setattr(tools_module, "search_catalog", fake_search)
-    monkeypatch.setattr(tools_module.logger, "info", lambda message, *, extra: logs.append((message, extra)))
+    monkeypatch.setattr(search_tool_module, "search_catalog", fake_search)
+    monkeypatch.setattr(search_tool_module.logger, "info", lambda message, *, extra: logs.append((message, extra)))
     encoded = json.dumps(
         {
             "mode": "new",
@@ -113,7 +114,7 @@ def test_more_mode_excludes_previously_shown_results(monkeypatch):
             search_ms=1,
         )
 
-    monkeypatch.setattr(tools_module, "search_catalog", fake_search)
+    monkeypatch.setattr(search_tool_module, "search_catalog", fake_search)
     encoded = json.dumps({"mode": "more"})
     tool_context = ToolContext(
         context=context,
@@ -131,7 +132,7 @@ def test_all_scope_overrides_a_previous_single_selection(monkeypatch):
     def fake_lookup(listing_ids):
         return [_vehicle(listing_id) for listing_id in listing_ids], 1.0
 
-    monkeypatch.setattr(tools_module, "get_vehicles", fake_lookup)
+    monkeypatch.setattr(details_tool_module, "get_vehicles", fake_lookup)
     _invoke(context, {"scope": "all", "mode": "capability"})
 
     assert len(context.grounded_response.facts) == 3
@@ -144,7 +145,7 @@ def test_all_details_for_an_ordinal_returns_every_user_facing_field(monkeypatch)
     def fake_lookup(listing_ids):
         return [_vehicle(listing_id) for listing_id in listing_ids], 1.0
 
-    monkeypatch.setattr(tools_module, "get_vehicles", fake_lookup)
+    monkeypatch.setattr(details_tool_module, "get_vehicles", fake_lookup)
     _invoke(context, {"scope": "one", "mode": "all_details", "result_number": 1})
 
     assert len(context.grounded_response.facts) == 1
@@ -177,7 +178,7 @@ def test_named_details_are_limited_to_matching_previous_results(monkeypatch):
     def fake_lookup(listing_ids):
         return [catalog[listing_id] for listing_id in listing_ids], 1.0
 
-    monkeypatch.setattr(tools_module, "get_vehicles", fake_lookup)
+    monkeypatch.setattr(details_tool_module, "get_vehicles", fake_lookup)
     _invoke(context, {"scope": "one", "mode": "all_details"})
 
     assert len(context.grounded_response.facts) == 2
@@ -191,7 +192,7 @@ def test_brochure_question_returns_sources_for_all_results(monkeypatch):
     def fake_lookup(listing_ids):
         return [_vehicle(listing_id) for listing_id in listing_ids], 1.0
 
-    monkeypatch.setattr(tools_module, "get_vehicles", fake_lookup)
+    monkeypatch.setattr(details_tool_module, "get_vehicles", fake_lookup)
     _invoke(context, {"scope": "all", "mode": "facts", "fields": ["spec_source_url"]})
 
     assert len(context.grounded_response.facts) == 3

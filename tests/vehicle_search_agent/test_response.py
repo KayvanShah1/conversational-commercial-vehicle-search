@@ -13,6 +13,7 @@ from vehicle_search_agent.response import (
     natural_response,
     search_response,
 )
+from vehicle_search_agent.response.details import DETAIL_RENDERERS
 
 
 def _priced_vehicle(listing_id: str, price: int) -> VehicleRecord:
@@ -82,6 +83,16 @@ def test_greeting_is_catalog_neutral_even_if_model_mentions_a_van():
     )
 
     assert response == "Hey, I'm Vivi. Tell me what you need to transport, your budget, and where you're looking."
+
+
+def test_detail_renderer_registry_covers_every_field():
+    assert set(DETAIL_RENDERERS) == set(DetailField)
+
+
+def test_conversational_response_normalizes_non_breaking_hyphens():
+    response = conversational_response("Choose a commercial‑vehicle for the route.", first_turn=False)
+
+    assert response == "Choose a commercial-vehicle for the route."
 
 
 def test_cheapest_comparison_is_explicit_and_grounded():
