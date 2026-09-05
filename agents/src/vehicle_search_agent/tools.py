@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import re
 from dataclasses import dataclass
@@ -11,9 +9,12 @@ from vehicle_search_utils import OperationLogContext, get_logger
 from agents import RunContextWrapper, function_tool
 from vehicle_search_agent.models import (
     AgentAction,
+    BodyType,
     CatalogTopic,
     ConversationState,
     DetailField,
+    FuelType,
+    PurposeTag,
     SearchField,
     SearchFilters,
     SlotPatch,
@@ -35,33 +36,10 @@ from vehicle_search_agent.settings import settings
 
 logger = get_logger("VehicleSearchTools")
 
-BodyType = Literal["open", "flatbed", "box", "container", "tipper", "tanker", "reefer"]
-Fuel = Literal["CNG", "Diesel"]
 SearchMode = Literal["new", "refine", "more"]
 DetailScope = Literal["one", "all"]
 DetailMode = Literal[
     "facts", "capability", "all_details", "best_match", "cheapest", "lowest_mileage", "highest_payload"
-]
-Purpose = Literal[
-    "agriculture",
-    "city_delivery",
-    "cold_chain",
-    "construction",
-    "ecommerce",
-    "fmcg",
-    "fuel_transport",
-    "heavy_delivery",
-    "industrial_goods",
-    "last_mile",
-    "logistics",
-    "long_haul",
-    "market_transport",
-    "mining",
-    "parcel_delivery",
-    "regional_delivery",
-    "roadwork",
-    "vegetable_delivery",
-    "water_transport",
 ]
 
 
@@ -158,9 +136,9 @@ async def search_vehicles(
         Field(description="Physical cargo body; pickup is a vehicle category, not a body type; do not infer it"),
     ]
     | None = None,
-    fuel: Annotated[Fuel, Field(description="Fuel stated by the user; do not infer it")] | None = None,
+    fuel: Annotated[FuelType, Field(description="Fuel stated by the user; do not infer it")] | None = None,
     city: Annotated[str, Field(description="Listing city; for a route use its origin city")] | None = None,
-    purpose: Annotated[Purpose, Field(description="Closest intended work or route type; ranking signal only")]
+    purpose: Annotated[PurposeTag, Field(description="Closest intended work or route type; ranking signal only")]
     | None = None,
     category: Annotated[
         VehicleCategory,

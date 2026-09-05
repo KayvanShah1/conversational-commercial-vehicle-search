@@ -1,53 +1,116 @@
-from __future__ import annotations
-
-from enum import StrEnum
+from enum import StrEnum, auto
+from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+# =============================================================================
+# Agent operations and catalog vocabulary
+# =============================================================================
+
 
 class SearchField(StrEnum):
-    budget_min = "budget_min"
-    budget_max = "budget_max"
-    city = "city"
-    fuel = "fuel"
-    body_type = "body_type"
-    vehicle_category = "vehicle_category"
-    weight_class = "weight_class"
-    make = "make"
-    model = "model"
-    payload_min_kg = "payload_min_kg"
-    gvw_min_kg = "gvw_min_kg"
-    papers_verified = "papers_verified"
-    purpose = "purpose"
+    budget_min = auto()
+    budget_max = auto()
+    city = auto()
+    fuel = auto()
+    body_type = auto()
+    vehicle_category = auto()
+    weight_class = auto()
+    make = auto()
+    model = auto()
+    payload_min_kg = auto()
+    gvw_min_kg = auto()
+    papers_verified = auto()
+    purpose = auto()
 
 
 class CatalogTopic(StrEnum):
-    cities = "cities"
-    vehicle_categories = "vehicle_categories"
-    body_types = "body_types"
-    fuels = "fuels"
-    makes = "makes"
-    purposes = "purposes"
+    cities = auto()
+    vehicle_categories = auto()
+    body_types = auto()
+    fuels = auto()
+    makes = auto()
+    purposes = auto()
 
 
 class AgentAction(StrEnum):
-    conversation = "conversation"
-    search = "search"
-    details = "details"
-    catalog_options = "catalog_options"
+    conversation = auto()
+    search = auto()
+    details = auto()
+    catalog_options = auto()
 
 
 class VehicleCategory(StrEnum):
-    mini_truck = "mini_truck"
-    pickup = "pickup"
-    rigid_truck = "rigid_truck"
+    mini_truck = auto()
+    pickup = auto()
+    rigid_truck = auto()
 
 
 class WeightClass(StrEnum):
-    light = "light"
-    intermediate = "intermediate"
-    medium = "medium"
-    heavy = "heavy"
+    light = auto()
+    intermediate = auto()
+    medium = auto()
+    heavy = auto()
+
+
+class BodyType(StrEnum):
+    open = auto()
+    flatbed = auto()
+    box = auto()
+    container = auto()
+    tipper = auto()
+    tanker = auto()
+    reefer = auto()
+
+
+class FuelType(StrEnum):
+    cng = "CNG"
+    diesel = "Diesel"
+
+
+class PurposeTag(StrEnum):
+    agriculture = auto()
+    city_delivery = auto()
+    cold_chain = auto()
+    construction = auto()
+    ecommerce = auto()
+    fmcg = auto()
+    fuel_transport = auto()
+    heavy_delivery = auto()
+    industrial_goods = auto()
+    last_mile = auto()
+    logistics = auto()
+    long_haul = auto()
+    market_transport = auto()
+    mining = auto()
+    parcel_delivery = auto()
+    regional_delivery = auto()
+    roadwork = auto()
+    vegetable_delivery = auto()
+    water_transport = auto()
+
+
+class DetailField(StrEnum):
+    year = auto()
+    price = auto()
+    km_driven = auto()
+    fuel = auto()
+    payload = auto()
+    gvw = auto()
+    body_type = auto()
+    city = auto()
+    papers_verified = auto()
+    condition = auto()
+    purpose_tags = auto()
+    vehicle_category = auto()
+    weight_class = auto()
+    axle_count = auto()
+    spec_source_url = auto()
+
+
+# =============================================================================
+# Search constraints and slot updates
+# =============================================================================
 
 
 class FilterValues(BaseModel):
@@ -59,8 +122,8 @@ class FilterValues(BaseModel):
         default=None,
         description="Vehicle listing or pickup city; for a route, use its origin city",
     )
-    fuel: str | None = None
-    body_type: str | None = Field(
+    fuel: FuelType | None = None
+    body_type: BodyType | None = Field(
         default=None,
         description="Physical cargo body explicitly requested by the user; do not infer it from the cargo or purpose",
     )
@@ -77,27 +140,28 @@ class FilterValues(BaseModel):
     payload_min_kg: int | None = Field(default=None, ge=0)
     gvw_min_kg: int | None = Field(default=None, ge=0)
     papers_verified: bool | None = None
-    purpose: str | None = Field(
+    purpose: PurposeTag | None = Field(
         default=None,
         description="Best-fit intended work or route type inferred from the user's need; used only for ranking",
     )
 
-    @field_validator("city", "fuel", "make", "model", mode="before")
+    @field_validator("city", "make", "model", mode="before")
     @classmethod
     def strip_text(cls, value: str | None) -> str | None:
         return value.strip() or None if isinstance(value, str) else value
 
-    @field_validator("fuel", mode="after")
+    @field_validator("fuel", mode="before")
     @classmethod
-    def normalize_fuel(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        return {"cng": "CNG", "diesel": "Diesel"}.get(value.casefold(), value)
+    def normalize_fuel(cls, value: str | FuelType | None) -> str | FuelType | None:
+        if not isinstance(value, str):
+            return value
+        cleaned = value.strip()
+        return {"cng": "CNG", "diesel": "Diesel"}.get(cleaned.casefold(), cleaned or None)
 
 
 class SearchFilters(FilterValues):
     @model_validator(mode="after")
-    def validate_budget(self) -> SearchFilters:
+    def validate_budget(self) -> Self:
         if self.budget_min is not None and self.budget_max is not None and self.budget_min > self.budget_max:
             raise ValueError("budget_min cannot exceed budget_max")
         return self
@@ -120,6 +184,11 @@ def merge_slot_patch(current: SearchFilters, patch: SlotPatch) -> tuple[SearchFi
     return updated, changed
 
 
+# =============================================================================
+# Persisted conversation state
+# =============================================================================
+
+
 class ConversationState(BaseModel):
     session_id: str
     active_filters: SearchFilters = Field(default_factory=SearchFilters)
@@ -128,6 +197,11 @@ class ConversationState(BaseModel):
     shown_result_ids: list[str] = Field(default_factory=list)
     selected_listing_id: str | None = None
     turn_number: int = Field(default=0, ge=0)
+
+
+# =============================================================================
+# Catalog records, ranking, and search results
+# =============================================================================
 
 
 class VehicleRecord(BaseModel):
@@ -176,22 +250,9 @@ class VehicleSearchResult(BaseModel):
     search_ms: float = Field(ge=0)
 
 
-class DetailField(StrEnum):
-    year = "year"
-    price = "price"
-    km_driven = "km_driven"
-    fuel = "fuel"
-    payload = "payload"
-    gvw = "gvw"
-    body_type = "body_type"
-    city = "city"
-    papers_verified = "papers_verified"
-    condition = "condition"
-    purpose_tags = "purpose_tags"
-    vehicle_category = "vehicle_category"
-    weight_class = "weight_class"
-    axle_count = "axle_count"
-    spec_source_url = "spec_source_url"
+# =============================================================================
+# Per-turn observability and public results
+# =============================================================================
 
 
 class TurnMetrics(BaseModel):
