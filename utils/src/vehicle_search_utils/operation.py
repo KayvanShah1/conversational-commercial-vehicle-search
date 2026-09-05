@@ -62,6 +62,6 @@ class OperationLogContext:
             started_at_utc=self.started_at_utc,
             ended_at_utc=utc_now_iso(),
             duration_ms=round(self.duration_ms, 2),
-            duration_human=self.duration_human,
+            # duration_human=self.duration_human,
             **fields,
         )
