@@ -1,14 +1,20 @@
 # Vivi: Voice-first Commercial Vehicle search
 
+[![Test, Build Image and Deploy to Render](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/actions/workflows/test-publish-container.yaml/badge.svg)](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/actions/workflows/test-publish-container.yaml)
 [![Evaluation: 46/46](https://img.shields.io/badge/evaluation-46%2F46_passed-22c55e?style=flat-square)](docs/EVALUATION.md)
 [![Catalog: 1,000 listings](https://img.shields.io/badge/catalog-1%2C000_listings-2563eb?style=flat-square)](docs/DATA_GENERATION.md)
 [![Input: Voice & Text](https://img.shields.io/badge/input-voice_%2B_text-7c3aed?style=flat-square)](docs/SETUP.md)
 [![Grounding: validated](https://img.shields.io/badge/catalog_facts-validated-0f766e?style=flat-square)](docs/TECHNICAL_DECISIONS.md#correctness-boundaries)
+[![Live demo](https://img.shields.io/badge/live_demo-open-ec4899?style=flat-square)](https://conversational-commercial-vehicle-search.onrender.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-334155?style=flat-square)](LICENSE)
 
 ![Vivi voice-first commercial vehicle search](assets/vivi-repo-cover.png)
 
 Vivi is a conversational assistant for finding used commercial vehicles through voice or text. It turns natural requests into inspectable constraints, applies deterministic filters and ranking to a MotherDuck catalog, and validates vehicle facts before returning or speaking a recommendation.
+
+## Try the live demo
+
+**[Open Vivi in your browser](https://conversational-commercial-vehicle-search.onrender.com/)** and start with a text or voice request. No local setup is required.
 
 ## Highlights
 
@@ -18,7 +24,27 @@ Vivi is a conversational assistant for finding used commercial vehicles through 
 - **Resilient voice path:** Groq handles speech and model inference with bounded key and model rotation.
 - **Executable evaluation:** 46 cases cover conversation, safety, catalog discovery, all vehicle sizes, body variants, attribute lookup, pagination, and preference changes.
 
-## Quick start
+## Run locally
+
+### Published container
+
+You need Docker, a MotherDuck token, and at least one Groq API key. Create `.env` from [`example.env`](example.env), then set these required values:
+
+```dotenv
+MOTHERDUCK__TOKEN=<API_TOKEN>
+GROQ__API_KEYS=["<API_KEY>"]
+```
+
+Pull the latest published image and start the app:
+
+```console
+docker pull ghcr.io/kayvanshah1/conversational-commercial-vehicle-search:latest
+docker run --rm --name vivi --env-file .env -p 8501:10000 ghcr.io/kayvanshah1/conversational-commercial-vehicle-search:latest
+```
+
+Open <http://localhost:8501>. The container stores session data only for its lifetime; add `-v vivi-sessions:/app/data/sessions` to the `docker run` command if you want sessions to persist between containers.
+
+### From source
 
 You need [uv](https://docs.astral.sh/uv/), a MotherDuck token, and at least one Groq API key.
 
@@ -85,10 +111,14 @@ Both complete suites ran through the live agent and MotherDuck path on 2026-09-0
 [![MotherDuck](https://img.shields.io/badge/MotherDuck-FFF000?style=flat-square&logo=duckdb&logoColor=111827)](https://motherduck.com/)
 [![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?style=flat-square&logo=duckdb&logoColor=111827)](https://duckdb.org/)
 [![Pydantic](https://img.shields.io/badge/Pydantic-E92063?style=flat-square&logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
-[![Groq](https://img.shields.io/badge/Groq-111827?style=flat-square)](https://groq.com/)
+[![Groq](https://img.shields.io/badge/Groq-F55036?style=flat-square&logo=groq&logoColor=white)](https://groq.com/)
 [![Polars](https://img.shields.io/badge/Polars-CD792C?style=flat-square&logo=polars&logoColor=white)](https://pola.rs/)
 [![uv](https://img.shields.io/badge/uv-DE5FE9?style=flat-square&logo=uv&logoColor=white)](https://docs.astral.sh/uv/)
 [![pytest](https://img.shields.io/badge/pytest-0A9EDC?style=flat-square&logo=pytest&logoColor=white)](https://pytest.org/)
+[![Ruff](https://img.shields.io/badge/Ruff-D7FF64?style=flat-square&logo=ruff&logoColor=261230)](https://docs.astral.sh/ruff/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
+[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white)](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/actions)
+[![Render](https://img.shields.io/badge/Render-000000?style=flat-square&logo=render&logoColor=white)](https://render.com/)
 
 ## Documentation
 
@@ -135,10 +165,10 @@ The live MotherDuck integration test is opt-in. See [Verification](docs/SETUP.md
 
 Licensed under the [MIT License](LICENSE).
 
-### Disclaimer
+#### Disclaimer
 
 <sub>This is an engineering demonstration, not a live marketplace or purchasing service. The catalog, prices, availability, rankings, and recommendations are synthetic and must not be treated as current commercial offers. Specification links provide provenance for selected reference attributes; confirm specifications, legal requirements, condition, pricing, and suitability with the manufacturer or seller before making a decision.</sub>
 
-### AI-assisted development
+#### AI-assisted development
 
 <sub>AI tools supported implementation, refactoring, test design, documentation, and the repository cover image. Product scope, system boundaries, architecture, evaluation criteria, and final verification remained human-directed. AI-generated code and content were reviewed against executable tests, live evaluation cases, catalog-grounding checks, and the documented requirements.</sub>
