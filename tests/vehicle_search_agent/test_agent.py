@@ -2,7 +2,8 @@ from types import SimpleNamespace
 
 import vehicle_search_agent.tools.context as tools_context_module
 from pydantic import SecretStr
-from vehicle_search_agent.agent import FallbackModel, _tool_result, build_agent
+from vehicle_search_agent.agent import FallbackModel, build_agent
+from vehicle_search_agent.agent.definition import _tool_result
 from vehicle_search_agent.models import AgentAction, ConversationState
 from vehicle_search_agent.response import message_response
 from vehicle_search_agent.settings import settings

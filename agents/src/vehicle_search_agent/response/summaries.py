@@ -1,4 +1,5 @@
 from vehicle_search_agent.models import DetailField, VehicleRecord
+from vehicle_search_agent.response.details import join_naturally
 from vehicle_search_agent.response.models import DetailValue
 
 SPOKEN_FIELD_GROUPS = (
@@ -8,14 +9,6 @@ SPOKEN_FIELD_GROUPS = (
     (DetailField.papers_verified, DetailField.condition, DetailField.weight_class),
     (DetailField.purpose_tags,),
 )
-
-
-def _join_naturally(values: list[str]) -> str:
-    if len(values) < 2:
-        return "".join(values)
-    if len(values) == 2:
-        return " and ".join(values)
-    return ", ".join(values[:-1]) + f", and {values[-1]}"
 
 
 def _identity_sentence(vehicle: VehicleRecord, details: dict[DetailField, DetailValue]) -> str:
@@ -44,7 +37,7 @@ def detail_summary(vehicle: VehicleRecord, details: dict[DetailField, DetailValu
         clauses = [detail.spoken_clause for field in group if (detail := details.get(field)) and detail.spoken_clause]
         if clauses:
             subject = "It" if sentences else name
-            sentences.append(f"{subject} {_join_naturally(clauses)}.")
+            sentences.append(f"{subject} {join_naturally(clauses)}.")
 
     if source := details.get(DetailField.spec_source_url):
         sentences.append(f"The specification source for {name} is {source.checks[0]}.")
@@ -67,7 +60,7 @@ def multiple_detail_summary(
             for field in (DetailField.price, DetailField.km_driven, DetailField.payload, DetailField.gvw)
             if (detail := details.get(field)) and detail.spoken_clause
         ]
-        sentences.append(f"{subject} {_join_naturally(highlights)}." if highlights else f"{subject} is included.")
+        sentences.append(f"{subject} {join_naturally(highlights)}." if highlights else f"{subject} is included.")
 
     first_details = details_by_vehicle[0]
     if DetailField.fuel in first_details and len({vehicle.fuel for vehicle in vehicles}) == 1:

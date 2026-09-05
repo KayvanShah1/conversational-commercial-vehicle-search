@@ -12,7 +12,7 @@ def format_price(price_inr: int) -> str:
     return f"INR {formatted}L"
 
 
-def _join_naturally(values: list[str]) -> str:
+def join_naturally(values: list[str]) -> str:
     if len(values) < 2:
         return "".join(values)
     if len(values) == 2:
@@ -98,7 +98,7 @@ def _render_purpose_tags(vehicle: VehicleRecord) -> DetailValue:
     display = ", ".join(values)
     return DetailValue(
         f"listed uses {display}",
-        f"is listed for {_join_naturally(list(values))}",
+        f"is listed for {join_naturally(list(values))}",
         "Listed uses",
         display,
         values,

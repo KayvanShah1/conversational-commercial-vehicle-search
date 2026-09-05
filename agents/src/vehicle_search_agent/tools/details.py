@@ -17,16 +17,14 @@ DetailMode = Literal[
 ]
 
 
-def mentioned(value: str, text: str) -> bool:
-    return re.sub(r"[^a-z0-9]", "", value.casefold()) in re.sub(r"[^a-z0-9]", "", text.casefold())
-
-
 def named_vehicles(vehicles: list[VehicleRecord], text: str) -> list[VehicleRecord]:
     words = set(re.findall(r"[a-z0-9]+", text.casefold()))
+    compact_text = re.sub(r"[^a-z0-9]", "", text.casefold())
     matches = []
     for vehicle in vehicles:
         model_words = set(re.findall(r"[a-z0-9]+", vehicle.model.casefold())) - {"cng", "diesel"}
-        if mentioned(vehicle.make, text) or model_words & words:
+        compact_make = re.sub(r"[^a-z0-9]", "", vehicle.make.casefold())
+        if compact_make in compact_text or model_words & words:
             matches.append(vehicle)
     return matches
 

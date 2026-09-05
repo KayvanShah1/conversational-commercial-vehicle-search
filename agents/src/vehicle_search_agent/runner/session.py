@@ -16,15 +16,6 @@ from vehicle_search_agent.voice import synthesize_speech, transcribe_audio
 logger = get_logger("VehicleSearchAgent")
 
 
-def _configure_tracing_export() -> None:
-    if not settings.agent_runtime.tracing_enabled:
-        return
-    api_key = settings.openai.api_key
-    if api_key is None:
-        raise RuntimeError("OPENAI__API_KEY is required when Agents SDK tracing is enabled.")
-    set_tracing_export_api_key(api_key.get_secret_value())
-
-
 def _match_text(value: str) -> str:
     """Normalize visually equivalent model text before grounding checks."""
     return " ".join(normalize("NFKC", value).casefold().split())
@@ -32,7 +23,8 @@ def _match_text(value: str) -> str:
 
 class VehicleSearchSession:
     def __init__(self, session_id: str) -> None:
-        _configure_tracing_export()
+        if settings.agent_runtime.tracing_enabled:
+            set_tracing_export_api_key(settings.openai.api_key.get_secret_value())
         self.session_id = session_id
         self.context = AgentContext(state=ConversationState(session_id=session_id))
         self.agent = build_agent()
