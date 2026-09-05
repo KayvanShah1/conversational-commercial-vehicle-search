@@ -8,6 +8,8 @@ from uuid import uuid4
 from rich.console import Console
 from vehicle_search_agent.runner import VehicleSearchSession
 
+from agents import flush_traces, trace
+
 DEFAULT_TURNS = (
     "Show me the top three used commercial vehicles under 20 lakh.",
     "What is the payload of the first one?",
@@ -36,24 +38,36 @@ async def _run(turns: list[str], session_id: str) -> None:
 
     console.print("SESSION>", session_id, style="bold magenta", markup=False)
 
-    for index, transcript in enumerate(turns, start=1):
-        console.rule(f"Turn {index}", style="dim")
-        console.print("USER>", transcript, style="bold cyan", markup=False)
+    try:
+        with trace(
+            "vehicle_search_chat",
+            group_id=session_id,
+            metadata={"provider": "groq", "turn_count": str(len(turns))},
+        ) as chat_trace:
+            console.print("TRACE_ID>", chat_trace.trace_id, style="bold magenta", markup=False)
 
-        result = await session.run_text_turn(transcript)
-        timings = {name: value for name, value in result.metrics.model_dump().items() if value is not None}
+            for index, transcript in enumerate(turns, start=1):
+                console.rule(f"Turn {index}", style="dim")
+                console.print("USER>", transcript, style="bold cyan", markup=False)
 
-        console.print("VIVI>", result.spoken_response, style="green", markup=False)
-        console.print("STATE>", result.active_filters.model_dump_json(exclude_none=True), style="dim", markup=False)
-        console.print("RESULT_IDS>", json.dumps(result.last_result_ids), style="dim", markup=False)
-        console.print("MODEL>", result.model_used, style="dim", markup=False)
-        console.print("TIMINGS_MS>", json.dumps(timings, sort_keys=True), style="dim", markup=False)
-        console.print(
-            "USAGE>",
-            result.usage.model_dump_json(exclude_none=True),
-            style="dim",
-            markup=False,
-        )
+                result = await session.run_text_turn(transcript)
+                timings = {name: value for name, value in result.metrics.model_dump().items() if value is not None}
+
+                console.print("VIVI>", result.spoken_response, style="green", markup=False)
+                console.print(
+                    "STATE>", result.active_filters.model_dump_json(exclude_none=True), style="dim", markup=False
+                )
+                console.print("RESULT_IDS>", json.dumps(result.last_result_ids), style="dim", markup=False)
+                console.print("MODEL>", result.model_used, style="dim", markup=False)
+                console.print("TIMINGS_MS>", json.dumps(timings, sort_keys=True), style="dim", markup=False)
+                console.print(
+                    "USAGE>",
+                    result.usage.model_dump_json(exclude_none=True),
+                    style="dim",
+                    markup=False,
+                )
+    finally:
+        flush_traces()
 
 
 def main() -> None:

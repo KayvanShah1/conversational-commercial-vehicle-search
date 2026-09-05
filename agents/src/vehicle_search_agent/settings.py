@@ -36,6 +36,20 @@ class GroqConfig(BaseModel):
         return list(unique.values())
 
 
+class OpenAIConfig(BaseModel):
+    api_key: SecretStr | None = None
+
+    @field_validator("api_key")
+    @classmethod
+    def validate_api_key(cls, api_key: SecretStr | None) -> SecretStr | None:
+        if api_key is None:
+            return None
+        value = api_key.get_secret_value().strip()
+        if not value or value == "<API_KEY>":
+            raise ValueError("OPENAI__API_KEY contains an unconfigured key.")
+        return SecretStr(value)
+
+
 class AgentRuntimeConfig(BaseModel):
     max_turns: int = Field(default=6, ge=2, le=10)
     model_timeout_seconds: float = Field(default=8.0, gt=0)
@@ -56,9 +70,12 @@ class AgentSettings(CommonSettings):
     # Agent Configuration
     groq: GroqConfig = Field(default_factory=GroqConfig)
     agent_runtime: AgentRuntimeConfig = Field(default_factory=AgentRuntimeConfig)
+    openai: OpenAIConfig = Field(default_factory=OpenAIConfig)
 
     def model_post_init(self, __context, /):
         super().model_post_init(__context)
+        if self.agent_runtime.tracing_enabled and self.openai.api_key is None:
+            raise ValueError("OPENAI__API_KEY is required when Agents SDK tracing is enabled.")
         self.session_data_path.mkdir(parents=True, exist_ok=True)
 
 

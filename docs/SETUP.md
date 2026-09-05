@@ -113,6 +113,7 @@ Never commit `.env` or paste real credentials into logs, screenshots, evaluation
 | `AGENT_RUNTIME__MAX_TURNS` | `6` | Maximum SDK turns per user request |
 | `AGENT_RUNTIME__MODEL_TIMEOUT_SECONDS` | `8.0` | Timeout for each model route |
 | `AGENT_RUNTIME__TOOL_TIMEOUT_SECONDS` | `15.0` | Catalog tool timeout |
+| `OPENAI__API_KEY` | unset | OpenAI project key used only for trace export; required when tracing is enabled |
 | `AGENT_RUNTIME__TRACING_ENABLED` | `false` | Enables Agents SDK tracing |
 | `AGENT_RUNTIME__TRACE_INCLUDE_SENSITIVE_DATA` | `false` | Controls sensitive trace content; keep disabled for normal use |
 | `SESSION_DB_PATH` | `data/sessions/agent_sessions.sqlite` | Local conversation-history database |
