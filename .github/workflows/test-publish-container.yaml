@@ -21,6 +21,9 @@ jobs:
     test:
         name: Test and lint
         runs-on: ubuntu-latest
+        env:
+            GROQ__API_KEYS: '["ci-test-key"]'
+            RUN_MOTHERDUCK_INTEGRATION_TESTS: 0
 
         steps:
             - name: Checkout repository
@@ -40,10 +43,12 @@ jobs:
               run: uv sync --all-packages --dev
 
             - name: Run lint
-              run: uv run ruff check agents app evals tests utils vehicle-catalog-generator
+              run:
+                  uv run ruff check agents app evals tests utils
+                  vehicle-catalog-generator
 
             - name: Run tests
-              run: uv run pytest
+              run: uv run pytest tests
 
     docker-build-publish:
         name: Build and publish GHCR image
@@ -85,7 +90,9 @@ jobs:
                   context: .
                   file: ./Dockerfile
                   platforms: linux/amd64
-                  push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+                  push:
+                      ${{ github.event_name == 'push' && github.ref ==
+                      'refs/heads/main' }}
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
                   cache-from: type=gha
