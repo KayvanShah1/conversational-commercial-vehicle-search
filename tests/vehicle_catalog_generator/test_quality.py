@@ -58,6 +58,16 @@ def test_validate_catalog_rejects_payload_at_or_above_gvw(catalog_dataframe):
         validate_catalog(invalid, expected_record_count=100)
 
 
+def test_validate_catalog_rejects_estimate_without_payload(catalog_dataframe):
+    invalid = catalog_dataframe.with_columns(
+        pl.lit(None).cast(pl.Int64).alias("payload_kg"),
+        pl.lit(True).alias("payload_is_estimated"),
+    )
+
+    with pytest.raises(ValueError, match="payload_is_estimated requires payload_kg"):
+        validate_catalog(invalid, expected_record_count=100)
+
+
 def test_validate_catalog_rejects_nulls_in_required_columns(catalog_dataframe):
     invalid = catalog_dataframe.with_columns(pl.lit(None).cast(pl.String).alias("make"))
 

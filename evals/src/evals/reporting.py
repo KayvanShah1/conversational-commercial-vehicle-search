@@ -19,15 +19,31 @@ USAGE_FIELDS = (
     "total_tokens",
     "estimated_list_cost_inr",
 )
+ACCURACY_LABELS = (
+    ("Routing accuracy", "routing"),
+    ("Tool-only accuracy", "tool_only"),
+    ("No-tool accuracy", "no_tool"),
+    ("Argument/state accuracy", "arguments"),
+    ("End-to-end pass rate", "end_to_end"),
+)
 
 
 def build_report(rows: list[dict[str, Any]], generated_at: datetime) -> dict[str, Any]:
     passed = sum(row["passed"] for row in rows)
+    tool_rows = [row for row in rows if row["expected_action"] != "conversation"]
+    no_tool_rows = [row for row in rows if row["expected_action"] == "conversation"]
     return {
         "generated_at_utc": generated_at.isoformat(),
         "pass_rate": 100 * passed / len(rows),
         "passed": passed,
         "total": len(rows),
+        "accuracy": {
+            "routing": _score(rows, "routing_correct"),
+            "tool_only": _score(tool_rows, "routing_correct"),
+            "no_tool": _score(no_tool_rows, "routing_correct"),
+            "arguments": _score(tool_rows, "arguments_correct"),
+            "end_to_end": _score(rows, "passed"),
+        },
         "mean_timings_ms": _mean_fields(rows, "timings_ms", TIMING_FIELDS),
         "mean_usage": _mean_fields(rows, "usage", USAGE_FIELDS),
         "cases": rows,
@@ -68,7 +84,8 @@ def prune_old_reports(directory: Path) -> None:
 def print_report(report: dict[str, Any], console: Console) -> None:
     table = Table(title="Vehicle Search Agent Evaluation")
     table.add_column("Case")
-    table.add_column("Action")
+    table.add_column("Expected")
+    table.add_column("Actual")
     table.add_column("Model")
     table.add_column("Result")
     table.add_column("Total ms", justify="right")
@@ -80,6 +97,7 @@ def print_report(report: dict[str, Any], console: Console) -> None:
         cost = row["usage"].get("estimated_list_cost_inr")
         table.add_row(
             row["id"],
+            row["expected_action"],
             row["action"] or "error",
             row["model"],
             "PASS" if row["passed"] else "FAIL",
@@ -91,10 +109,13 @@ def print_report(report: dict[str, Any], console: Console) -> None:
         )
 
     console.print(table)
-    console.print(
-        f"Pass rate: {report['pass_rate']:.1f}% ({report['passed']}/{report['total']})",
-        style="bold",
-    )
+    accuracy_table = Table(title="Accuracy summary")
+    accuracy_table.add_column("Metric")
+    accuracy_table.add_column("Score", justify="right")
+    for label, key in ACCURACY_LABELS:
+        score = report["accuracy"][key]
+        accuracy_table.add_row(label, _format_score(score))
+    console.print(accuracy_table)
     for name, value in report["mean_timings_ms"].items():
         console.print(f"Mean {name}: {value:.2f}")
     for name, value in report["mean_usage"].items():
@@ -107,13 +128,26 @@ def markdown_report(report: dict[str, Any], dataset: Path) -> str:
         "",
         f"- Generated: {report['generated_at_utc']}",
         f"- Dataset: `{_display_path(dataset)}`",
-        f"- Pass rate: **{report['pass_rate']:.1f}% ({report['passed']}/{report['total']})**",
+        f"- End-to-end pass rate: **{report['pass_rate']:.1f}% ({report['passed']}/{report['total']})**",
         "",
-        "## Mean turn telemetry",
+        "## Accuracy",
         "",
-        "| Metric | Mean |",
+        "| Metric | Score |",
         "| --- | ---: |",
     ]
+    for label, key in ACCURACY_LABELS:
+        score = report["accuracy"][key]
+        lines.append(f"| {label} | {_format_score(score)} |")
+
+    lines.extend(
+        [
+            "",
+            "## Mean turn telemetry",
+            "",
+            "| Metric | Mean |",
+            "| --- | ---: |",
+        ]
+    )
     for name, value in report["mean_timings_ms"].items():
         label = name.removesuffix("_ms").replace("_", " ").title()
         lines.append(f"| {label} | {value:,.2f} ms |")
@@ -130,15 +164,15 @@ def markdown_report(report: dict[str, Any], dataset: Path) -> str:
             "",
             "## Cases",
             "",
-            "| Case | Action | Model route | Result | Total ms | Tokens | Est. INR | Problems |",
-            "| --- | --- | --- | --- | ---: | ---: | ---: | --- |",
+            "| Case | Expected | Actual | Model route | Result | Total ms | Tokens | Est. INR | Problems |",
+            "| --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |",
         ]
     )
     for row in report["cases"]:
         cost = row["usage"].get("estimated_list_cost_inr")
         problems = "; ".join(row["problems"]).replace("|", "\\|") or "-"
         lines.append(
-            f"| {row['id']} | {row['action'] or 'error'} | {row['model']} | "
+            f"| {row['id']} | {row['expected_action']} | {row['action'] or 'error'} | {row['model']} | "
             f"{'PASS' if row['passed'] else 'FAIL'} | {row['timings_ms'].get('total_ms', '-')} | "
             f"{row['usage'].get('total_tokens', '-')} | {f'{cost:.4f}' if cost is not None else '-'} | "
             f"{problems} |"
@@ -171,6 +205,22 @@ def _mean_fields(
         if values:
             means[field] = mean(values)
     return means
+
+
+def _score(rows: list[dict[str, Any]], field: str) -> dict[str, float | int | None]:
+    correct = sum(bool(row[field]) for row in rows)
+    total = len(rows)
+    return {
+        "rate": 100 * correct / total if total else None,
+        "correct": correct,
+        "total": total,
+    }
+
+
+def _format_score(score: dict[str, Any]) -> str:
+    if not score["total"]:
+        return "N/A (0 cases)"
+    return f"{score['rate']:.1f}% ({score['correct']}/{score['total']})"
 
 
 def _display_path(path: Path) -> str:

@@ -36,23 +36,17 @@ class GroqConfig(BaseModel):
         return list(unique.values())
 
 
-class OpenRouterConfig(BaseModel):
+class OpenAIConfig(BaseModel):
     api_key: SecretStr | None = None
-    base_url: str = "https://openrouter.ai/api/v1"
-    fallback_models: list[str] = Field(
-        default_factory=lambda: ["google/gemma-4-26b-a4b-it:free", "google/gemma-4-31b-it:free"],
-        min_length=1,
-    )
 
-    @field_validator("api_key", mode="before")
+    @field_validator("api_key")
     @classmethod
-    def normalize_optional_api_key(cls, api_key: SecretStr | str | None) -> SecretStr | None:
+    def validate_api_key(cls, api_key: SecretStr | None) -> SecretStr | None:
         if api_key is None:
             return None
-        value = api_key.get_secret_value() if isinstance(api_key, SecretStr) else api_key
-        value = value.strip()
+        value = api_key.get_secret_value().strip()
         if not value or value == "<API_KEY>":
-            return None
+            raise ValueError("OPENAI__API_KEY contains an unconfigured key.")
         return SecretStr(value)
 
 
@@ -75,11 +69,13 @@ class AgentSettings(CommonSettings):
 
     # Agent Configuration
     groq: GroqConfig = Field(default_factory=GroqConfig)
-    openrouter: OpenRouterConfig = Field(default_factory=OpenRouterConfig)
     agent_runtime: AgentRuntimeConfig = Field(default_factory=AgentRuntimeConfig)
+    openai: OpenAIConfig = Field(default_factory=OpenAIConfig)
 
     def model_post_init(self, __context, /):
         super().model_post_init(__context)
+        if self.agent_runtime.tracing_enabled and self.openai.api_key is None:
+            raise ValueError("OPENAI__API_KEY is required when Agents SDK tracing is enabled.")
         self.session_data_path.mkdir(parents=True, exist_ok=True)
 
 

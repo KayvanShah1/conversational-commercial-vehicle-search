@@ -45,7 +45,7 @@ Vehicle specifications are not generated independently. A selected model carries
 
 This avoids unrealistic combinations such as assigning arbitrary payloads or fuel types to a vehicle model.
 
-The reference catalog contains source URLs for the commercial-vehicle specifications used during generation. Some pricing and heavy-vehicle payload values are explicitly treated as synthetic or derived anchors where authoritative values are unavailable.
+The reference catalog contains source URLs for the commercial-vehicle specifications used during generation. Some pricing and heavy-vehicle payload values are explicitly treated as synthetic or derived anchors where authoritative values are unavailable. Estimated payloads remain searchable, but Vivi labels them as approximate rather than presenting them as manufacturer-published values.
 
 ## Synthetic Listing Fields
 
@@ -61,6 +61,7 @@ Once a vehicle reference is selected, listing-specific attributes are generated.
 | Papers verified | Configurable probability |
 | Listing ID | Deterministic generated identifier |
 | Specification source URL | Link to official vehicle listing/ selected vehicle reference spec sheet|
+| Payload basis | `payload_is_estimated` follows the selected reference and is shown with the value in agent responses and result cards |
 
 Mileage is tied to vehicle age rather than sampled independently.
 
@@ -113,12 +114,13 @@ The generator writes:
 ```text
 data/generated/
 ├── vehicles.parquet
-└── vehicles.csv
+├── vehicles.csv
+└── vehicle_reference_catalog.csv
 ```
 
 Parquet is used as the primary machine-readable artifact because it preserves column types and list-valued fields such as `purpose_tags`.
 
-CSV is retained for quick inspection.
+`vehicles.csv` is retained for quick listing inspection. `vehicle_reference_catalog.csv` records the complete curated reference set, provenance metadata, price anchors, and whether payload values are estimated.
 
 The Parquet catalog is loaded into:
 

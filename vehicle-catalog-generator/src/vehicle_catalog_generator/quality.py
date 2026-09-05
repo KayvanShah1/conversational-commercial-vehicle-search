@@ -55,6 +55,9 @@ def validate_catalog(
     if invalid_payloads:
         raise ValueError("gvw_kg must be greater than payload_kg when payload_kg is present")
 
+    if dataframe.filter(pl.col("payload_is_estimated") & pl.col("payload_kg").is_null()).height:
+        raise ValueError("payload_is_estimated requires payload_kg")
+
     return {
         "row_count": dataframe.height,
         "unique_listing_ids": unique_listing_ids,

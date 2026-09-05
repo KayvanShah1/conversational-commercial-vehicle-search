@@ -57,6 +57,7 @@ class VehicleListing(BaseModel):
     km_driven: int = Field(ge=0)
     fuel: str
     payload_kg: int | None = Field(default=None, gt=0)
+    payload_is_estimated: bool = False
     gvw_kg: int = Field(gt=0)
     vehicle_category: VehicleCategory
     weight_class: VehicleWeightClass

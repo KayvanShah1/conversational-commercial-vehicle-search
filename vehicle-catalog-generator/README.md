@@ -11,7 +11,7 @@ data/generated/
 └── vehicle_reference_catalog.csv
 ```
 
-The listing artifacts include searchable vehicle data and the selected reference's manufacturer specification URL. `vehicle_reference_catalog.csv` separately records the complete provenance metadata, generation price anchors, and whether a payload value is derived or estimated.
+The listing artifacts include searchable vehicle data, the selected reference's manufacturer specification URL, and `payload_is_estimated` so downstream responses can disclose derived payloads. `vehicle_reference_catalog.csv` separately records the complete provenance metadata and generation price anchors.
 
 ## Data provenance
 

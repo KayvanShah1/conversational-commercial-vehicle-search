@@ -11,10 +11,9 @@ This guide takes Vivi from a fresh clone to the Streamlit voice-and-text demo. C
 | `uv` | Workspace dependency and command runner | [Official installation guide](https://docs.astral.sh/uv/getting-started/installation/) |
 | MotherDuck account and access token | Load and query the searchable catalog | [MotherDuck](https://app.motherduck.com/) → **Settings** → **Access tokens** |
 | Groq account and API key | LLM, speech-to-text, and text-to-speech | [Groq API Keys](https://console.groq.com/keys) |
-| OpenRouter API key | Optional cross-provider model fallback | [OpenRouter API Keys](https://openrouter.ai/settings/keys) |
 | Microphone-enabled browser | Voice input and audio playback | A current Chrome, Edge, or Firefox release |
 
-OpenRouter is optional. Text and voice operation require Groq; catalog loading and search require MotherDuck.
+Text and voice operation require Groq; catalog loading and search require MotherDuck.
 
 ## 1. Install `uv`
 
@@ -69,12 +68,6 @@ Multiple Groq keys can be supplied as a JSON list. The runtime rotates through c
 GROQ__API_KEYS=["<PRIMARY_KEY>","<SECONDARY_KEY>"]
 ```
 
-Add OpenRouter only when its fallback routes are required:
-
-```dotenv
-OPENROUTER__API_KEY=<YOUR_OPENROUTER_KEY>
-```
-
 Never commit `.env` or paste real credentials into logs, screenshots, evaluation reports, or issues.
 
 ## Environment reference
@@ -113,14 +106,6 @@ Never commit `.env` or paste real credentials into logs, screenshots, evaluation
 | `GROQ__TTS_FORMAT` | `wav` | Audio response format |
 | `GROQ__TTS_MAX_CHARS` | `200` | Per-request TTS limit; longer responses are chunked and stitched |
 
-### Optional OpenRouter fallback
-
-| Variable | Template value | Purpose |
-| --- | --- | --- |
-| `OPENROUTER__API_KEY` | unset | Enables cross-provider fallbacks |
-| `OPENROUTER__BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint |
-| `OPENROUTER__FALLBACK_MODELS` | JSON list | Ordered OpenRouter fallback models |
-
 ### Runtime and storage
 
 | Variable | Template value | Purpose |
@@ -128,10 +113,13 @@ Never commit `.env` or paste real credentials into logs, screenshots, evaluation
 | `AGENT_RUNTIME__MAX_TURNS` | `6` | Maximum SDK turns per user request |
 | `AGENT_RUNTIME__MODEL_TIMEOUT_SECONDS` | `8.0` | Timeout for each model route |
 | `AGENT_RUNTIME__TOOL_TIMEOUT_SECONDS` | `15.0` | Catalog tool timeout |
-| `AGENT_RUNTIME__TRACING_ENABLED` | `false` | Enables Agents SDK tracing |
+| `OPENAI__API_KEY` | unset | OpenAI project key used only for trace export; required when tracing is enabled |
+| `AGENT_RUNTIME__TRACING_ENABLED` | `false` | Exports Agents SDK traces to OpenAI without changing the Groq inference route |
 | `AGENT_RUNTIME__TRACE_INCLUDE_SENSITIVE_DATA` | `false` | Controls sensitive trace content; keep disabled for normal use |
 | `SESSION_DB_PATH` | `data/sessions/agent_sessions.sqlite` | Local conversation-history database |
 | `RUN_MOTHERDUCK_INTEGRATION_TESTS` | `0` | Opt-in switch for the live database test |
+
+Tracing is optional and does not route inference through OpenAI. When enabled, turns from one app conversation share a session group in the OpenAI dashboard. The smoke runner also creates one outer conversation trace. See the wiki's [OpenAI tracing guide](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Evaluation-and-Observability#openai-agents-sdk-traces) for the trace shape, privacy setting, and dashboard behavior.
 
 The committed [`example.env`](../example.env) is the authoritative copy-ready template. Model availability and provider quotas can change; adjust model identifiers there rather than changing application code.
 
@@ -193,7 +181,7 @@ Confirm that `.env` exists at the repository root, placeholder values were repla
 
 ### Every model route returns HTTP 429
 
-The configured free-tier quota or shared model capacity is exhausted. Wait for the provider window to reset, configure another Groq key, enable the optional OpenRouter routes, or use a paid-capacity model. Vivi fails closed instead of inventing catalog results.
+The configured quota or shared model capacity is exhausted. Wait for the provider window to reset, configure another authorized Groq key, or use a paid-capacity model. Vivi fails closed instead of inventing catalog results.
 
 ### MotherDuck authentication fails
 

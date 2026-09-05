@@ -54,7 +54,10 @@ def test_catalog_is_reproducible(monkeypatch):
     assert "price_inr" in first[0].model_dump()
     assert "new_vehicle_price_anchor_inr" not in first[0].model_dump()
     assert first[0].spec_source_url in {reference.spec_source_url for reference in VEHICLE_REFERENCES}
-    assert "payload_is_estimated" not in first[0].model_dump()
+    estimated_models = {
+        (reference.make, reference.model) for reference in VEHICLE_REFERENCES if reference.payload_is_estimated
+    }
+    assert all(listing.payload_is_estimated == ((listing.make, listing.model) in estimated_models) for listing in first)
     assert len(first) == 100
 
 

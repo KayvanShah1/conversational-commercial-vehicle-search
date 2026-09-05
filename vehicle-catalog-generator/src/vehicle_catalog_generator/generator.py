@@ -86,6 +86,7 @@ def generate_vehicle_listing(index: int) -> VehicleListing:
         km_driven=km_driven,
         fuel=reference.fuel,
         payload_kg=reference.payload_kg,
+        payload_is_estimated=reference.payload_is_estimated,
         gvw_kg=reference.gvw_kg,
         vehicle_category=reference.vehicle_category,
         weight_class=reference.weight_class,

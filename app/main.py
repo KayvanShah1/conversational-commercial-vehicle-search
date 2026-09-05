@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import hashlib
 from pathlib import Path
@@ -28,7 +26,6 @@ def _initialize_state() -> None:
             "total_ms": 0.0,
             **dict.fromkeys(CUMULATIVE_USAGE_FIELDS, 0),
         },
-        "last_tool": None,
         "reply_audio": None,
         "audio_format": "wav",
         "processed_audio": None,
@@ -46,13 +43,18 @@ def _session() -> VehicleSearchSession:
 
 
 def _save_result(result: AgentTurnResult, session: VehicleSearchSession) -> None:
-    st.session_state.messages.append({"role": "assistant", "content": display_response(result, session)})
+    st.session_state.messages.append(
+        {
+            "role": "assistant",
+            "content": display_response(result, session),
+            "tool": TOOL_NAMES[result.action.value],
+        }
+    )
     if session.context.last_search_result is not None:
         st.session_state.last_search_result = session.context.last_search_result
     st.session_state.metrics = result.metrics.model_dump(mode="json", exclude_none=True)
     st.session_state.usage = result.usage.model_dump(mode="json", exclude_none=True)
     _update_conversation_totals(result)
-    st.session_state.last_tool = TOOL_NAMES[result.action.value]
     st.session_state.error = None
 
 
@@ -125,16 +127,6 @@ with st.container(key="page_header"):
     st.title("Find the right commercial vehicle")
     st.caption("Natural English or Hinglish, grounded in the vehicle catalog.")
 
-with st.container(key="status_rail", horizontal=True, horizontal_alignment="right", vertical_alignment="center"):
-    st.badge("Voice + text", icon=":material/mic:", color="primary")
-    if st.session_state.last_tool:
-        st.badge(
-            st.session_state.last_tool,
-            icon=(":material/check_circle:" if st.session_state.last_tool == "No tool" else ":material/build:"),
-            color="gray",
-            help="Tool used on the latest turn",
-        )
-
 with st.chat_message("assistant"):
     st.write(
         "Hi, I'm Vivi. Tell me what you need to carry, where you operate, "
@@ -147,6 +139,8 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         if message["role"] == "assistant":
             st.markdown(message["content"])
+            if tool := message.get("tool"):
+                st.caption(f"Tool used: `{tool}`")
         else:
             st.write(message["content"])
 

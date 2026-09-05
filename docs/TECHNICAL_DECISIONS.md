@@ -1,212 +1,79 @@
 # Architecture and technical decisions
 
-This is the concise submission-facing design record. The wiki contains the deeper [architecture narrative](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Architecture-and-Technical-Decisions) and [agent behavior walkthrough](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Agent-Behavior-and-Grounding).
+This is the concise, submission-facing design record. The wiki contains the deeper [architecture rationale](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Architecture-and-Technical-Decisions), [agent behavior walkthrough](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Agent-Behavior-and-Grounding), and [evaluation and observability guide](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Evaluation-and-Observability).
 
 ## Seven identifiable components
 
-| System component | Implementation | Hidden complexity | Production replacement |
+| System component | Current implementation | Production seam |
+| --- | --- | --- |
+| Voice interface | Streamlit microphone, text fallback, result/state display, and audio playback | Product client with streaming media |
+| Speech to text | File-based Groq Whisper request | Streaming STT with confidence and endpointing |
+| Understanding | One Agents SDK agent with three typed tools | Capacity-backed model behind the same schemas |
+| Catalog and search | Parameterized MotherDuck queries and deterministic ranking | Indexed search service with bounded connections |
+| Response and TTS | Grounded composer, validator, and batched WAV synthesis | Streaming response and TTS gateway |
+| Conversation state | Typed state plus SDK `SQLiteSession` | Redis or another concurrent state store |
+| Evaluation | Behavior-based case suites and structured timings | Pinned CI evaluations and production telemetry |
+
+These are responsibility boundaries, not seven agents or a serial model chain.
+
+## Decisions at a glance
+
+| Decision | Chosen | Rejected | Main trade-off |
 | --- | --- | --- | --- |
-| Voice interface | `app/main.py` Streamlit microphone, text fallback, result/state display, audio playback | Browser capture and reruns | Product web client with streaming media |
-| Speech to text | `voice.py:transcribe_audio` | Multipart audio and provider timing | Streaming STT with noisy-audio adaptation |
-| Understanding | One Agents SDK agent with typed tools | Intent choice, slot extraction, correction | Larger capacity model with the same schemas |
-| Catalog and search | `search.py` plus MotherDuck | Parameterized filters, ranking, invariant checks | Search service with replicas and indexes |
-| Response and TTS | `response.py` plus `voice.py` | Grounded composition, value validation, WAV batching | Streaming response and TTS gateway |
-| Conversation state | Typed `ConversationState` plus SDK `SQLiteSession` | Slot merging and result references | Redis or durable session service |
-| Evaluation and latency | `evals.evaluate_agent` and structured operation logs | Semantic checks and stage timing | CI evaluation service plus observability |
+| Catalog access | Typed tool arguments plus application-owned parameterized SQL | Generated SQL or a general database tool | New hard filters require schema and query changes, but constraints remain testable and raw data stays inaccessible. |
+| Agent topology | One bounded agent with search, details, and catalog-options tools | Intent, selector, response, and critic agent hierarchy | Avoids extra model latency, tokens, hand-offs, and disagreement for three domain operations. |
+| Response grounding | Deterministic facts and fallback, with validated natural rephrasing where useful | Prompt-only grounding or natural generation for every search | Comparison and detail answers remain conversational without allowing invented or reordered catalog values. |
+| Voice | Recorded audio → STT → text agent/search → TTS → WAV | Opaque speech-to-speech model | The cascade is slower, but transcript, filters, records, stage latency, and failures remain inspectable. |
+| Database lifecycle | One scoped read-only MotherDuck connection per catalog operation | Process-global connection | Ownership is safe for concurrent Streamlit sessions; production should replace repeated setup with a bounded pool or read service. |
 
-## Code organization and quality review
+## Correctness boundaries
 
-The implementation is separated by failure boundary rather than by framework pattern. The largest files remain cohesive modules: `tools.py` validates model-facing inputs, `search.py` owns parameterized queries and ranking, `response.py` owns grounded composition, and `runner.py` owns turns, state, retries, and telemetry. Splitting these into one-use classes would add navigation without isolating another responsibility.
+The model reasons at two seams:
 
-| Review concern | Resolution |
+1. choose one of the three tools and extract typed arguments;
+2. optionally phrase a detail or comparison answer over returned records.
+
+Application code owns SQL construction, hard-filter enforcement, ranking, cross-turn slot merging, catalog facts, and numeric validation. Ordinary grounded searches stop after the tool and use deterministic composition. If an optional natural answer drops, reorders, or invents required facts, the deterministic fallback is shown.
+
+If a no-tool response names a current result, the runner retries once with the details tool required. This keeps general questions tool-free without allowing listing-specific claims from conversation prose alone. Invalid tool arguments have a three-attempt repair limit.
+
+## Code organization and retained safeguards
+
+The implementation is grouped by capability: `agent/`, `models/`, `tools/`, `search/`, `response/`, `runner/`, and `voice/`. Packages expose small public APIs without generic one-use service, repository, or presenter classes.
+
+| Safeguard | Why it remains |
 | --- | --- |
-| Repeated API-key checks | Pydantic settings validate and deduplicate Groq keys; OpenRouter is normalized once as an optional provider. |
-| Unused logging wrappers | One `OperationLogContext` records monotonic duration and structured fields across catalog, model, tool, STT, TTS, and turn operations. |
-| Tool-selector or critic agent | Not added. Three typed operations do not justify another model call or state hand-off. |
-| Generic service/repository layer | Not added. Search is the only MotherDuck consumer and owns its parameterized queries directly. |
-| Process-global database connection | Not used. Each catalog operation owns one scoped read-only connection and reuses it for that operation. |
-| Prompt and schema duplication | The prompt explains *when* to use a tool; schemas and docstrings describe *which values* are accepted. |
-| TTS batching | Retained because the provider caps each request at 200 characters; application code chunks text and stitches compatible WAV responses. |
-| Model fallback adapter | Retained because the SDK accepts one model interface while the demo needs bounded key, model, and provider failover. |
-| Rechecking database results | Retained as the hard-filter invariant that detects a violated user constraint before a result is shown. |
+| One `OperationLogContext` | Supplies monotonic duration and structured fields without duplicate timing wrappers. |
+| TTS batching | The provider limits each request to 200 characters, so compatible WAV chunks are stitched in application code. |
+| Bounded model fallback | The demo can rotate configured Groq keys/models while preserving one Agents SDK model interface. |
+| Result invariant check | Every returned row is rechecked against active hard filters before display. |
+| Grounded-response validator | Catalog identifiers and numeric values cannot be changed by natural rephrasing. |
 
-Deliberately absent: generated SQL, a raw database tool, multi-agent routing, generic repositories, prompt-encoded vehicle inventories, expected-answer matching, and a framework-specific wrapper around the conversation session.
+Deliberately absent: generated SQL, a raw database tool, multi-agent routing, generic repositories, prompt-encoded vehicle inventory, expected-answer matching, and a framework wrapper around the SDK session.
 
-## Decision 1: typed tools and deterministic SQL
+## Ranking
 
-**Chosen:** the model identifies intent and supplies typed slot arguments;
-application code builds parameterized SQL, applies hard filters, ranks rows, and
-checks every returned record against the filters.
+Search applies hard filters first; ranking only orders valid candidates. Purpose fit carries 30%, while verified papers, budget proximity, lower mileage, and condition carry 15% each and newer year carries 10%. Signals unavailable for a query are zeroed and the remaining weights are normalized. The UI exposes the numeric breakdown for each returned listing.
 
-**Rejected:** asking the model to generate SQL or giving it a general database
-tool.
+## Fallback and failure behavior
 
-**Why:** budgets, fuel, and cities are hard constraints. Deterministic query
-construction is easier to test and prevents data exfiltration, arbitrary SQL,
-and silent constraint relaxation. The cost is that new filters require a schema
-and query change.
+Each turn starts on the last successful model route. A retryable failure makes one bounded pass through configured Groq keys and models. STT and TTS independently remember their last successful key and rotate on rate limits. If every route fails, the UI reports a recoverable error rather than inventing a vehicle.
 
-## Decision 2: one bounded agent, not an agent hierarchy
+## Production priorities
 
-**Chosen:** one Vivi agent chooses among three typed tools. Small code rules are
-used only for hard invariants such as literal fuel/body/category terms, previous
-result references, and the three-attempt invalid-tool bound.
+At 100,000 conversations per month, provider capacity and long-tail model latency are expected to fail before a 1,000-row catalog query. The upgrade order is:
 
-**Rejected:** separate intent, slot-extraction, tool-selector, response, and
-critic agents.
+1. purchase defined-capacity model routes and add circuit-breaker telemetry;
+2. stream STT and TTS while retaining the typed text-agent boundary;
+3. replace SQLite history with a concurrent store and retention limits;
+4. add a bounded catalog connection pool or read service and cache low-cardinality options;
+5. run pinned-model evaluations in CI with a separate canary set for provider changes.
 
-**Why:** a multi-agent chain adds serial model latency, tokens, failure modes,
-and state hand-offs to a demo whose domain has three operations. The current
-seams remain replaceable without turning each seam into another model call.
+Current pass rates, timings, token use, and estimated cost live only in [Evaluation](EVALUATION.md) so volatile evidence has one source of truth. The wiki explains the speech-latency boundary, trace grouping, cost interpretation, and longer-form production rationale.
 
-## Decision 3: deterministic facts with optional natural rephrasing
+## Reviewer quick answers
 
-**Chosen:** tools create a grounded fallback and an ordered set of allowed
-catalog values. The model may rephrase them naturally. Code rejects missing,
-reordered, or newly invented numeric facts and uses the fallback instead.
-
-**Rejected:** prompt-only grounding and a global `stop_on_first_tool` policy.
-
-**Why:** prompt-only instructions do not enforce zero invention. Always stopping
-at the first tool is safe but makes comparison and capability follow-ups sound
-mechanical. Validation preserves a conversational voice while keeping the
-catalog boundary explicit. It cannot prove that subjective buying advice is
-optimal; it only proves the factual values are grounded.
-
-The latency mitigation already implemented is to stop immediately on ordinary
-grounded search results. Detail and comparison turns use one post-tool model
-pass so Vivi can speak naturally over typed catalog facts. The prompt permits
-only one catalog tool per turn, and code validates the final values before they
-reach the user.
-
-## Where the agent reasons
-
-The model reasons only at two bounded seams: choosing one of three tools and
-extracting its typed arguments, then phrasing a detail/comparison answer over
-returned records. SQL construction, hard-filter enforcement, ranking,
-cross-turn slot merging, catalog facts, and factual validation remain
-deterministic.
-
-GPT-OSS may report reasoning tokens even without an explicit reasoning-effort
-setting. Increasing reasoning effort globally is not assumed to improve this
-system: it adds latency and tokens and can increase tool-call variability. A
-larger reasoning budget is justified only for a measured failure class such as
-a grounded multi-record explanation, and only if the evaluation gain offsets
-the latency and schema-error cost.
-
-## Decision 4: cascaded voice pipeline
-
-**Chosen:** file-based STT, text agent/search, then TTS.
-
-**Rejected:** a speech-to-speech model.
-
-**Why:** the cascade keeps the transcript, slots, executed filters, records, and
-latency for every stage inspectable during evaluation. It is slower than a
-streaming speech-to-speech system but much easier to debug and defend. The first
-production latency change would be streaming STT/TTS without changing the agent
-or search interfaces.
-
-## Decision 5: scoped MotherDuck connections
-
-**Chosen:** open one read-only connection for each catalog operation, reuse it
-for all SQL inside that operation, then close it through the shared context
-manager.
-
-**Rejected:** a process-global DuckDB connection passed through every layer.
-
-**Why:** one global connection is fragile across concurrent Streamlit sessions
-and couples the agent to database lifecycle. Per-operation ownership is obvious
-and safe for the demo. At higher load it would be replaced by a bounded pool or
-a catalog service rather than opening unlimited connections.
-
-## Model fallback and failure behavior
-
-The agent starts each turn on the last successful route. On a retryable failure,
-it makes one bounded pass through every configured Groq key and model before the
-optional OpenRouter Gemma routes. Speech requests likewise remember the last
-successful Groq key and rotate on HTTP 429. This protects later turns from
-repeatedly hitting a known-exhausted key, but free models do not guarantee
-independent upstream capacity. The UI reports a recoverable error instead of
-inventing a vehicle when every route fails.
-
-## What breaks first at 100,000 conversations per month
-
-The first bottleneck is external model capacity: serial LLM calls, free-tier
-rate limits, and long-tail latency. Priority order:
-
-1. Purchase defined-capacity provider tiers, add circuit breakers, and monitor
-   per-provider tokens, rupee cost, availability, and p95 latency.
-2. Stream STT and TTS and keep deterministic searches on the one-model-call
-   path when no post-tool reasoning is required.
-3. Replace local SQLite sessions with Redis or another concurrent state store;
-   cap session lifetime and payload size.
-4. Put catalog access behind a bounded connection pool/read service, add indexes
-   for common filters, and cache low-cardinality catalog options.
-5. Run the evaluation set in CI against a pinned model and maintain a separate
-   canary set for provider/model changes.
-
-## Usage and cost telemetry
-
-Each turn records LLM requests, input, cached-input, output, reasoning, and
-total tokens from the Agents SDK. Voice turns also record input-audio seconds
-and TTS characters. The UI and evaluation reports estimate equivalent list
-cost using the successful model route; actual free-tier spend can be zero.
-
-The 27-case live core run averaged 2,143.96 tokens and INR 0.0460 of estimated
-LLM list cost per text turn. At that observed mix, 100,000 text turns would be
-about INR 4,605 for the LLM portion only. Voice, database, hosting, retries, and
-production discounts are separate. USD values use an explicitly documented
-INR 95.43 exchange-rate assumption, so this is a reproducible estimate rather
-than a provider-billing claim.
-
-Cached-input tokens are displayed as context reuse, not operating-system RAM.
-Conversation memory itself is the small typed slot/result state plus the SDK's
-SQLite history. Process-memory profiling is not part of the required metrics
-and should be added under load testing rather than conflated with token usage.
-
-## Q&A defence
-
-### If STT hears “S” instead of “Ace”
-
-The transcript reaches the same intent/slot path. If “S” is treated as a model
-filter, the deterministic search returns no exact matches; it does not silently
-substitute Ace. The missing production seam is a catalog-aware normalization
-step between STT and tool execution that can propose likely makes/models and
-ask for confirmation when confidence is low. It should not silently rewrite a
-user constraint.
-
-### Why these three ranked first
-
-The UI's **Why these ranked first** table exposes the numeric
-`RankingBreakdown` for each returned listing: purpose 30%, papers 15%, budget
-15%, mileage 15%, condition 15%, and year 10%. Signals unavailable for a query
-are zeroed and the remaining weights are normalized. This is the data behind
-the ordering, not a prose rationale generated after the fact.
-
-### First production replacement
-
-Replace the free-provider routing/capacity layer first. The agent consumes the
-Agents SDK model interface and returns typed tool arguments, so a purchased
-provider or internal gateway can replace `FallbackModel` without changing SQL,
-ranking, response validation, or the UI contract.
-
-### First 200 ms to win back
-
-In the latest 27-case core run, understanding averaged 1,083.62 ms and catalog
-search/lookup averaged 621.38 ms; detail response generation averaged 1,265.38
-ms on the three turns that used it. The first broadly available ~200 ms is in
-catalog connection setup: keep a bounded warm read-only connection pool or put
-the catalog behind a small read service. Detail turns can save more by using a
-deterministic requested-field composer when natural rephrasing is unnecessary.
-
-## Speech-end latency boundary
-
-Voice turns record `speech_end_to_audio_ready_ms`. With Streamlit's default
-audio-enabled chat input, the server first sees the recording after the browser
-has completed and uploaded it, so the start timestamp is server receipt of that
-completed recording. The end timestamp is when the full synthesized WAV is
-available for playback. This is a useful, repeatable server-side proxy, but it
-excludes browser upload time and is not first streamed audio bytes. Exact
-browser speech-stop to first-byte measurement requires a custom client event
-and streaming audio transport; that is the first voice-interface production
-upgrade, not something hidden by the reported number.
+- **If STT hears “S” instead of “Ace”:** exact filtering returns no match instead of silently substituting a model. Production would add catalog-aware normalization with a confidence-gated confirmation step.
+- **Why these results rank first:** the UI's numeric ranking table is the evidence; the prose is not.
+- **What gets replaced first:** free-provider routing becomes a capacity-backed gateway behind the existing Agents SDK model interface.
+- **Where to recover the first 200 ms:** warm or pool catalog connections; detail turns can also skip natural rephrasing when a deterministic requested-field response is sufficient.

@@ -25,8 +25,16 @@ def test_streamlit_app_renders_without_framework_error() -> None:
     assert app.chat_input[0].placeholder == "Describe a vehicle need or ask a follow-up"
     assert any("Hi, I'm Vivi" in markdown.value for markdown in app.markdown)
     assert {button.label for button in app.button} >= STARTER_QUESTIONS
+    assert any(button.label == "Start new chat" and button.key == "new_chat" for button in app.button)
 
-    app.session_state.messages = [{"role": "user", "content": "Show me a truck"}]
+    app.session_state.messages = [
+        {"role": "user", "content": "Which cities do you operate in?"},
+        {
+            "role": "assistant",
+            "content": "We have listings in Ahmedabad and Mumbai.",
+            "tool": "list_catalog_options",
+        },
+    ]
     app.session_state.metrics = {
         "understanding_ms": 123,
         "speech_end_to_audio_ready_ms": 455,
@@ -43,7 +51,6 @@ def test_streamlit_app_renders_without_framework_error() -> None:
         "tts_characters": 42,
         "estimated_list_cost_inr": 0.001,
     }
-    app.session_state.last_tool = "search_vehicles"
     app.session_state.conversation_totals = {
         "turns": 3,
         "total_ms": 12_345,
@@ -71,6 +78,7 @@ def test_streamlit_app_renders_without_framework_error() -> None:
                     km_driven=29_919,
                     fuel="Diesel",
                     payload_kg=815,
+                    payload_is_estimated=True,
                     gvw_kg=1_605,
                     vehicle_category="mini_truck",
                     weight_class="light",
@@ -100,6 +108,7 @@ def test_streamlit_app_renders_without_framework_error() -> None:
 
     assert not {button.label for button in app.button}.intersection(STARTER_QUESTIONS)
     assert any("Hi, I'm Vivi" in markdown.value for markdown in app.markdown)
+    assert any("Tool used: `list_catalog_options`" in caption.value for caption in app.caption)
     assert any("| **Total** | **456 ms** |" in markdown.value for markdown in app.markdown)
     assert any("Speech end to audio ready" in markdown.value for markdown in app.markdown)
     assert any("**120**" in markdown.value for markdown in app.markdown)
@@ -108,4 +117,12 @@ def test_streamlit_app_renders_without_framework_error() -> None:
     assert any("2.50 s" in markdown.value for markdown in app.markdown)
     assert any("12.3 s" in markdown.value for markdown in app.markdown)
     assert any("₹0.0123" in markdown.value for markdown in app.markdown)
+    assert any("weighted signals below" in caption.value for caption in app.caption)
+    assert any("Vivi may infer purpose and vehicle size" in caption.value for caption in app.caption)
+    assert any(
+        "Purpose fit" in dataframe.value.columns and dataframe.value.iloc[0]["Purpose fit"] == "30%"
+        for dataframe in app.dataframe
+    )
     assert any("Mahindra Jeeto Strong Diesel" in markdown.value for markdown in app.markdown)
+    assert any(metric.label == "Est. payload" for metric in app.metric)
+    assert any(metric.value == "815 kg" for metric in app.metric)
