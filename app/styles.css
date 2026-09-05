@@ -34,20 +34,6 @@
 	margin-top: 0.15rem;
 }
 
-.st-key-status_rail {
-	position: fixed;
-	top: 3.25rem;
-	right: 2rem;
-	z-index: 50;
-	width: fit-content;
-	padding: 0.3rem 0.4rem;
-	border: 1px solid #303946;
-	border-radius: 0.65rem;
-	background: rgb(21 26 33 / 92%);
-	box-shadow: 0 0.35rem 1.1rem rgb(0 0 0 / 22%);
-	backdrop-filter: blur(12px);
-}
-
 .st-key-sidebar_header {
 	position: sticky;
 	top: 2.75rem;
@@ -180,9 +166,23 @@
 }
 
 [class*="st-key-vehicle_specs_"] [data-testid="stMetricValue"] {
+	overflow: visible;
 	font-size: 0.88rem;
 	font-weight: 650;
 	line-height: 1.4;
+	white-space: nowrap;
+}
+
+[class*="st-key-vehicle_specs_"] [data-testid="stMetricValue"] p {
+	overflow: visible;
+	text-overflow: clip;
+	white-space: nowrap;
+}
+
+[class*="st-key-vehicle_specs_"] [data-testid="stMetricLabel"],
+[class*="st-key-vehicle_specs_"] [data-testid="stMetricLabel"] p {
+	overflow: visible;
+	text-overflow: clip;
 	white-space: nowrap;
 }
 
@@ -247,10 +247,4 @@
 		position: static;
 	}
 
-	.st-key-status_rail {
-		position: static;
-		width: 100%;
-		justify-content: flex-start;
-		margin-bottom: 0.5rem;
-	}
 }

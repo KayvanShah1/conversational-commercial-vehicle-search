@@ -33,12 +33,15 @@ def render_sidebar(reset_conversation: Callable[[], None]) -> None:
         with st.container(key="sidebar_header"):
             st.title("Vivi")
             st.caption("Commercial vehicle assistant")
-        st.badge("Catalog connected", icon=":material/database:", color="green")
+        with st.container(horizontal=True):
+            st.badge("Catalog connected", icon=":material/database:", color="green")
+            st.badge("Voice & Text Available", icon=":material/mic:", color="primary")
         st.button(
-            "New chat",
+            "Start new chat",
             icon=":material/add:",
-            type="tertiary",
-            width="content",
+            type="secondary",
+            width="stretch",
+            key="new_chat",
             on_click=reset_conversation,
         )
 
@@ -137,10 +140,8 @@ def render_matches(result: VehicleSearchResult | None) -> None:
 
             with st.container(key=f"vehicle_specs_{index}", gap="small"):
                 specs = st.columns([0.8, 1.2, 1.2], gap="small", vertical_alignment="top")
-                payload_label = "Estimated payload" if vehicle["Payload basis"] == "Estimated" else "Payload"
+                payload_label = "Est. payload" if vehicle["Payload basis"] == "Estimated" else "Payload"
                 payload_value = _format_weight(vehicle["Payload (kg)"])
-                if vehicle["Payload basis"] == "Estimated":
-                    payload_value = f"Approx. {payload_value}"
                 values = (
                     ("Fuel", vehicle["Fuel"]),
                     (payload_label, payload_value),
@@ -188,6 +189,29 @@ def render_matches(result: VehicleSearchResult | None) -> None:
             for item in result.vehicles
         ]
         with st.expander("Why these ranked first"):
+            st.caption(
+                "All shown vehicles meet your filters. Their total combines the weighted signals below; "
+                "higher is better."
+            )
+            st.dataframe(
+                [
+                    {
+                        "Purpose fit": "30%",
+                        "Verified papers": "15%",
+                        "Within budget": "15%",
+                        "Lower mileage": "15%",
+                        "Condition": "15%",
+                        "Newer year": "10%",
+                    }
+                ],
+                hide_index=True,
+                width="stretch",
+            )
+            st.caption(
+                "If purpose or budget is not provided, its share is redistributed. Vivi may infer purpose and "
+                "vehicle size from the use case; everything else must be stated."
+            )
+            st.caption("Score by vehicle")
             st.dataframe(
                 ranking_rows,
                 hide_index=True,
