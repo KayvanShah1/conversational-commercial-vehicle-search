@@ -25,6 +25,22 @@ def test_fallback_model_keeps_the_successful_route_for_a_new_user_turn():
     assert model.advance() is None
 
 
+def test_new_session_starts_from_the_last_shared_route():
+    routes = ["shared-first-route", "shared-second-route"]
+    first = FallbackModel(
+        [SimpleNamespace(model="first"), SimpleNamespace(model="second")],
+        routes,
+    )
+    first.advance()
+
+    second = FallbackModel(
+        [SimpleNamespace(model="first"), SimpleNamespace(model="second")],
+        routes,
+    )
+
+    assert second.route == "shared-second-route"
+
+
 def test_tool_validation_retries_are_bounded_at_three(monkeypatch):
     logs = []
     context = AgentContext(state=ConversationState(session_id="test"))

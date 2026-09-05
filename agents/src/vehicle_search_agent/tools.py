@@ -1,9 +1,11 @@
 import asyncio
 import re
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Annotated, Literal
 
 from pydantic import Field
+from pydantic.fields import FieldInfo
 from vehicle_search_utils import OperationLogContext, get_logger
 
 from agents import RunContextWrapper, function_tool
@@ -41,6 +43,12 @@ DetailScope = Literal["one", "all"]
 DetailMode = Literal[
     "facts", "capability", "all_details", "best_match", "cheapest", "lowest_mileage", "highest_payload"
 ]
+
+
+def _enum_argument(enum_type: type[StrEnum], description: str) -> FieldInfo:
+    values = [item.value for item in enum_type]
+    pattern = "^(?:" + "|".join(re.escape(value) for value in values) + ")$"
+    return Field(description=description, pattern=pattern, json_schema_extra={"enum": values})
 
 
 @dataclass
@@ -132,13 +140,25 @@ async def search_vehicles(
     ]
     | None = None,
     body_type: Annotated[
-        BodyType,
-        Field(description="Physical cargo body; pickup is a vehicle category, not a body type; do not infer it"),
+        str,
+        _enum_argument(
+            BodyType,
+            "Physical cargo body; pickup is a vehicle category, not a body type; do not infer it",
+        ),
     ]
     | None = None,
-    fuel: Annotated[FuelType, Field(description="Fuel stated by the user; do not infer it")] | None = None,
+    fuel: Annotated[str, _enum_argument(FuelType, "Fuel stated by the user; do not infer it")] | None = None,
     city: Annotated[str, Field(description="Listing city; for a route use its origin city")] | None = None,
-    purpose: Annotated[PurposeTag, Field(description="Closest intended work or route type; ranking signal only")]
+    purpose: Annotated[
+        str,
+        _enum_argument(
+            PurposeTag,
+            (
+                "Closest intended work or route type; ranking signal only. Use heavy_delivery for transporting "
+                "heavy machinery and industrial_goods for general industrial cargo"
+            ),
+        ),
+    ]
     | None = None,
     category: Annotated[
         VehicleCategory,
@@ -149,8 +169,8 @@ async def search_vehicles(
         WeightClass,
         Field(
             description=(
-                "Exact stated size: light, intermediate, medium, or heavy; "
-                "chhota/small means light and bada/heavy means heavy"
+                "Map explicit size words exactly: light to light, intermediate to intermediate, "
+                "medium to medium, and heavy to heavy; map chhota/small to light and bada to heavy"
             )
         ),
     ]
