@@ -21,6 +21,13 @@
     "expected_response_contains_any": ["available cities", "operate in", "ahmedabad"]
   },
   {
+    "id": "available_purposes",
+    "utterance": "What kinds of work can the available vehicles be used for?",
+    "expected_action": "catalog_options",
+    "expected_filters": {},
+    "expected_response_contains_all": ["listed uses", "city delivery", "construction"]
+  },
+  {
     "id": "general_buying_question",
     "utterance": "For city deliveries, how should I choose between diesel and CNG?",
     "expected_action": "conversation",

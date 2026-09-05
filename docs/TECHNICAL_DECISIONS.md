@@ -20,23 +20,23 @@ The implementation is separated by failure boundary rather than by framework pat
 
 | Review concern | Resolution |
 | --- | --- |
-| Repeated API-key checks | Pydantic settings validate and deduplicate Groq keys; OpenRouter is normalized once as an optional provider. |
+| Repeated API-key checks | Pydantic settings validate and deduplicate Groq keys once; model and speech clients reuse that pool. |
 | Unused logging wrappers | One `OperationLogContext` records monotonic duration and structured fields across catalog, model, tool, STT, TTS, and turn operations. |
 | Tool-selector or critic agent | Not added. Three typed operations do not justify another model call or state hand-off. |
 | Generic service/repository layer | Not added. Search is the only MotherDuck consumer and owns its parameterized queries directly. |
 | Process-global database connection | Not used. Each catalog operation owns one scoped read-only connection and reuses it for that operation. |
 | Prompt and schema duplication | The prompt explains *when* to use a tool; schemas and docstrings describe *which values* are accepted. |
 | TTS batching | Retained because the provider caps each request at 200 characters; application code chunks text and stitches compatible WAV responses. |
-| Model fallback adapter | Retained because the SDK accepts one model interface while the demo needs bounded key, model, and provider failover. |
+| Model fallback adapter | Retained because the SDK accepts one model interface while the demo needs bounded key and model failover. |
 | Rechecking database results | Retained as the hard-filter invariant that detects a violated user constraint before a result is shown. |
 
 Deliberately absent: generated SQL, a raw database tool, multi-agent routing, generic repositories, prompt-encoded vehicle inventories, expected-answer matching, and a framework-specific wrapper around the conversation session.
 
 ## Decision 1: typed tools and deterministic SQL
 
-**Chosen:** the model identifies intent and supplies typed slot arguments;
-application code builds parameterized SQL, applies hard filters, ranks rows, and
-checks every returned record against the filters.
+**Chosen:** the model identifies intent and supplies typed operation, scope, and
+slot arguments; application code builds parameterized SQL, applies hard filters,
+ranks rows, and checks every returned record against the filters.
 
 **Rejected:** asking the model to generate SQL or giving it a general database
 tool.
@@ -78,6 +78,11 @@ grounded search results. Detail and comparison turns use one post-tool model
 pass so Vivi can speak naturally over typed catalog facts. The prompt permits
 only one catalog tool per turn, and code validates the final values before they
 reach the user.
+
+If a no-tool response names one of the current result labels, the runner drops
+that ungrounded attempt and retries once with the details tool required. This
+keeps general side questions tool-free while preventing a model from bypassing
+the catalog boundary for a specific listing. Usage includes both attempts.
 
 ## Where the agent reasons
 
@@ -122,12 +127,11 @@ a catalog service rather than opening unlimited connections.
 ## Model fallback and failure behavior
 
 The agent starts each turn on the last successful route. On a retryable failure,
-it makes one bounded pass through every configured Groq key and model before the
-optional OpenRouter Gemma routes. Speech requests likewise remember the last
-successful Groq key and rotate on HTTP 429. This protects later turns from
-repeatedly hitting a known-exhausted key, but free models do not guarantee
-independent upstream capacity. The UI reports a recoverable error instead of
-inventing a vehicle when every route fails.
+it makes one bounded pass through every configured Groq key and model. STT and
+TTS independently remember the last successful key for their model and rotate
+on HTTP 429. This protects later turns from repeatedly hitting a known-exhausted
+key. The UI reports a recoverable error instead of inventing a vehicle when
+every route fails.
 
 ## What breaks first at 100,000 conversations per month
 
@@ -152,9 +156,9 @@ total tokens from the Agents SDK. Voice turns also record input-audio seconds
 and TTS characters. The UI and evaluation reports estimate equivalent list
 cost using the successful model route; actual free-tier spend can be zero.
 
-The 27-case live core run averaged 2,143.96 tokens and INR 0.0460 of estimated
+The 28-case live core run averaged 2,163.75 tokens and INR 0.0380 of estimated
 LLM list cost per text turn. At that observed mix, 100,000 text turns would be
-about INR 4,605 for the LLM portion only. Voice, database, hosting, retries, and
+about INR 3,800 for the LLM portion only. Voice, database, hosting, retries, and
 production discounts are separate. USD values use an explicitly documented
 INR 95.43 exchange-rate assumption, so this is a reproducible estimate rather
 than a provider-billing claim.
@@ -192,8 +196,8 @@ ranking, response validation, or the UI contract.
 
 ### First 200 ms to win back
 
-In the latest 27-case core run, understanding averaged 1,083.62 ms and catalog
-search/lookup averaged 621.38 ms; detail response generation averaged 1,265.38
+In the latest 28-case core run, understanding averaged 1,053.89 ms and catalog
+search/lookup averaged 434.24 ms; detail response generation averaged 3,451.68
 ms on the three turns that used it. The first broadly available ~200 ms is in
 catalog connection setup: keep a bounded warm read-only connection pool or put
 the catalog behind a small read service. Detail turns can save more by using a

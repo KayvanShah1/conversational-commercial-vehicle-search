@@ -16,6 +16,10 @@ def _row(
     purpose: str = "logistics",
     weight_class: str = "light",
     model: str | None = None,
+    city: str = "Pune",
+    payload: int | None = 1000,
+    payload_is_estimated: bool = False,
+    gvw: int = 2000,
 ):
     return (
         listing_id,
@@ -25,13 +29,14 @@ def _row(
         price,
         kilometres,
         "Diesel",
-        1000,
-        2000,
+        payload,
+        payload_is_estimated,
+        gvw,
         "mini_truck",
         weight_class,
         "open",
         2,
-        "Pune",
+        city,
         papers_verified,
         condition,
         [purpose],
@@ -46,14 +51,17 @@ def _install_catalog(monkeypatch, rows):
         CREATE TABLE vehicles (
             listing_id VARCHAR, make VARCHAR, model VARCHAR, year INTEGER,
             price_inr INTEGER, km_driven INTEGER, fuel VARCHAR, payload_kg INTEGER,
-            gvw_kg INTEGER, vehicle_category VARCHAR, weight_class VARCHAR,
+            payload_is_estimated BOOLEAN, gvw_kg INTEGER,
+            vehicle_category VARCHAR, weight_class VARCHAR,
             body_type VARCHAR, axle_count INTEGER, city VARCHAR,
             papers_verified BOOLEAN, condition VARCHAR, purpose_tags VARCHAR[],
             spec_source_url VARCHAR
         )
         """
     )
-    connection.executemany("INSERT INTO vehicles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
+    connection.executemany(
+        "INSERT INTO vehicles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows
+    )
     calls = {"count": 0}
 
     @contextmanager
@@ -146,6 +154,24 @@ def test_weight_class_is_a_hard_filter(monkeypatch):
     assert result.vehicles[0].vehicle.listing_id == "VEH-002"
 
 
+def test_payload_and_gvw_constraints_are_both_required(monkeypatch):
+    connection, _ = _install_catalog(
+        monkeypatch,
+        [
+            _row("LOW-PAYLOAD", payload=1500, gvw=10_000),
+            _row("LOW-GVW", payload=2500, gvw=9000),
+            _row("MATCH", payload=2500, gvw=10_000),
+        ],
+    )
+
+    try:
+        result = search_module.search_catalog(SearchFilters(payload_min_kg=2000, gvw_min_kg=10_000), [])
+    finally:
+        connection.close()
+
+    assert [item.vehicle.listing_id for item in result.vehicles] == ["MATCH"]
+
+
 def test_search_accepts_a_partial_model_name_with_its_make(monkeypatch):
     connection, _ = _install_catalog(
         monkeypatch,
@@ -161,21 +187,23 @@ def test_search_accepts_a_partial_model_name_with_its_make(monkeypatch):
     assert result.vehicles[0].vehicle.model == "Ace Gold"
 
 
-def test_catalog_options_use_one_connection_and_only_requested_topics(monkeypatch):
+def test_catalog_options_use_one_connection_and_return_unique_facets(monkeypatch):
     rows = [
         _row("VEH-001"),
-        (*_row("VEH-002")[:13], "Mumbai", *_row("VEH-002")[14:]),
+        _row("VEH-002", purpose="city_delivery", city="Mumbai"),
+        _row("VEH-003"),
     ]
     connection, calls = _install_catalog(monkeypatch, rows)
 
     try:
-        options, _ = search_module.get_catalog_options([CatalogTopic.cities, CatalogTopic.fuels])
+        options, _ = search_module.get_catalog_options([CatalogTopic.cities, CatalogTopic.fuels, CatalogTopic.purposes])
     finally:
         connection.close()
 
     assert options == {
         CatalogTopic.cities: ["Mumbai", "Pune"],
         CatalogTopic.fuels: ["Diesel"],
+        CatalogTopic.purposes: ["city_delivery", "logistics"],
     }
     assert calls["count"] == 1
 

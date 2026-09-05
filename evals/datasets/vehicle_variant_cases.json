@@ -184,7 +184,7 @@
       "weight_class": "medium"
     },
     "preserve_result_ids": true,
-    "expected_response_contains_all": ["cheapest"]
+    "expected_response_contains_all": ["cheapest", "18.4"]
   },
   {
     "id": "variant_heavy_rigid_tipper",

@@ -1,20 +1,24 @@
-from __future__ import annotations
-
 import asyncio
 import re
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Annotated, Literal
 
 from pydantic import Field
+from pydantic.fields import FieldInfo
 from vehicle_search_utils import OperationLogContext, get_logger
 
 from agents import RunContextWrapper, function_tool
 from vehicle_search_agent.models import (
     AgentAction,
+    BodyType,
     CatalogTopic,
     ConversationState,
     DetailField,
+    FuelType,
+    PurposeTag,
     SearchField,
+    SearchFilters,
     SlotPatch,
     VehicleCategory,
     VehicleRecord,
@@ -34,34 +38,17 @@ from vehicle_search_agent.settings import settings
 
 logger = get_logger("VehicleSearchTools")
 
-DETAIL_REQUEST_PATTERN = re.compile(
-    r"\b(?:detail[a-z]*|specifications?|specs?|brochures?)\b|\bmore\s+(?:about|on)\b",
-    re.IGNORECASE,
-)
-
-BodyType = Literal["open", "flatbed", "box", "container", "tipper", "tanker", "reefer"]
-Fuel = Literal["CNG", "Diesel"]
-Purpose = Literal[
-    "agriculture",
-    "city_delivery",
-    "cold_chain",
-    "construction",
-    "ecommerce",
-    "fmcg",
-    "fuel_transport",
-    "heavy_delivery",
-    "industrial_goods",
-    "last_mile",
-    "logistics",
-    "long_haul",
-    "market_transport",
-    "mining",
-    "parcel_delivery",
-    "regional_delivery",
-    "roadwork",
-    "vegetable_delivery",
-    "water_transport",
+SearchMode = Literal["new", "refine", "more"]
+DetailScope = Literal["one", "all"]
+DetailMode = Literal[
+    "facts", "capability", "all_details", "best_match", "cheapest", "lowest_mileage", "highest_payload"
 ]
+
+
+def _enum_argument(enum_type: type[StrEnum], description: str) -> FieldInfo:
+    values = [item.value for item in enum_type]
+    pattern = "^(?:" + "|".join(re.escape(value) for value in values) + ")$"
+    return Field(description=description, pattern=pattern, json_schema_extra={"enum": values})
 
 
 @dataclass
@@ -145,22 +132,47 @@ def _set_response(context: AgentContext, response: GroundedResponse) -> str:
 )
 async def search_vehicles(
     ctx: RunContextWrapper[AgentContext],
+    mode: Annotated[SearchMode, Field(description="new search, refinement, or more results")],
     budget_min: Annotated[int, Field(ge=0, description="Minimum INR budget stated by the user")] | None = None,
     budget_max: Annotated[
         int,
         Field(ge=0, description="Maximum INR budget stated by the user; convert 20 lakh to 2000000"),
     ]
     | None = None,
-    body_type: Annotated[BodyType, Field(description="Physical cargo body stated by the user; do not infer it")]
+    body_type: Annotated[
+        str,
+        _enum_argument(
+            BodyType,
+            "Physical cargo body; pickup is a vehicle category, not a body type; do not infer it",
+        ),
+    ]
     | None = None,
-    fuel: Annotated[Fuel, Field(description="Fuel stated by the user; do not infer it")] | None = None,
+    fuel: Annotated[str, _enum_argument(FuelType, "Fuel stated by the user; do not infer it")] | None = None,
     city: Annotated[str, Field(description="Listing city; for a route use its origin city")] | None = None,
-    purpose: Annotated[Purpose, Field(description="Closest intended work or route type; ranking signal only")]
+    purpose: Annotated[
+        str,
+        _enum_argument(
+            PurposeTag,
+            (
+                "Closest intended work or route type; ranking signal only. Use heavy_delivery for transporting "
+                "heavy machinery and industrial_goods for general industrial cargo"
+            ),
+        ),
+    ]
     | None = None,
-    category: Annotated[VehicleCategory, Field(description="Construction category named by the user")] | None = None,
+    category: Annotated[
+        VehicleCategory,
+        Field(description="Vehicle category stated by the user: mini_truck, pickup, or rigid_truck"),
+    ]
+    | None = None,
     size: Annotated[
         WeightClass,
-        Field(description="Closest stated or implied size; chhota/small means light, bada/heavy means heavy"),
+        Field(
+            description=(
+                "Map explicit size words exactly: light to light, intermediate to intermediate, "
+                "medium to medium, and heavy to heavy; map chhota/small to light and bada to heavy"
+            )
+        ),
     ]
     | None = None,
     make: Annotated[str, Field(description="Manufacturer name only, for example Tata or Mahindra")] | None = None,
@@ -174,27 +186,19 @@ async def search_vehicles(
     gvw_min_kg: Annotated[int, Field(ge=0, description="Minimum GVW only when a number is stated")] | None = None,
     papers_verified: bool | None = None,
     clear_fields: list[SearchField] | None = None,
-    more_results: Annotated[bool, Field(description="True only when the user asks for more or next options")] = False,
 ) -> str:
-    """Search or refine results by applying only the constraints changed in this turn.
+    """Start, refine, or paginate a search using constraints from this turn.
 
-    Always use this tool when the user adds, removes, corrects, or prefers any
-    constraint, even if they also ask which previous option is best. Omitted
-    arguments preserve their current values. Infer size and purpose; category,
-    body, and fuel must be explicit.
+    Always use this tool when the user adds, removes, corrects, or prefers a
+    constraint, even when the same turn asks which option is best. Use mode=new
+    for a fresh request, refine for a change to the current search, and more to
+    exclude results already shown. Omitted arguments preserve current values in
+    refine and more modes. Infer size and purpose; category, body, and fuel must
+    be explicit.
 
-    Valid category values: mini_truck, pickup, rigid_truck. Valid size values:
-    light, intermediate, medium, heavy. Valid body values: open, flatbed, box,
-    container, tipper, tanker, reefer. Valid fuel values: CNG, Diesel.
-    Valid purposes: agriculture, city_delivery, cold_chain, construction,
-    ecommerce, fmcg, fuel_transport, heavy_delivery, industrial_goods,
-    last_mile, logistics, long_haul, market_transport, mining, parcel_delivery,
-    regional_delivery, roadwork, vegetable_delivery, water_transport.
+    Accepted values and numeric constraints are declared in the tool schema.
     """
     logger.info("tool_called", extra={"tool": "search_vehicles"})
-    more_results = more_results or bool(
-        re.search(r"\b(?:more|next|another)\s+(?:options?|vehicles?|results?)\b", ctx.context.current_input, re.IGNORECASE)
-    )
     patch = SlotPatch(
         budget_min=budget_min,
         budget_max=budget_max,
@@ -214,13 +218,15 @@ async def search_vehicles(
     context = ctx.context
     context.action = AgentAction.search
 
-    filters, changed_fields = merge_slot_patch(context.state.active_filters, patch)
-    excluded_ids = context.state.shown_result_ids if more_results else []
+    current_filters = SearchFilters() if mode == "new" else context.state.active_filters
+    filters, changed_fields = merge_slot_patch(current_filters, patch)
+    excluded_ids = context.state.shown_result_ids if mode == "more" else []
     result = await asyncio.to_thread(search_catalog, filters, changed_fields, excluded_ids)
 
     context.state.active_filters = filters
     context.state.last_result_ids = [item.vehicle.listing_id for item in result.vehicles]
-    if more_results:
+    context.state.last_result_labels = [f"{item.vehicle.make} {item.vehicle.model}" for item in result.vehicles]
+    if mode == "more":
         context.state.shown_result_ids.extend(context.state.last_result_ids)
     else:
         context.state.shown_result_ids = list(context.state.last_result_ids)
@@ -237,46 +243,56 @@ async def search_vehicles(
 )
 async def get_vehicle_details(
     ctx: RunContextWrapper[AgentContext],
+    scope: Annotated[DetailScope, Field(description="one prior result or all current results")],
+    mode: Annotated[
+        DetailMode,
+        Field(
+            description=(
+                "facts for named fields; capability for can-carry questions; all_details only for "
+                "explicit requests for every detail; otherwise choose the requested comparison mode"
+            )
+        ),
+    ] = "facts",
     fields: Annotated[list[DetailField], Field(min_length=1, max_length=15)] | None = None,
     result_number: Annotated[int, Field(ge=1, le=3)] | None = None,
-    all_details: Annotated[bool, Field(description="True when the user asks for every available vehicle attribute")] = False,
 ) -> str:
-    """Read facts for previous results when this turn does not change a constraint.
+    """Read or compare grounded facts from previously returned results.
 
-    If the user adds, removes, corrects, or prefers any search constraint, use
-    search_vehicles instead. Omit result_number for these/all results.
-    A make or model named in the user's question is resolved against the prior
-    results when result_number is omitted.
-
-    Valid fields: year, price, km_driven, fuel, payload, gvw, body_type, city,
-    papers_verified, condition, purpose_tags, vehicle_category, weight_class,
-    axle_count, spec_source_url. Set all_details=true for every available
-    attribute. For capability questions use payload, gvw, body_type, and
-    purpose_tags. For brochure, manufacturer page, specification source, or
-    reference-link questions use spec_source_url.
-    Never call this once per result when the user asks about all results.
+    Use this only when the turn does not add or change a search constraint. A
+    comparison containing a new preference belongs to search_vehicles, even if
+    the current results already appear to satisfy it. Use
+    scope=all for plural references and comparisons. For one result, pass its
+    result_number when known; a named make or model can otherwise be resolved
+    against prior results. Use mode=all_details for every available attribute.
+    For capability questions request payload, gvw, body_type, and purpose_tags;
+    for brochures request spec_source_url. Never call this once per result for
+    scope=all. Accepted fields and modes are declared in the tool schema.
     """
     logger.info("tool_called", extra={"tool": "get_vehicle_details"})
     context = ctx.context
     context.action = AgentAction.details
     state = context.state
 
-    all_details = all_details or (not fields and bool(DETAIL_REQUEST_PATTERN.search(context.current_input)))
-    if all_details:
+    comparison_fields = {
+        "best_match": list(DetailField),
+        "cheapest": [DetailField.price],
+        "lowest_mileage": [DetailField.km_driven],
+        "highest_payload": [DetailField.payload],
+    }
+    if mode == "capability":
+        fields = [DetailField.payload, DetailField.gvw, DetailField.body_type, DetailField.purpose_tags]
+    elif mode == "all_details":
         fields = list(DetailField)
+    elif mode in comparison_fields:
+        fields = comparison_fields[mode]
     elif not fields:
         return _set_response(context, message_response("Which vehicle details would you like?"))
 
     if not state.last_result_ids:
         return _set_response(context, message_response("Please search for vehicles first."))
 
-    plural_reference = re.search(
-        r"\b(?:these|those|they|them|options|vehicles|results|inmein|ye|yeh)\b|\ball\s+(?:three|\d+)\b",
-        context.current_input,
-        re.IGNORECASE,
-    )
     vehicles: list[VehicleRecord] | None = None
-    if plural_reference:
+    if scope == "all":
         listing_ids = list(state.last_result_ids)
     elif result_number is not None:
         if result_number > len(state.last_result_ids):
@@ -303,7 +319,8 @@ async def get_vehicle_details(
         )
 
     state.selected_listing_id = listing_ids[0] if len(listing_ids) == 1 else None
-    return _set_response(context, details_response(vehicles, fields, context.current_input))
+    comparison = mode if mode in comparison_fields else None
+    return _set_response(context, details_response(vehicles, fields, comparison))
 
 
 @function_tool(
@@ -319,8 +336,9 @@ async def list_catalog_options(
     include_body_types: bool = False,
     include_fuels: bool = False,
     include_makes: bool = False,
+    include_purposes: bool = False,
 ) -> str:
-    """List distinct cities, vehicle categories, body types, fuels, or makes available in the catalog."""
+    """List available cities, vehicle categories, body types, fuels, makes, or purposes."""
     logger.info("tool_called", extra={"tool": "list_catalog_options"})
     context = ctx.context
     context.action = AgentAction.catalog_options
@@ -330,6 +348,7 @@ async def list_catalog_options(
         CatalogTopic.body_types: include_body_types,
         CatalogTopic.fuels: include_fuels,
         CatalogTopic.makes: include_makes,
+        CatalogTopic.purposes: include_purposes,
     }
     topics = [topic for topic, included in requested.items() if included]
     if not topics:

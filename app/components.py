@@ -137,9 +137,13 @@ def render_matches(result: VehicleSearchResult | None) -> None:
 
             with st.container(key=f"vehicle_specs_{index}", gap="small"):
                 specs = st.columns([0.8, 1.2, 1.2], gap="small", vertical_alignment="top")
+                payload_label = "Estimated payload" if vehicle["Payload basis"] == "Estimated" else "Payload"
+                payload_value = _format_weight(vehicle["Payload (kg)"])
+                if vehicle["Payload basis"] == "Estimated":
+                    payload_value = f"Approx. {payload_value}"
                 values = (
                     ("Fuel", vehicle["Fuel"]),
-                    ("Payload", _format_weight(vehicle["Payload (kg)"])),
+                    (payload_label, payload_value),
                     ("GVW", _format_weight(vehicle["GVW (kg)"])),
                 )
                 for spec, (label, value) in zip(specs, values, strict=True):
@@ -235,6 +239,7 @@ def _vehicle_rows(result: VehicleSearchResult | None) -> list[dict]:
             "KM": ranked.vehicle.km_driven,
             "Fuel": ranked.vehicle.fuel,
             "Payload (kg)": ranked.vehicle.payload_kg,
+            "Payload basis": "Estimated" if ranked.vehicle.payload_is_estimated else "Manufacturer-listed",
             "GVW (kg)": ranked.vehicle.gvw_kg,
             "Body": ranked.vehicle.body_type,
             "City": ranked.vehicle.city,

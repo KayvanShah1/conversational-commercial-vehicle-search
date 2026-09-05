@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from vehicle_search_agent.models import CatalogTopic, DetailField, RankedVehicle, VehicleRecord, VehicleSearchResult
@@ -12,6 +11,15 @@ class GroundedResponse:
     facts: tuple[str, ...]
     checks: tuple[tuple[str, ...], ...]
     display_markdown: str | None = None
+
+
+@dataclass(frozen=True)
+class DetailValue:
+    fact: str
+    spoken_clause: str | None
+    display_label: str
+    display_value: str
+    checks: tuple[str, ...]
 
 
 def _price(price_inr: int) -> str:
@@ -39,100 +47,159 @@ def _join_naturally(values: list[str]) -> str:
     return ", ".join(values[:-1]) + f", and {values[-1]}"
 
 
-def _detail_summary(vehicle: VehicleRecord, fields: set[DetailField]) -> str:
+def _payload(vehicle: VehicleRecord) -> tuple[str, str]:
+    label = "Estimated payload" if vehicle.payload_is_estimated else "Payload"
+    if vehicle.payload_kg is None:
+        return label, "not listed"
+    prefix = "approximately " if vehicle.payload_is_estimated else ""
+    return label, f"{prefix}{vehicle.payload_kg:,} kg"
+
+
+def _render_detail(vehicle: VehicleRecord, field: DetailField) -> DetailValue:
+    match field:
+        case DetailField.year:
+            value = str(vehicle.year)
+            return DetailValue(f"year {value}", f"is a {value} model", "Year", value, (value,))
+        case DetailField.price:
+            value = _price(vehicle.price_inr)
+            return DetailValue(f"price {value}", f"costs {value}", "Price", value, (value,))
+        case DetailField.km_driven:
+            value = f"{vehicle.km_driven:,} km"
+            return DetailValue(value, f"has covered {value}", "Kilometres driven", value, (str(vehicle.km_driven),))
+        case DetailField.fuel:
+            value = vehicle.fuel
+            return DetailValue(f"fuel {value}", f"runs on {value}", "Fuel", value, (value,))
+        case DetailField.payload:
+            label, value = _payload(vehicle)
+            article = "an" if vehicle.payload_is_estimated else "a"
+            checks = ("estimated",) if vehicle.payload_is_estimated else ()
+            checks += (str(vehicle.payload_kg) if vehicle.payload_kg is not None else "not listed",)
+            return DetailValue(
+                f"{label.casefold()} {value}",
+                f"has {article} {label.casefold()} of {value}",
+                label,
+                value,
+                checks,
+            )
+        case DetailField.gvw:
+            value = f"{vehicle.gvw_kg:,} kg"
+            return DetailValue(f"GVW {value}", f"has a GVW of {value}", "GVW", value, (str(vehicle.gvw_kg),))
+        case DetailField.body_type:
+            value = vehicle.body_type
+            article = "an" if value[:1].casefold() in "aeiou" else "a"
+            return DetailValue(f"body type {value}", f"has {article} {value} body", "Body", value.title(), (value,))
+        case DetailField.city:
+            value = vehicle.city
+            return DetailValue(f"city {value}", f"is listed in {value}", "City", value, (value,))
+        case DetailField.papers_verified:
+            value = "Verified" if vehicle.papers_verified else "Not verified"
+            check = "verified" if vehicle.papers_verified else "not verified"
+            clause = "has verified papers" if vehicle.papers_verified else "does not have verified papers"
+            return DetailValue(f"papers {value.casefold()}", clause, "Papers", value, (check,))
+        case DetailField.condition:
+            value = vehicle.condition
+            return DetailValue(
+                f"condition {value}", f"is in {value} condition", "Condition", value.title(), (value,)
+            )
+        case DetailField.purpose_tags:
+            values = tuple(tag.replace("_", " ") for tag in vehicle.purpose_tags)
+            display = ", ".join(values)
+            return DetailValue(
+                f"listed uses {display}",
+                f"is listed for {_join_naturally(list(values))}",
+                "Listed uses",
+                display,
+                values,
+            )
+        case DetailField.vehicle_category:
+            value = vehicle.vehicle_category.replace("_", " ")
+            return DetailValue(f"category {value}", f"is a {value}", "Category", value.title(), (value,))
+        case DetailField.weight_class:
+            value = vehicle.weight_class
+            return DetailValue(
+                f"size class {value}", f"is in the {value} weight class", "Weight class", value.title(), (value,)
+            )
+        case DetailField.axle_count:
+            value = str(vehicle.axle_count)
+            return DetailValue(f"axles {value}", f"has {value} axles", "Axles", value, (value,))
+        case DetailField.spec_source_url:
+            value = vehicle.spec_source_url
+            return DetailValue(
+                f"specification source {value}",
+                None,
+                "Specification source",
+                f"[View manufacturer specifications]({value})",
+                (value,),
+            )
+    raise ValueError(f"Unsupported detail field: {field}")
+
+
+SPOKEN_FIELD_GROUPS = (
+    (DetailField.city,),
+    (DetailField.price, DetailField.km_driven, DetailField.fuel),
+    (DetailField.payload, DetailField.gvw, DetailField.axle_count),
+    (DetailField.papers_verified, DetailField.condition, DetailField.weight_class),
+    (DetailField.purpose_tags,),
+)
+
+
+def _identity_sentence(vehicle: VehicleRecord, details: dict[DetailField, DetailValue]) -> str:
     name = f"{vehicle.make} {vehicle.model}"
-    sentences: list[str] = []
-    category = vehicle.vehicle_category.replace("_", " ")
-    if DetailField.year in fields and DetailField.vehicle_category in fields:
-        introduction = f"{name} is a {vehicle.year} model in the {category} category"
-    elif DetailField.year in fields:
-        introduction = f"{name} is a {vehicle.year} model"
-    elif DetailField.vehicle_category in fields:
-        introduction = f"{name} is a {category}"
+    year = details.get(DetailField.year)
+    category = details.get(DetailField.vehicle_category)
+    body = details.get(DetailField.body_type)
+
+    if year and category:
+        introduction = f"{name} is a {year.display_value} model in the {category.display_value.casefold()} category"
+    elif year:
+        introduction = f"{name} {year.spoken_clause}"
+    elif category:
+        introduction = f"{name} {category.spoken_clause}"
     else:
         introduction = ""
-    if DetailField.body_type in fields:
-        article = "an" if vehicle.body_type[:1].casefold() in "aeiou" else "a"
-        introduction += (
-            f" and has {article} {vehicle.body_type} body"
-            if introduction
-            else f"{name} has {article} {vehicle.body_type} body"
-        )
-    if introduction:
-        sentences.append(introduction + ".")
-    if DetailField.city in fields:
-        subject = "It" if sentences else name
-        sentences.append(f"{subject} is listed in {vehicle.city}.")
+    if body:
+        introduction += f" and {body.spoken_clause}" if introduction else f"{name} {body.spoken_clause}"
+    return introduction + "." if introduction else ""
 
-    running = []
-    if DetailField.price in fields:
-        running.append(f"costs {_price(vehicle.price_inr)}")
-    if DetailField.km_driven in fields:
-        running.append(f"has covered {vehicle.km_driven:,} km")
-    if DetailField.fuel in fields:
-        running.append(f"runs on {vehicle.fuel}")
-    if running:
-        subject = "It" if sentences else name
-        sentences.append(f"{subject} {_join_naturally(running)}.")
 
-    capacity = []
-    if DetailField.payload in fields:
-        payload = f"{vehicle.payload_kg:,} kg" if vehicle.payload_kg is not None else "not listed"
-        capacity.append(f"has a payload of {payload}")
-    if DetailField.gvw in fields:
-        capacity.append(f"has a GVW of {vehicle.gvw_kg:,} kg")
-    if DetailField.axle_count in fields:
-        capacity.append(f"has {vehicle.axle_count} axles")
-    if capacity:
-        subject = "It" if sentences else name
-        sentences.append(f"{subject} {_join_naturally(capacity)}.")
+def _detail_summary(vehicle: VehicleRecord, details: dict[DetailField, DetailValue]) -> str:
+    name = f"{vehicle.make} {vehicle.model}"
+    sentences = [sentence] if (sentence := _identity_sentence(vehicle, details)) else []
+    for group in SPOKEN_FIELD_GROUPS:
+        clauses = [detail.spoken_clause for field in group if (detail := details.get(field)) and detail.spoken_clause]
+        if clauses:
+            subject = "It" if sentences else name
+            sentences.append(f"{subject} {_join_naturally(clauses)}.")
 
-    status = []
-    if DetailField.papers_verified in fields:
-        status.append("has verified papers" if vehicle.papers_verified else "does not have verified papers")
-    if DetailField.condition in fields:
-        status.append(f"is in {vehicle.condition} condition")
-    if DetailField.weight_class in fields:
-        status.append(f"is in the {vehicle.weight_class} weight class")
-    if status:
-        subject = "It" if sentences else name
-        sentences.append(f"{subject} {_join_naturally(status)}.")
-
-    if DetailField.purpose_tags in fields:
-        purposes = [tag.replace("_", " ") for tag in vehicle.purpose_tags]
-        subject = "It" if sentences else name
-        sentences.append(f"{subject} is listed for {_join_naturally(purposes)}.")
-    if DetailField.spec_source_url in fields:
-        sentences.append(f"The specification source for {name} is {vehicle.spec_source_url}.")
+    if source := details.get(DetailField.spec_source_url):
+        sentences.append(f"The specification source for {name} is {source.checks[0]}.")
     return " ".join(sentences)
 
 
-def _multiple_detail_summary(vehicles: list[VehicleRecord], fields: set[DetailField]) -> str:
+def _multiple_detail_summary(
+    vehicles: list[VehicleRecord],
+    details_by_vehicle: list[dict[DetailField, DetailValue]],
+) -> str:
     sentences = [f"I found {len(vehicles)} matching listings."]
-    for vehicle in vehicles:
+    for vehicle, details in zip(vehicles, details_by_vehicle, strict=True):
         name = f"{vehicle.make} {vehicle.model}"
-        qualifiers = []
-        if DetailField.year in fields:
-            qualifiers.append(str(vehicle.year))
-        if DetailField.city in fields:
-            qualifiers.append(vehicle.city)
+        qualifiers = [
+            detail.display_value
+            for field in (DetailField.year, DetailField.city)
+            if (detail := details.get(field))
+        ]
         subject = f"The {' '.join(qualifiers)} {name} listing" if qualifiers else name
-
-        highlights = []
-        if DetailField.price in fields:
-            highlights.append(f"costs {_price(vehicle.price_inr)}")
-        if DetailField.km_driven in fields:
-            highlights.append(f"has covered {vehicle.km_driven:,} km")
-        if DetailField.payload in fields:
-            payload = f"{vehicle.payload_kg:,} kg" if vehicle.payload_kg is not None else "not listed"
-            highlights.append(f"has a payload of {payload}")
-        if DetailField.gvw in fields:
-            highlights.append(f"has a GVW of {vehicle.gvw_kg:,} kg")
+        highlights = [
+            detail.spoken_clause
+            for field in (DetailField.price, DetailField.km_driven, DetailField.payload, DetailField.gvw)
+            if (detail := details.get(field)) and detail.spoken_clause
+        ]
         sentences.append(f"{subject} {_join_naturally(highlights)}." if highlights else f"{subject} is included.")
 
-    if DetailField.fuel in fields and len({vehicle.fuel for vehicle in vehicles}) == 1:
-        sentences.append(f"All run on {vehicles[0].fuel}.")
-    if DetailField.papers_verified in fields and all(vehicle.papers_verified for vehicle in vehicles):
+    first_details = details_by_vehicle[0]
+    if DetailField.fuel in first_details and len({vehicle.fuel for vehicle in vehicles}) == 1:
+        sentences.append(f"All run on {first_details[DetailField.fuel].display_value}.")
+    if DetailField.papers_verified in first_details and all(vehicle.papers_verified for vehicle in vehicles):
         sentences.append("All have verified papers.")
     sentences.append("The full specifications and source links are shown on screen.")
     return " ".join(sentences)
@@ -166,126 +233,98 @@ def search_response(result: VehicleSearchResult) -> GroundedResponse:
     return GroundedResponse(response, tuple(facts), checks)
 
 
-def details_response(vehicles: list[VehicleRecord], fields: list[DetailField], question: str = "") -> GroundedResponse:
+ComparisonResult = tuple[str, tuple[str, ...]]
+
+
+def _best_match(vehicles: list[VehicleRecord]) -> ComparisonResult:
+    vehicle = vehicles[0]
+    return f"Best match: {vehicle.make} {vehicle.model}", (vehicle.make, vehicle.model)
+
+
+def _cheapest(vehicles: list[VehicleRecord]) -> ComparisonResult:
+    vehicle = min(vehicles, key=lambda item: item.price_inr)
+    value = _price(vehicle.price_inr)
+    return f"Cheapest: {vehicle.make} {vehicle.model} at {value}", (vehicle.make, vehicle.model, value)
+
+
+def _lowest_mileage(vehicles: list[VehicleRecord]) -> ComparisonResult:
+    vehicle = min(vehicles, key=lambda item: item.km_driven)
+    value = f"{vehicle.km_driven:,} km"
+    return f"Lowest kilometres: {vehicle.make} {vehicle.model} at {value}", (vehicle.make, vehicle.model, value)
+
+
+def _highest_payload(vehicles: list[VehicleRecord]) -> ComparisonResult | None:
+    known = [vehicle for vehicle in vehicles if vehicle.payload_kg is not None]
+    if not known:
+        return None
+
+    vehicle = max(known, key=lambda item: item.payload_kg or 0)
+    label, value = _payload(vehicle)
+    heading = f"Highest {label.casefold()}: {vehicle.make} {vehicle.model} at {value}"
+    checks = [vehicle.make, vehicle.model]
+    if vehicle.payload_is_estimated:
+        checks.append("estimated")
+    checks.append(value)
+    return heading, tuple(checks)
+
+
+COMPARISON_RENDERERS: dict[str, Callable[[list[VehicleRecord]], ComparisonResult | None]] = {
+    "best_match": _best_match,
+    "cheapest": _cheapest,
+    "lowest_mileage": _lowest_mileage,
+    "highest_payload": _highest_payload,
+}
+
+
+def details_response(
+    vehicles: list[VehicleRecord],
+    fields: list[DetailField],
+    comparison: str | None = None,
+) -> GroundedResponse:
     facts: list[str] = []
     check_groups: list[tuple[str, ...]] = []
     display_sections: list[str] = []
     field_set = set(fields)
+    details_by_vehicle: list[dict[DetailField, DetailValue]] = []
 
     for vehicle in vehicles:
-        values: list[str] = []
-        display_values: list[tuple[str, str]] = []
-        checks = [f"{vehicle.make} {vehicle.model}"]
-        for field in fields:
-            match field:
-                case DetailField.year:
-                    values.append(f"year {vehicle.year}")
-                    display_values.append(("Year", str(vehicle.year)))
-                    checks.append(str(vehicle.year))
-                case DetailField.price:
-                    values.append(f"price {_price(vehicle.price_inr)}")
-                    display_values.append(("Price", _price(vehicle.price_inr)))
-                    checks.append(_price(vehicle.price_inr))
-                case DetailField.km_driven:
-                    values.append(f"{vehicle.km_driven:,} km")
-                    display_values.append(("Kilometres driven", f"{vehicle.km_driven:,} km"))
-                    checks.append(str(vehicle.km_driven))
-                case DetailField.fuel:
-                    values.append(f"fuel {vehicle.fuel}")
-                    display_values.append(("Fuel", vehicle.fuel))
-                    checks.append(vehicle.fuel)
-                case DetailField.payload:
-                    payload = f"{vehicle.payload_kg:,} kg" if vehicle.payload_kg is not None else "not listed"
-                    values.append(f"payload {payload}")
-                    display_values.append(("Payload", payload))
-                    checks.append(str(vehicle.payload_kg) if vehicle.payload_kg is not None else "not listed")
-                case DetailField.gvw:
-                    gvw = f"{vehicle.gvw_kg:,} kg"
-                    values.append(f"GVW {gvw}")
-                    display_values.append(("GVW", gvw))
-                    checks.append(str(vehicle.gvw_kg))
-                case DetailField.body_type:
-                    values.append(f"body type {vehicle.body_type}")
-                    display_values.append(("Body", vehicle.body_type.title()))
-                    checks.append(vehicle.body_type)
-                case DetailField.city:
-                    values.append(f"city {vehicle.city}")
-                    display_values.append(("City", vehicle.city))
-                    checks.append(vehicle.city)
-                case DetailField.papers_verified:
-                    papers = "Verified" if vehicle.papers_verified else "Not verified"
-                    values.append(f"papers {papers.casefold()}")
-                    display_values.append(("Papers", papers))
-                    checks.append("verified" if vehicle.papers_verified else "not verified")
-                case DetailField.condition:
-                    values.append(f"condition {vehicle.condition}")
-                    display_values.append(("Condition", vehicle.condition.title()))
-                    checks.append(vehicle.condition)
-                case DetailField.purpose_tags:
-                    purposes = ", ".join(tag.replace("_", " ") for tag in vehicle.purpose_tags)
-                    values.append(f"listed uses {purposes}")
-                    display_values.append(("Listed uses", purposes))
-                    checks.extend(tag.replace("_", " ") for tag in vehicle.purpose_tags)
-                case DetailField.vehicle_category:
-                    category = vehicle.vehicle_category.replace("_", " ")
-                    values.append(f"category {category}")
-                    display_values.append(("Category", category.title()))
-                    checks.append(category)
-                case DetailField.weight_class:
-                    values.append(f"size class {vehicle.weight_class}")
-                    display_values.append(("Weight class", vehicle.weight_class.title()))
-                    checks.append(vehicle.weight_class)
-                case DetailField.axle_count:
-                    values.append(f"axles {vehicle.axle_count}")
-                    display_values.append(("Axles", str(vehicle.axle_count)))
-                    checks.append(str(vehicle.axle_count))
-                case DetailField.spec_source_url:
-                    values.append(f"specification source {vehicle.spec_source_url}")
-                    display_values.append(
-                        ("Specification source", f"[View manufacturer specifications]({vehicle.spec_source_url})")
-                    )
-                    checks.append(vehicle.spec_source_url)
+        rendered = [_render_detail(vehicle, field) for field in fields]
+        details_by_vehicle.append(dict(zip(fields, rendered, strict=True)))
 
         name = f"{vehicle.make} {vehicle.model}"
-        facts.append(f"{name}: " + ", ".join(values))
+        checks = [f"{vehicle.make} {vehicle.model}"]
+        for detail in rendered:
+            checks.extend(detail.checks)
+
+        facts.append(f"{name}: " + ", ".join(detail.fact for detail in rendered))
         check_groups.append(tuple(checks))
-        details = "\n".join(f"- **{label}:** {value}" for label, value in display_values)
+        details = "\n".join(f"- **{detail.display_label}:** {detail.display_value}" for detail in rendered)
         display_sections.append(f"#### {name}\n\n{details}")
 
-    question = question.casefold()
-    comparison: tuple[str, tuple[str, ...]] | None = None
-    if "cheapest" in question:
-        vehicle = min(vehicles, key=lambda item: item.price_inr)
-        value = _price(vehicle.price_inr)
-        comparison = (f"Cheapest: {vehicle.make} {vehicle.model} at {value}", (vehicle.make, vehicle.model, value))
-    elif "lowest" in question and DetailField.km_driven in fields:
-        vehicle = min(vehicles, key=lambda item: item.km_driven)
-        value = f"{vehicle.km_driven:,} km"
-        comparison = (f"Lowest kilometres: {vehicle.make} {vehicle.model} at {value}", (vehicle.make, vehicle.model, value))
-    elif re.search(r"\b(?:highest|most)\b", question) and DetailField.payload in fields:
-        known = [vehicle for vehicle in vehicles if vehicle.payload_kg is not None]
-        if known:
-            vehicle = max(known, key=lambda item: item.payload_kg or 0)
-            value = f"{vehicle.payload_kg} kg"
-            comparison = (f"Highest payload: {vehicle.make} {vehicle.model} at {value}", (vehicle.make, vehicle.model, value))
+    comparison_renderer = COMPARISON_RENDERERS.get(comparison or "")
+    comparison_result = comparison_renderer(vehicles) if comparison_renderer else None
 
-    if comparison:
-        facts.append(comparison[0])
-        check_groups.append(comparison[1])
+    if comparison_result:
+        facts.append(comparison_result[0])
+        check_groups.append(comparison_result[1])
 
-    if len(vehicles) > 1 and len(fields) > 6:
-        response = _multiple_detail_summary(vehicles, field_set)
+    full_details = field_set == set(DetailField)
+    if len(vehicles) > 1 and full_details:
+        response = _multiple_detail_summary(vehicles, details_by_vehicle)
     else:
-        response = " ".join(_detail_summary(vehicle, field_set) for vehicle in vehicles)
-    if comparison:
-        response += f" {comparison[0]}."
-    if len(vehicles) > 1 and len(fields) <= 6 and ({DetailField.payload, DetailField.gvw} & field_set):
+        response = " ".join(
+            _detail_summary(vehicle, details)
+            for vehicle, details in zip(vehicles, details_by_vehicle, strict=True)
+        )
+    if comparison_result:
+        response += f" {comparison_result[0]}."
+    if len(vehicles) > 1 and not full_details and ({DetailField.payload, DetailField.gvw} & field_set):
         response = "Compare the cargo weight and loading needs before deciding. " + response
 
     subject = "this vehicle" if len(vehicles) == 1 else f"these {len(vehicles)} vehicles"
     display = f"Here are the catalog details for {subject}.\n\n" + "\n\n".join(display_sections)
-    if comparison:
-        display = f"**{comparison[0]}**\n\n" + display
+    if comparison_result:
+        display = f"**{comparison_result[0]}**\n\n" + display
     return GroundedResponse(response, tuple(facts), tuple(check_groups), display)
 
 
@@ -300,6 +339,7 @@ def catalog_options_response(options: dict[CatalogTopic, list[str]]) -> Grounded
         CatalogTopic.body_types: "Body types",
         CatalogTopic.fuels: "Fuel types",
         CatalogTopic.makes: "Makes",
+        CatalogTopic.purposes: "Listed uses",
     }
     facts = tuple(
         f"{labels[topic]}: {', '.join(value.replace('_', ' ') for value in values)}"

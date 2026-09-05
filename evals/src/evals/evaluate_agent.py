@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import argparse
 import asyncio
 import json
@@ -42,26 +40,15 @@ def _mismatches(
     result: Any,
     previous_ids: list[str],
     grounded_facts: tuple[str, ...],
-) -> list[str]:
-    actual_filters = result.active_filters.model_dump(mode="json", exclude_none=True)
+) -> tuple[list[str], bool]:
     response = result.spoken_response.casefold().replace("’", "'")
+    argument_problems = _argument_mismatches(case, result)
     problems = []
     if result.action.value != case["expected_action"]:
         problems.append(f"action={result.action.value}")
-    if any(actual_filters.get(name) != value for name, value in case["expected_filters"].items()):
-        problems.append(f"filters={actual_filters}")
-    unexpected = set(actual_filters) - set(case["expected_filters"]) - {
-        "vehicle_category",
-        "weight_class",
-        "purpose",
-    }
-    if unexpected:
-        problems.append(f"unexpected_filters={sorted(unexpected)}")
+    problems.extend(argument_problems)
     if "expect_results" in case and bool(result.last_result_ids) != case["expect_results"]:
         problems.append(f"result_count={len(result.last_result_ids)}")
-    expected_changed = case.get("expected_changed_fields")
-    if expected_changed is not None and [field.value for field in result.changed_fields] != expected_changed:
-        problems.append(f"changed_fields={[field.value for field in result.changed_fields]}")
     if case.get("preserve_result_ids") and result.last_result_ids != previous_ids:
         problems.append("result_ids_changed")
     if case.get("new_result_ids") and set(result.last_result_ids).intersection(previous_ids):
@@ -85,6 +72,29 @@ def _mismatches(
     forbidden = [text.casefold() for text in case.get("response_must_not_contain", [])]
     if any(text in response for text in forbidden):
         problems.append("response_contains_forbidden_text")
+    return problems, not argument_problems
+
+
+def _argument_mismatches(case: dict[str, Any], result: Any) -> list[str]:
+    actual_filters = result.active_filters.model_dump(mode="json", exclude_none=True)
+    problems = []
+    if any(actual_filters.get(name) != value for name, value in case["expected_filters"].items()):
+        problems.append(f"filters={actual_filters}")
+    unexpected = (
+        set(actual_filters)
+        - set(case["expected_filters"])
+        - {
+            "vehicle_category",
+            "weight_class",
+            "purpose",
+        }
+    )
+    if unexpected:
+        problems.append(f"unexpected_filters={sorted(unexpected)}")
+    expected_changed = case.get("expected_changed_fields")
+    actual_changed = [field.value for field in result.changed_fields]
+    if expected_changed is not None and actual_changed != expected_changed:
+        problems.append(f"changed_fields={actual_changed}")
     return problems
 
 
@@ -105,14 +115,23 @@ async def evaluate(cases: list[dict[str, Any]], *, delay_seconds: float = 0.0) -
         try:
             result = await session.run_text_turn(case["utterance"])
             grounded = session.context.grounded_response
-            problems = _mismatches(case, result, previous_ids, grounded.facts if grounded else ())
+            routing_correct = result.action.value == case["expected_action"]
+            problems, arguments_correct = _mismatches(
+                case,
+                result,
+                previous_ids,
+                grounded.facts if grounded else (),
+            )
             rows.append(
                 {
                     "id": case["id"],
                     "passed": not problems,
                     "problems": problems,
                     "model": result.model_used,
+                    "expected_action": case["expected_action"],
                     "action": result.action.value,
+                    "routing_correct": routing_correct,
+                    "arguments_correct": routing_correct and arguments_correct,
                     "filters": result.active_filters.model_dump(mode="json", exclude_none=True),
                     "result_ids": result.last_result_ids,
                     "response": result.spoken_response,
@@ -127,7 +146,10 @@ async def evaluate(cases: list[dict[str, Any]], *, delay_seconds: float = 0.0) -
                     "passed": False,
                     "problems": [f"{type(error).__name__}: {error}"],
                     "model": str(session.agent.model.model),
+                    "expected_action": case["expected_action"],
                     "action": None,
+                    "routing_correct": False,
+                    "arguments_correct": False,
                     "filters": session.context.state.active_filters.model_dump(mode="json", exclude_none=True),
                     "result_ids": session.context.state.last_result_ids,
                     "timings_ms": {},

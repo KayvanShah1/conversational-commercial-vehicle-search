@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+from threading import Lock
 from typing import Any
 
 from openai import AsyncOpenAI
@@ -22,6 +21,8 @@ from vehicle_search_agent.settings import settings
 from vehicle_search_agent.tools import AgentContext, get_vehicle_details, list_catalog_options, search_vehicles
 
 logger = get_logger("VehicleSearchAgent")
+_route_indices: dict[tuple[str, ...], int] = {}
+_route_lock = Lock()
 
 
 class FallbackModel(Model):
@@ -32,7 +33,9 @@ class FallbackModel(Model):
             raise ValueError("Each model requires a route label.")
         self.models = models
         self.routes = routes
-        self.index = 0
+        self._route_pool = tuple(routes)
+        with _route_lock:
+            self.index = _route_indices.get(self._route_pool, 0) % len(models)
         self._turn_advances = 0
 
     @property
@@ -47,6 +50,8 @@ class FallbackModel(Model):
         if self._turn_advances == len(self.models) - 1:
             return None
         self.index = (self.index + 1) % len(self.models)
+        with _route_lock:
+            _route_indices[self._route_pool] = self.index
         self._turn_advances += 1
         return self.route
 
@@ -101,12 +106,6 @@ def build_agent() -> Agent[AgentContext]:
             models.append(OpenAIChatCompletionsModel(model=model_name, openai_client=client))
             routes.append(f"groq-key-{key_number}/{model_name}")
 
-    if settings.openrouter.api_key:
-        openrouter_key = settings.openrouter.api_key.get_secret_value()
-        openrouter_client = AsyncOpenAI(api_key=openrouter_key, base_url=settings.openrouter.base_url)
-        for model_name in settings.openrouter.fallback_models:
-            models.append(OpenAIChatCompletionsModel(model=model_name, openai_client=openrouter_client))
-            routes.append(f"openrouter/{model_name}")
     model = FallbackModel(models, routes)
 
     def use_next_model(context) -> bool | RetryDecision:

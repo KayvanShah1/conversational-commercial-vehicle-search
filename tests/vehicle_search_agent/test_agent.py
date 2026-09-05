@@ -25,6 +25,22 @@ def test_fallback_model_keeps_the_successful_route_for_a_new_user_turn():
     assert model.advance() is None
 
 
+def test_new_session_starts_from_the_last_shared_route():
+    routes = ["shared-first-route", "shared-second-route"]
+    first = FallbackModel(
+        [SimpleNamespace(model="first"), SimpleNamespace(model="second")],
+        routes,
+    )
+    first.advance()
+
+    second = FallbackModel(
+        [SimpleNamespace(model="first"), SimpleNamespace(model="second")],
+        routes,
+    )
+
+    assert second.route == "shared-second-route"
+
+
 def test_tool_validation_retries_are_bounded_at_three(monkeypatch):
     logs = []
     context = AgentContext(state=ConversationState(session_id="test"))
@@ -67,7 +83,6 @@ def test_rate_limit_rotates_groq_keys_before_changing_model(monkeypatch):
         "api_keys",
         [SecretStr("key-one"), SecretStr("key-two"), SecretStr("key-three")],
     )
-    monkeypatch.setattr(settings.openrouter, "api_key", None)
     agent = build_agent()
     expected_routes = [
         f"groq-key-2/{settings.groq.primary_model}",
@@ -105,14 +120,3 @@ def test_final_model_does_not_retry_after_routes_are_exhausted():
     decision = agent.model_settings.retry.policy(retry_context)
 
     assert decision is False
-
-
-def test_openrouter_models_are_retained_after_groq_fallbacks(monkeypatch):
-    monkeypatch.setattr(settings.openrouter, "api_key", SecretStr("test-key"))
-
-    agent = build_agent()
-
-    assert [str(model.model) for model in agent.model.models][-2:] == [
-        "google/gemma-4-26b-a4b-it:free",
-        "google/gemma-4-31b-it:free",
-    ]
