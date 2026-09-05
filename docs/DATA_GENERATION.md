@@ -114,12 +114,13 @@ The generator writes:
 ```text
 data/generated/
 ├── vehicles.parquet
-└── vehicles.csv
+├── vehicles.csv
+└── vehicle_reference_catalog.csv
 ```
 
 Parquet is used as the primary machine-readable artifact because it preserves column types and list-valued fields such as `purpose_tags`.
 
-CSV is retained for quick inspection.
+`vehicles.csv` is retained for quick listing inspection. `vehicle_reference_catalog.csv` records the complete curated reference set, provenance metadata, price anchors, and whether payload values are estimated.
 
 The Parquet catalog is loaded into:
 
