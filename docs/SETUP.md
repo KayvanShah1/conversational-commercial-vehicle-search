@@ -114,10 +114,12 @@ Never commit `.env` or paste real credentials into logs, screenshots, evaluation
 | `AGENT_RUNTIME__MODEL_TIMEOUT_SECONDS` | `8.0` | Timeout for each model route |
 | `AGENT_RUNTIME__TOOL_TIMEOUT_SECONDS` | `15.0` | Catalog tool timeout |
 | `OPENAI__API_KEY` | unset | OpenAI project key used only for trace export; required when tracing is enabled |
-| `AGENT_RUNTIME__TRACING_ENABLED` | `false` | Enables Agents SDK tracing |
+| `AGENT_RUNTIME__TRACING_ENABLED` | `false` | Exports Agents SDK traces to OpenAI without changing the Groq inference route |
 | `AGENT_RUNTIME__TRACE_INCLUDE_SENSITIVE_DATA` | `false` | Controls sensitive trace content; keep disabled for normal use |
 | `SESSION_DB_PATH` | `data/sessions/agent_sessions.sqlite` | Local conversation-history database |
 | `RUN_MOTHERDUCK_INTEGRATION_TESTS` | `0` | Opt-in switch for the live database test |
+
+Tracing is optional and does not route inference through OpenAI. When enabled, turns from one app conversation share a session group in the OpenAI dashboard. The smoke runner also creates one outer conversation trace. See the wiki's [OpenAI tracing guide](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Evaluation-and-Observability#openai-agents-sdk-traces) for the trace shape, privacy setting, and dashboard behavior.
 
 The committed [`example.env`](../example.env) is the authoritative copy-ready template. Model availability and provider quotas can change; adjust model identifiers there rather than changing application code.
 

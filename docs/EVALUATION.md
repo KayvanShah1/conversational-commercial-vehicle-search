@@ -115,13 +115,13 @@ Per turn, the harness stores:
 - audio duration and synthesized characters for voice turns
 - equivalent public-list-price estimates in USD and INR
 
-The estimate is not an invoice. Free-tier spend can be zero, and database, hosting, retries, discounts, and production pricing are outside the calculation. The USD/INR assumption and provider references are documented in [architecture and technical decisions](TECHNICAL_DECISIONS.md#usage-and-cost-telemetry) and [sources](SOURCES.md).
+The estimate is not an invoice. Free-tier spend can be zero, and database, hosting, retries, discounts, and production pricing are outside the calculation. The USD/INR assumption and provider references are documented in [sources](SOURCES.md). The wiki's [evaluation and observability](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki/Evaluation-and-Observability) page explains how to interpret these metrics and inspect grouped OpenAI traces.
 
 ## Local verification
 
 The latest local verification reported:
 
-- 90 unit tests passed
+- 68 tests passed
 - 1 live MotherDuck integration test skipped by default
 - Ruff passed for the changed agent source and tests; the repository-wide check retains one pre-existing notebook import-order finding
 - Streamlit AppTest rendered the conversation, result, state, and metric surfaces

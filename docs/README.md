@@ -2,6 +2,8 @@
 
 Repository documentation is organized around common reviewer and developer tasks. For deeper implementation narratives, use the [project wiki](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/wiki).
 
+Repository docs are the source of truth for versioned setup, commands, current evaluation results, and requirement evidence. The wiki owns longer-lived explanations of architecture, agent behavior, observability, and catalog rationale; it links back here instead of copying volatile results.
+
 | Goal | Document |
 | --- | --- |
 | Install dependencies, configure providers, and run Vivi | [Setup](SETUP.md) |

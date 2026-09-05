@@ -2,8 +2,8 @@
 
 [![Evaluation: 46/46](https://img.shields.io/badge/evaluation-46%2F46_passed-22c55e?style=flat-square)](docs/EVALUATION.md)
 [![Catalog: 1,000 listings](https://img.shields.io/badge/catalog-1%2C000_listings-2563eb?style=flat-square)](docs/DATA_GENERATION.md)
-[![Input: voice and text](https://img.shields.io/badge/input-voice_%2B_text-7c3aed?style=flat-square)](docs/SETUP.md)
-[![Grounding: validated](https://img.shields.io/badge/catalog_facts-validated-0f766e?style=flat-square)](docs/TECHNICAL_DECISIONS.md#decision-3-deterministic-facts-with-optional-natural-rephrasing)
+[![Input: Voice & Text](https://img.shields.io/badge/input-voice_%2B_text-7c3aed?style=flat-square)](docs/SETUP.md)
+[![Grounding: validated](https://img.shields.io/badge/catalog_facts-validated-0f766e?style=flat-square)](docs/TECHNICAL_DECISIONS.md#correctness-boundaries)
 [![License: MIT](https://img.shields.io/badge/license-MIT-334155?style=flat-square)](LICENSE)
 
 ![Vivi voice-first commercial vehicle search](assets/vivi-repo-cover.png)

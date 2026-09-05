@@ -20,7 +20,7 @@ This matrix maps each requirement to inspectable implementation or evaluation ev
 | Explainable ranking | Streamlit table exposes the numeric `RankingBreakdown` for each result | Met |
 | Seven identifiable components | [Architecture](TECHNICAL_DECISIONS.md#seven-identifiable-components) and presentation | Met |
 | Three decisions and rejected alternatives | [Technical decisions](TECHNICAL_DECISIONS.md) | Met |
-| 100,000 conversations/month discussion | [Scale plan](TECHNICAL_DECISIONS.md#what-breaks-first-at-100000-conversations-per-month) | Met |
+| 100,000 conversations/month discussion | [Scale plan](TECHNICAL_DECISIONS.md#production-priorities) | Met |
 | README runs in under 10 minutes | [Quick start](../README.md#quick-start) and [setup guide](SETUP.md) | Met |
 | Presentation PDF | [Evaluator walkthrough](../output/pdf/vivi-vehicle-search-presentation.pdf) | Met |
 | External references | [Sources and acknowledgements](SOURCES.md) | Met |
