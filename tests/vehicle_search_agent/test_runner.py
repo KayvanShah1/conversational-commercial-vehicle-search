@@ -11,7 +11,7 @@ from vehicle_search_agent.models import (
     TurnUsage,
 )
 from vehicle_search_agent.response import message_response
-from vehicle_search_agent.runner import AgentStageTimer, VehicleSearchSession, _llm_list_cost_usd
+from vehicle_search_agent.runner import AgentStageTimer, VehicleSearchSession
 from vehicle_search_agent.tools import AgentContext
 
 from agents import RunContextWrapper
@@ -125,11 +125,6 @@ def test_named_catalog_answer_is_retried_with_the_details_tool(monkeypatch):
     assert result.usage.total_tokens == 350
     assert calls[0] is None
     assert calls[1].tool_choice == "get_vehicle_details"
-
-
-def test_llm_list_cost_uses_input_and_output_rates():
-    assert _llm_list_cost_usd("openai/gpt-oss-120b", 1_000_000, 1_000_000) == 0.75
-    assert _llm_list_cost_usd("unknown-model", 100, 100) is None
 
 
 def test_stage_hook_accumulates_priced_model_usage():
