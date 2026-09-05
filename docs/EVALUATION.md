@@ -9,12 +9,12 @@ For the extended rationale and failure taxonomy, see the wiki's [evaluation and 
 | Suite | Cases | Passed | Pass rate |
 | --- | ---: | ---: | ---: |
 | Core conversation | 28 | 28 | **100%** |
-| Vehicle variants | 18 | 17 | **94.4%** |
-| Combined | 46 | 45 | **97.8%** |
+| Vehicle variants | 18 | 18 | **100%** |
+| Combined | 46 | 46 | **100%** |
 
 Both complete runs were executed on 2026-09-05 through the live agent and MotherDuck path. Generated JSON and Markdown reports are retained locally under `data/evaluation/` and excluded from Git.
 
-The one breadth miss was `Which of these three is the cheapest?`. The model skipped the details tool, but the response validator detected its ungrounded numeric answer and replaced it with the safe fallback, so no invented price reached the user. A focused rerun passed through the grounded details path; it is not substituted for the complete-run score above.
+All cases passed in their complete suite runs; no focused rerun was substituted into either score.
 
 ## What is evaluated
 
@@ -63,12 +63,12 @@ This separates expected behavior from exact prose. Rephrasing is allowed; changi
 
 | Metric | Core | Vehicle variants |
 | --- | ---: | ---: |
-| Understanding | 1,053.89 ms | 2,390.82 ms |
-| Catalog search or lookup | 434.24 ms | 454.36 ms |
-| Grounded response generation¹ | 3,451.68 ms | 4,431.72 ms |
-| Total | 1,826.16 ms | 4,310.44 ms |
-| Tokens | 2,163.75 | 3,178.06 |
-| Estimated LLM list cost | INR 0.0380 | INR 0.0522 |
+| Understanding | 1,038.32 ms | 964.40 ms |
+| Catalog search or lookup | 466.44 ms | 478.61 ms |
+| Grounded response generation¹ | 3,418.80 ms | 4,020.80 ms |
+| Total | 1,841.30 ms | 3,034.29 ms |
+| Tokens | 2,196.21 | 3,041.89 |
+| Estimated LLM list cost | INR 0.0383 | INR 0.0489 |
 
 ¹ Response-generation means are calculated only for turns that use the optional post-tool natural-language pass. Straight grounded searches stop after deterministic composition.
 
@@ -121,9 +121,9 @@ The estimate is not an invoice. Free-tier spend can be zero, and database, hosti
 
 The latest local verification reported:
 
-- 93 unit tests passed
+- 90 unit tests passed
 - 1 live MotherDuck integration test skipped by default
-- Ruff passed across source, app, evaluations, and tests
+- Ruff passed for the changed agent source and tests; the repository-wide check retains one pre-existing notebook import-order finding
 - Streamlit AppTest rendered the conversation, result, state, and metric surfaces
 - live STT and TTS smoke checks produced valid transcript and WAV output
 
