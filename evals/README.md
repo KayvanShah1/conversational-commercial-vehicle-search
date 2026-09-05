@@ -36,3 +36,5 @@ uv run --package evals python -m evals.measure_voice_latency `
 ```
 
 JSON and Markdown reports are written locally under `data/evaluation/` and excluded from Git. The five newest runs are retained automatically, including reports written with a custom `--output` name. See the repository [evaluation guide](../docs/EVALUATION.md) for scoring, metrics, and interpretation.
+
+Each report separates routing accuracy, tool-only accuracy, no-tool accuracy, argument/state accuracy, and the end-to-end pass rate. Argument/state accuracy checks the expected filters and changed slots for tool-using cases. `expected_action` remains the dataset's single routing label; the report does not duplicate it with a second expected-tool field.
