@@ -15,7 +15,7 @@ Vivi is a conversational assistant for finding used commercial vehicles through 
 - **Natural conversation:** understands budgets, payloads, vehicle sizes, fuels, body types, locations, corrections, and follow-up questions.
 - **Grounded recommendations:** the model never writes SQL, and catalog facts are checked against returned records before they reach the user.
 - **Inspectable decisions:** active filters, ranked results, ranking components, tool calls, model route, latency, tokens, and estimated cost are visible in the demo.
-- **Resilient voice path:** Groq handles speech and primary model inference, with bounded key/model rotation and optional OpenRouter fallbacks.
+- **Resilient voice path:** Groq handles speech and model inference with bounded key and model rotation.
 - **Executable evaluation:** 46 cases cover conversation, safety, catalog discovery, all vehicle sizes, body variants, attribute lookup, pagination, and preference changes.
 
 ## Quick start

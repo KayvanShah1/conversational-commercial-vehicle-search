@@ -20,14 +20,14 @@ The implementation is separated by failure boundary rather than by framework pat
 
 | Review concern | Resolution |
 | --- | --- |
-| Repeated API-key checks | Pydantic settings validate and deduplicate Groq keys; OpenRouter is normalized once as an optional provider. |
+| Repeated API-key checks | Pydantic settings validate and deduplicate Groq keys once; model and speech clients reuse that pool. |
 | Unused logging wrappers | One `OperationLogContext` records monotonic duration and structured fields across catalog, model, tool, STT, TTS, and turn operations. |
 | Tool-selector or critic agent | Not added. Three typed operations do not justify another model call or state hand-off. |
 | Generic service/repository layer | Not added. Search is the only MotherDuck consumer and owns its parameterized queries directly. |
 | Process-global database connection | Not used. Each catalog operation owns one scoped read-only connection and reuses it for that operation. |
 | Prompt and schema duplication | The prompt explains *when* to use a tool; schemas and docstrings describe *which values* are accepted. |
 | TTS batching | Retained because the provider caps each request at 200 characters; application code chunks text and stitches compatible WAV responses. |
-| Model fallback adapter | Retained because the SDK accepts one model interface while the demo needs bounded key, model, and provider failover. |
+| Model fallback adapter | Retained because the SDK accepts one model interface while the demo needs bounded key and model failover. |
 | Rechecking database results | Retained as the hard-filter invariant that detects a violated user constraint before a result is shown. |
 
 Deliberately absent: generated SQL, a raw database tool, multi-agent routing, generic repositories, prompt-encoded vehicle inventories, expected-answer matching, and a framework-specific wrapper around the conversation session.
@@ -127,12 +127,11 @@ a catalog service rather than opening unlimited connections.
 ## Model fallback and failure behavior
 
 The agent starts each turn on the last successful route. On a retryable failure,
-it makes one bounded pass through every configured Groq key and model before the
-optional OpenRouter Gemma routes. Speech requests likewise remember the last
-successful Groq key and rotate on HTTP 429. This protects later turns from
-repeatedly hitting a known-exhausted key, but free models do not guarantee
-independent upstream capacity. The UI reports a recoverable error instead of
-inventing a vehicle when every route fails.
+it makes one bounded pass through every configured Groq key and model. STT and
+TTS independently remember the last successful key for their model and rotate
+on HTTP 429. This protects later turns from repeatedly hitting a known-exhausted
+key. The UI reports a recoverable error instead of inventing a vehicle when
+every route fails.
 
 ## What breaks first at 100,000 conversations per month
 

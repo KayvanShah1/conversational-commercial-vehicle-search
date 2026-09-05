@@ -55,7 +55,7 @@ def test_synthesize_speech_stitches_wav_chunks(monkeypatch):
         assert reader.readframes(reader.getnframes()) == b"\x01\x02"
 
 
-def test_speech_request_rotates_after_rate_limit(monkeypatch):
+def test_speech_request_rotates_after_rate_limit_without_moving_other_models(monkeypatch):
     calls = {"limited": 0, "working": 0}
 
     class TestRateLimitError(Exception):
@@ -77,12 +77,21 @@ def test_speech_request_rotates_after_rate_limit(monkeypatch):
     )
     monkeypatch.setattr(voice_module, "RateLimitError", TestRateLimitError)
     monkeypatch.setattr(voice_module, "_speech_clients", lambda: clients)
-    monkeypatch.setattr(voice_module, "_speech_key_index", 0)
+    monkeypatch.setattr(voice_module, "_speech_key_indices", {})
 
     first = synthesize_speech("Use the second key.")
     second = synthesize_speech("Keep using the second key.")
+    stt_key = voice_module._request_with_key_rotation(
+        voice_module.settings.groq.stt_model,
+        lambda client: clients.index(client),
+    )
 
     assert calls == {"limited": 1, "working": 2}
+    assert stt_key == 0
+    assert voice_module._speech_key_indices == {
+        voice_module.settings.groq.tts_model: 1,
+        voice_module.settings.groq.stt_model: 0,
+    }
     for result in (first, second):
         with wave.open(io.BytesIO(result.audio), "rb") as reader:
             assert reader.readframes(reader.getnframes()) == b"\x02"

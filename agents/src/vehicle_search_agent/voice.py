@@ -14,7 +14,7 @@ from vehicle_search_agent.settings import settings
 tts_logger = get_logger("TextToSpeech")
 stt_logger = get_logger("SpeechToText")
 provider_logger = get_logger("SpeechProvider")
-_speech_key_index = 0
+_speech_key_indices: dict[str, int] = {}
 _speech_key_lock = Lock()
 
 
@@ -39,12 +39,10 @@ def _speech_clients() -> tuple[OpenAI, ...]:
     )
 
 
-def _request_with_key_rotation[ResponseT](request: Callable[[OpenAI], ResponseT]) -> ResponseT:
-    global _speech_key_index
-
+def _request_with_key_rotation[ResponseT](model: str, request: Callable[[OpenAI], ResponseT]) -> ResponseT:
     clients = _speech_clients()
     with _speech_key_lock:
-        start_index = _speech_key_index % len(clients)
+        start_index = _speech_key_indices.get(model, 0) % len(clients)
 
     for offset in range(len(clients)):
         key_index = (start_index + offset) % len(clients)
@@ -55,14 +53,18 @@ def _request_with_key_rotation[ResponseT](request: Callable[[OpenAI], ResponseT]
                 raise
             next_index = (key_index + 1) % len(clients)
             with _speech_key_lock:
-                _speech_key_index = next_index
+                _speech_key_indices[model] = next_index
             provider_logger.warning(
                 "speech_key_rotated",
-                extra={"previous_key_number": key_index + 1, "next_key_number": next_index + 1},
+                extra={
+                    "model": model,
+                    "previous_key_number": key_index + 1,
+                    "next_key_number": next_index + 1,
+                },
             )
         else:
             with _speech_key_lock:
-                _speech_key_index = key_index
+                _speech_key_indices[model] = key_index
             return response
     raise RuntimeError("No Groq speech client is configured.")
 
@@ -178,6 +180,7 @@ def synthesize_speech(text: str) -> SpeechResult:
     audio_chunks = []
     for chunk in chunks:
         response = _request_with_key_rotation(
+            settings.groq.tts_model,
             lambda client, text=chunk: client.audio.speech.create(
                 model=settings.groq.tts_model,
                 voice=settings.groq.tts_voice,
@@ -220,6 +223,7 @@ def transcribe_audio(
     )
 
     response = _request_with_key_rotation(
+        settings.groq.stt_model,
         lambda client: client.audio.transcriptions.create(
             file=(filename, audio_bytes),
             model=settings.groq.stt_model,

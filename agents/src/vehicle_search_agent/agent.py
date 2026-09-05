@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any
 
 from openai import AsyncOpenAI
@@ -101,12 +99,6 @@ def build_agent() -> Agent[AgentContext]:
             models.append(OpenAIChatCompletionsModel(model=model_name, openai_client=client))
             routes.append(f"groq-key-{key_number}/{model_name}")
 
-    if settings.openrouter.api_key:
-        openrouter_key = settings.openrouter.api_key.get_secret_value()
-        openrouter_client = AsyncOpenAI(api_key=openrouter_key, base_url=settings.openrouter.base_url)
-        for model_name in settings.openrouter.fallback_models:
-            models.append(OpenAIChatCompletionsModel(model=model_name, openai_client=openrouter_client))
-            routes.append(f"openrouter/{model_name}")
     model = FallbackModel(models, routes)
 
     def use_next_model(context) -> bool | RetryDecision:

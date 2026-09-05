@@ -30,11 +30,11 @@ Voice adds transcription before the text turn, then splits long responses into
 Groq's 200-character TTS requests and stitches the returned WAV audio.
 
 `GROQ__API_KEYS` is a JSON list. Model calls try every configured key for Groq's
-120B model before moving to Groq 20B, Qwen 3.6 27B, Qwen 3.8 27B, and—when
-`OPENROUTER__API_KEY` is configured—the two Gemma models in `example.env`.
-Agent and speech requests keep the last successful route as the next request's
-starting point. Retryable model failures and speech HTTP 429 responses rotate
-through the configured routes once; the route list itself is the retry bound.
+120B model before moving to Groq 20B, Qwen 3.6 27B, and Qwen 3.8 27B. Agent
+requests keep the last successful route as the next request's starting point.
+STT and TTS independently remember the last successful key for their model.
+Retryable model failures and speech HTTP 429 responses rotate through the
+configured routes once; the route list itself is the retry bound.
 
 Run the focused tests:
 

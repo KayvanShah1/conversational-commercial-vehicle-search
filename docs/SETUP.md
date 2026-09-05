@@ -11,10 +11,9 @@ This guide takes Vivi from a fresh clone to the Streamlit voice-and-text demo. C
 | `uv` | Workspace dependency and command runner | [Official installation guide](https://docs.astral.sh/uv/getting-started/installation/) |
 | MotherDuck account and access token | Load and query the searchable catalog | [MotherDuck](https://app.motherduck.com/) → **Settings** → **Access tokens** |
 | Groq account and API key | LLM, speech-to-text, and text-to-speech | [Groq API Keys](https://console.groq.com/keys) |
-| OpenRouter API key | Optional cross-provider model fallback | [OpenRouter API Keys](https://openrouter.ai/settings/keys) |
 | Microphone-enabled browser | Voice input and audio playback | A current Chrome, Edge, or Firefox release |
 
-OpenRouter is optional. Text and voice operation require Groq; catalog loading and search require MotherDuck.
+Text and voice operation require Groq; catalog loading and search require MotherDuck.
 
 ## 1. Install `uv`
 
@@ -69,12 +68,6 @@ Multiple Groq keys can be supplied as a JSON list. The runtime rotates through c
 GROQ__API_KEYS=["<PRIMARY_KEY>","<SECONDARY_KEY>"]
 ```
 
-Add OpenRouter only when its fallback routes are required:
-
-```dotenv
-OPENROUTER__API_KEY=<YOUR_OPENROUTER_KEY>
-```
-
 Never commit `.env` or paste real credentials into logs, screenshots, evaluation reports, or issues.
 
 ## Environment reference
@@ -112,14 +105,6 @@ Never commit `.env` or paste real credentials into logs, screenshots, evaluation
 | `GROQ__TTS_VOICE` | `daniel` | Synthesized voice |
 | `GROQ__TTS_FORMAT` | `wav` | Audio response format |
 | `GROQ__TTS_MAX_CHARS` | `200` | Per-request TTS limit; longer responses are chunked and stitched |
-
-### Optional OpenRouter fallback
-
-| Variable | Template value | Purpose |
-| --- | --- | --- |
-| `OPENROUTER__API_KEY` | unset | Enables cross-provider fallbacks |
-| `OPENROUTER__BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint |
-| `OPENROUTER__FALLBACK_MODELS` | JSON list | Ordered OpenRouter fallback models |
 
 ### Runtime and storage
 
@@ -193,7 +178,7 @@ Confirm that `.env` exists at the repository root, placeholder values were repla
 
 ### Every model route returns HTTP 429
 
-The configured free-tier quota or shared model capacity is exhausted. Wait for the provider window to reset, configure another Groq key, enable the optional OpenRouter routes, or use a paid-capacity model. Vivi fails closed instead of inventing catalog results.
+The configured quota or shared model capacity is exhausted. Wait for the provider window to reset, configure another authorized Groq key, or use a paid-capacity model. Vivi fails closed instead of inventing catalog results.
 
 ### MotherDuck authentication fails
 
