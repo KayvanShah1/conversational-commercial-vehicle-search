@@ -1,0 +1,36 @@
+services:
+    - type: web
+      name: vivi-vehicle-search
+      runtime: image
+      plan: free
+      region: singapore
+      image:
+          url: ghcr.io/kayvanshah1/conversational-commercial-vehicle-search:latest
+      healthCheckPath: /_stcore/health
+      envVars:
+          - key: MOTHERDUCK__TOKEN
+            sync: false
+          - key: GROQ__API_KEYS
+            sync: false
+          - key: MOTHERDUCK__DATABASE
+            value: vehicle_catalog
+          - key: GROQ__TTS_VOICE
+            value: troy
+          - key: PORT
+            value: "10000"
+          - key: PROJECT_ROOT
+            value: /app
+          - key: DATA_DIR
+            value: /app/data
+          - key: LOG_DIR
+            value: /app/logs
+          - key: SESSION_DATA_PATH
+            value: /app/data/sessions
+          - key: SESSION_DB_PATH
+            value: /app/data/sessions/agent_sessions.sqlite
+          - key: LOGGING__FILE_ENABLED
+            value: "false"
+          - key: AGENT_RUNTIME__TRACING_ENABLED
+            value: "false"
+          - key: AGENT_RUNTIME__TRACE_INCLUDE_SENSITIVE_DATA
+            value: "false"
