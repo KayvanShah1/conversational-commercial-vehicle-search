@@ -1,6 +1,6 @@
 services:
     - type: web
-      name: vivi-vehicle-search
+      name: conversational-commercial-vehicle-search
       runtime: image
       plan: free
       region: singapore
