@@ -32,6 +32,12 @@ RELAXATION_PRIORITY = (
     SearchField.weight_class,
     SearchField.budget_min,
 )
+RELAXATION_LABELS = {
+    SearchField.budget_min: "budget",
+    SearchField.budget_max: "budget",
+    SearchField.payload_min_kg: "payload",
+    SearchField.gvw_min_kg: "GVW",
+}
 
 
 def matches(vehicle: VehicleRecord, filters: SearchFilters) -> bool:
@@ -106,10 +112,12 @@ def rank(vehicles: list[VehicleRecord], filters: SearchFilters) -> list[RankedVe
 
 def find_relaxation(connection: duckdb.DuckDBPyConnection, filters: SearchFilters) -> str | None:
     all_vehicles = records(connection.execute(f"SELECT {VEHICLE_COLUMNS} FROM vehicles"))
-    for field in RELAXATION_PRIORITY:
-        if getattr(filters, field.value) is None:
-            continue
+    active_fields = [field for field in RELAXATION_PRIORITY if getattr(filters, field.value) is not None]
+    for field in active_fields:
         relaxed = filters.model_copy(update={field.value: None})
         if any(matches(vehicle, relaxed) for vehicle in all_vehicles):
-            return field.value.replace("_", " ")
+            return RELAXATION_LABELS.get(field, field.value.replace("_", " "))
+    if active_fields:
+        field = active_fields[0]
+        return RELAXATION_LABELS.get(field, field.value.replace("_", " "))
     return None

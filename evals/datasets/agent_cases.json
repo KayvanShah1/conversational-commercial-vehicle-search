@@ -195,7 +195,8 @@
       "fuel": "CNG",
       "body_type": "reefer"
     },
-    "expect_results": false
+    "expect_results": false,
+    "expected_response_contains_all": ["relax"]
   },
   {
     "id": "correction_initial",

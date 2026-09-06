@@ -127,6 +127,18 @@ def test_zero_result_search_still_uses_one_connection(monkeypatch):
     assert calls["count"] == 1
 
 
+def test_zero_result_search_suggests_an_active_constraint_when_one_removal_is_insufficient(monkeypatch):
+    connection, _ = _install_catalog(monkeypatch, [_row("VEH-001", city="Pune", price=500_000)])
+
+    try:
+        result = search_module.search_catalog(SearchFilters(city="Kolkata", budget_max=100_000), [])
+    finally:
+        connection.close()
+
+    assert result.total_matches == 0
+    assert result.relaxation == "budget"
+
+
 def test_purpose_matching_uses_normalized_values():
     vehicle = VehicleRecord.model_validate(
         dict(
