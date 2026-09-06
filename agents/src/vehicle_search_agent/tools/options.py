@@ -5,7 +5,7 @@ from vehicle_search_agent.models import AgentAction, CatalogTopic
 from vehicle_search_agent.response import catalog_options_response, message_response
 from vehicle_search_agent.search import get_catalog_options
 from vehicle_search_agent.settings import settings
-from vehicle_search_agent.tools.context import AgentContext, logger, retry_tool_error, set_response
+from vehicle_search_agent.tools.context import AgentContext, log_tool_call, retry_tool_error, set_response
 
 
 @function_tool(
@@ -24,8 +24,8 @@ async def list_catalog_options(
     include_purposes: bool = False,
 ) -> str:
     """List available cities, vehicle categories, body types, fuels, makes, or purposes."""
-    logger.info("tool_called", extra={"tool": "list_catalog_options"})
     context = ctx.context
+    log_tool_call(context, "list_catalog_options")
     context.action = AgentAction.catalog_options
     requested = {
         CatalogTopic.cities: include_cities,

@@ -60,8 +60,10 @@ class AgentStageTimer(RunHooks[AgentContext]):
         self, context: RunContextWrapper[AgentContext], agent: Agent[AgentContext], response: Any
     ) -> None:
         agent_context = context.context
+        agent_context.model_name = str(agent.model.model)
+        agent_context.model_route = str(getattr(agent.model, "route", agent_context.model_name))
         usage = response.usage
-        cost = llm_list_cost_usd(str(agent.model.model), usage.input_tokens, usage.output_tokens)
+        cost = llm_list_cost_usd(agent_context.model_name, usage.input_tokens, usage.output_tokens)
         if (usage.requests and not usage.total_tokens) or cost is None:
             agent_context.pricing_complete = False
         else:

@@ -23,6 +23,8 @@ class AgentContext:
     llm_list_cost_usd: float = 0.0
     pricing_complete: bool = True
     tool_failures: int = 0
+    model_name: str = "unknown"
+    model_route: str = "unknown"
 
     def reset_turn(self) -> None:
         self.current_input = ""
@@ -36,6 +38,8 @@ class AgentContext:
         self.llm_list_cost_usd = 0.0
         self.pricing_complete = True
         self.tool_failures = 0
+        self.model_name = "unknown"
+        self.model_route = "unknown"
 
 
 def retry_tool_error(ctx: RunContextWrapper[AgentContext], error: Exception) -> str:
@@ -51,6 +55,13 @@ def retry_tool_error(ctx: RunContextWrapper[AgentContext], error: Exception) -> 
         },
     )
     return f"Tool arguments were invalid. Correct them using the declared schema and retry. Validation: {error}"
+
+
+def log_tool_call(context: AgentContext, tool: str) -> None:
+    logger.info(
+        "tool_called",
+        extra={"tool": tool, "model": context.model_name, "model_route": context.model_route},
+    )
 
 
 def rephrase_request(response: GroundedResponse, *, first_turn: bool) -> str:
