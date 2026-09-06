@@ -10,11 +10,12 @@ For the extended rationale and failure taxonomy, see the wiki's [evaluation and 
 | --- | ---: | ---: | ---: |
 | Core conversation | 28 | 28 | **100%** |
 | Vehicle variants | 18 | 18 | **100%** |
-| Combined | 46 | 46 | **100%** |
+| Recorded voice pipeline | 3 | 3 | **100%** |
+| All suites | 49 | 49 | **100%** |
 
-Both complete runs were executed on 2026-09-05 through the live agent and MotherDuck path. Generated JSON and Markdown reports are retained locally under `data/evaluation/` and excluded from Git.
+All three complete runs were executed on 2026-09-06 through the live model, MotherDuck, and, for voice cases, STT and TTS paths. Generated JSON and Markdown reports are retained locally under `data/evaluation/` and excluded from Git.
 
-All cases passed in their complete suite runs; no focused rerun was substituted into either score.
+All cases passed in their complete suite runs; no focused rerun was substituted into any score.
 
 ## What is evaluated
 
@@ -63,12 +64,12 @@ This separates expected behavior from exact prose. Rephrasing is allowed; changi
 
 | Metric | Core | Vehicle variants |
 | --- | ---: | ---: |
-| Understanding | 1,038.32 ms | 964.40 ms |
-| Catalog search or lookup | 466.44 ms | 478.61 ms |
-| Grounded response generation¹ | 3,418.80 ms | 4,020.80 ms |
-| Total | 1,841.30 ms | 3,034.29 ms |
-| Tokens | 2,196.21 | 3,041.89 |
-| Estimated LLM list cost | INR 0.0383 | INR 0.0489 |
+| Understanding | 1,166.86 ms | 1,049.62 ms |
+| Catalog search or lookup | 613.93 ms | 691.56 ms |
+| Grounded response generation¹ | 5,744.22 ms | 4,761.02 ms |
+| Total | 2,344.51 ms | 3,588.23 ms |
+| Tokens | 2,188.89 | 3,058.67 |
+| Estimated LLM list cost | INR 0.0378 | INR 0.0496 |
 
 ¹ Response-generation means are calculated only for turns that use the optional post-tool natural-language pass. Straight grounded searches stop after deterministic composition.
 
@@ -77,13 +78,13 @@ This separates expected behavior from exact prose. Rephrasing is allowed; changi
 Run the primary suite first:
 
 ```powershell
-uv run --package evals python -m evals.evaluate_agent --delay-seconds 10
+uv run --package evals python -m evals.evaluator.agent --delay-seconds 10
 ```
 
 Then run the breadth suite:
 
 ```powershell
-uv run --package evals python -m evals.evaluate_agent `
+uv run --package evals python -m evals.evaluator.agent `
   --cases evals/datasets/vehicle_variant_cases.json `
   --delay-seconds 10
 ```
@@ -94,30 +95,34 @@ Each run writes local, Git-ignored JSON and Markdown reports under `data/evaluat
 
 ## Voice latency
 
-Run one real voice turn with an audio sample you are authorized to send to the configured STT provider:
+Run the recorded voice suite only with audio you are authorized to send to the configured speech provider:
 
 ```powershell
-uv run --package evals python -m evals.measure_voice_latency `
-  --audio path/to/authorized-sample.wav
+uv run --package evals python -m evals.evaluator.voice --delay-seconds 10
 ```
 
-The report includes STT, understanding, search or lookup, optional response generation, TTS, total time, and `speech_end_to_audio_ready_ms`.
+The voice manifest and recordings live together under `evals/datasets/voice/`. Add a case by supplying its WAV, reference utterance, expected action, and expected filters. Use `--case CASE_ID` repeatedly for a focused run.
 
-With Streamlit’s built-in microphone composer, the server receives audio only after browser recording and upload complete. The measurement therefore starts when the completed recording reaches the server and ends when the full synthesized WAV is ready for playback. It is a repeatable server-side proxy, not exact browser speech-stop to first streamed audio byte.
+The report includes transcript exact match, word error rate (WER), character error rate (CER), routing and argument accuracy, filter precision/recall/F1, end-to-end pass rate, cost, and mean, p50, and p95 latency. Stage timing covers STT, understanding, search or lookup, an optional validated follow-up model response, TTS, total time, and `recording_received_to_audio_ready_ms`. Ordinary search and catalog replies use deterministic grounded composition within total time, so their separate response stage is `N/A`.
+
+With Streamlit’s built-in microphone composer, the server receives audio only after browser recording and upload complete. The measurement therefore starts when the completed recording reaches the server and ends when the full synthesized WAV has been generated. It is a repeatable server-side proxy, not exact browser speech-stop to first streamed audio byte or playback.
 
 ### Recorded voice runs
 
-On 2026-09-06, two TTS-generated WAV requests were sent through the live STT, agent, MotherDuck search, grounded response, and TTS path. Both transcriptions preserved the requested constraints and correctly selected the search action.
+On 2026-09-06, two TTS-generated WAV files and one human-recorded Hinglish request were sent through the live STT, agent, MotherDuck search, grounded response, and TTS path. All three selected the search action, extracted every expected filter, and returned grounded results.
 
-| Request | Audio | STT | Understanding | Search | TTS | Speech end → audio ready | Estimated list cost |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| CNG mini truck under ₹6 lakh in Pune for city delivery | 4.96 s | 0.73 s | 0.80 s | 6.04 s | 3.89 s | **11.52 s** | ₹0.6285 |
-| Diesel tipper under ₹12 lakh in Mumbai with verified papers | 6.00 s | 0.72 s | 0.90 s | 5.44 s | 1.66 s | **8.75 s** | ₹0.3000 |
-| Mean | 5.48 s | 0.72 s | 0.85 s | 5.74 s | 2.77 s | **10.13 s** | ₹0.4643 |
+| Request | Audio | STT | Understanding | Search | Response | TTS | Recording received → audio ready | Estimated list cost |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| CNG mini truck under ₹6 lakh in Pune for city delivery | 4.96 s | 0.76 s | 0.90 s | 5.01 s | N/A | 3.99 s | **10.71 s** | ₹0.6302 |
+| Diesel tipper under ₹12 lakh in Mumbai with verified papers | 6.00 s | 0.29 s | 0.81 s | 0.30 s | N/A | 1.65 s | **3.09 s** | ₹0.2999 |
+| Human Hinglish: verified pickup under ₹12 lakh in Hyderabad | 5.58 s | 0.39 s | 1.01 s | 0.30 s | N/A | 5.69 s | **7.42 s** | ₹0.6684 |
+| Mean | 5.51 s | 0.48 s | 0.91 s | 1.87 s | N/A | 3.78 s | **7.07 s** | ₹0.5329 |
 
-Catalog search was the dominant measured stage. The first mitigation is to warm or pool MotherDuck connections, as described in [technical decisions](TECHNICAL_DECISIONS.md#production-priorities).
+TTS was the largest mean voice stage. The first catalog query also paid a 5.01-second cold-connection cost; the next two searches completed in about 0.30 seconds. Warm or pooled MotherDuck connections and streaming speech remain the first production latency improvements, as described in [technical decisions](TECHNICAL_DECISIONS.md#production-priorities).
 
-The synthetic input makes these backend measurements repeatable but does not replace a browser microphone demonstration. Input-audio generation happened before the measured boundary and is not included, matching a real turn where recording is complete before the server receives it.
+Ordinary search and catalog replies use deterministic grounded composition within total time rather than a separate response timer. Details and comparisons report a response stage when a validated follow-up model call runs.
+
+The two synthetic inputs make baseline measurements repeatable, while the human recording adds realistic Hinglish coverage. The speech provider returned the Hinglish transcript largely in Devanagari, producing 65.0% aggregate WER across the three cases despite 100% downstream filter precision, recall, and F1. This is why transcript similarity and task success are reported separately. Recording or synthetic-audio generation happened before the measured boundary and is not included.
 
 ## Usage and cost
 
@@ -139,12 +144,12 @@ The latest local verification reported:
 - 1 live MotherDuck integration test skipped by default
 - Repository-wide Ruff check passed
 - Streamlit AppTest rendered the conversation, result, state, and metric surfaces
-- live STT and TTS smoke checks produced valid transcript and WAV output
+- the three-case live voice suite completed STT, agent, catalog, grounding, and TTS successfully
 
 Provider-backed evaluation and voice tests are intentionally separate from the default unit suite because they consume external quota and transmit configured inputs.
 
 ## Known boundaries
 
 1. Free-tier provider pools can all return HTTP 429. Bounded route rotation improves demo resilience but does not guarantee capacity.
-2. The current voice endpoint returns complete WAV files, so the measured endpoint is playable audio rather than first streamed bytes.
+2. The current voice endpoint returns complete WAV files, so the measured endpoint is generated WAV bytes rather than first streamed bytes or browser playback.
 3. Natural-response validation guarantees grounded numeric and catalog facts; it does not prove that subjective buying advice is globally optimal.

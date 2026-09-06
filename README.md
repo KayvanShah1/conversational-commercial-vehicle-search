@@ -1,7 +1,7 @@
 # Vivi: Voice-first Commercial Vehicle search
 
 [![Test, Build Image and Deploy to Render](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/actions/workflows/test-publish-container.yaml/badge.svg)](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/actions/workflows/test-publish-container.yaml)
-[![Evaluation: 46/46](https://img.shields.io/badge/evaluation-46%2F46_passed-22c55e?style=flat-square)](docs/EVALUATION.md)
+[![Evaluation: 49/49](https://img.shields.io/badge/evaluation-49%2F49_passed-22c55e?style=flat-square)](docs/EVALUATION.md)
 [![Catalog: 1,000 listings](https://img.shields.io/badge/catalog-1%2C000_listings-2563eb?style=flat-square)](docs/DATA_GENERATION.md)
 [![Input: Voice & Text](https://img.shields.io/badge/input-voice_%2B_text-7c3aed?style=flat-square)](docs/SETUP.md)
 [![Grounding: validated](https://img.shields.io/badge/catalog_facts-validated-0f766e?style=flat-square)](docs/TECHNICAL_DECISIONS.md#correctness-boundaries)
@@ -120,9 +120,10 @@ The buyer gets a natural conversation and comparable options; the application tu
 | --- | --- | ---: |
 | Core | Conversation, intent, slots, safety, corrections, and follow-ups | **28/28 (100%)** |
 | Vehicle variants | Sizes, bodies, fuels, categories, attributes, and pagination | **18/18 (100%)** |
-| Combined | All executable cases | **46/46 (100%)** |
+| Voice pipeline | STT, agent behavior, catalog search, grounding, TTS, and latency | **3/3 (100%)** |
+| All suites | 46 text cases and 3 recorded voice cases | **49/49 (100%)** |
 
-Both complete suites ran through the live agent and MotherDuck path on 2026-09-05 and exceeded the 90% target. Full commands, timings, token usage, and cost boundaries are in the [evaluation report](docs/EVALUATION.md).
+All three suites ran through their live provider paths on 2026-09-06 and exceeded the 90% target. Full commands, timings, token usage, and cost boundaries are in the [evaluation report](docs/EVALUATION.md).
 
 ## Tech stack
 
