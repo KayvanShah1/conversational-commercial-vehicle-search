@@ -10,12 +10,14 @@ For the extended rationale and failure taxonomy, see the wiki's [evaluation and 
 | --- | ---: | ---: | ---: |
 | Core conversation | 28 | 28 | **100%** |
 | Vehicle variants | 18 | 18 | **100%** |
-| Recorded voice pipeline | 3 | 3 | **100%** |
-| All suites | 49 | 49 | **100%** |
+| Recorded voice pipeline | 6 | 5 | **83.3%** |
+| All suites | 52 | 51 | **98.1%** |
 
-All three complete runs were executed on 2026-09-06 through the live model, MotherDuck, and, for voice cases, STT and TTS paths. Generated JSON and Markdown reports are retained locally under `data/evaluation/` and excluded from Git.
+All three complete runs were executed on 2026-09-06 through the live model, MotherDuck, and, for voice cases, STT and TTS paths. The combined pass rate exceeds the assignment's 90% target. Generated JSON and Markdown reports are retained locally under `data/evaluation/` and excluded from Git.
 
-All cases passed in their complete suite runs; no focused rerun was substituted into any score.
+One expanded voice case remains failed in the report: the spoken city was transcribed and extracted as `Bangalore`, while the catalog and expected filter use `Bengaluru`. No focused rerun was substituted into the score, and the expectation was not weakened to hide the mismatch.
+
+With the documented 10-second rate-limit delay, the 52 cases took about 10 minutes 54 seconds of evaluator runtime: 5 minutes 37 seconds for the core suite, 3 minutes 55 seconds for vehicle variants, and 1 minute 22 seconds for voice. Case processing totalled about 2 minutes 42 seconds; the remaining time was the deliberate delay between cases. Provider latency and rate limits will make future runs vary.
 
 ## What is evaluated
 
@@ -101,6 +103,8 @@ Run the recorded voice suite only with audio you are authorized to send to the c
 uv run --package evals python -m evals.evaluator.voice --delay-seconds 10
 ```
 
+The expanded voice suite intentionally retains one failed case and therefore writes its report before exiting with status 1 against the default 90% per-suite threshold. The combined 52-case result remains above 90%; the threshold and expected filter are left unchanged so the known failure stays visible.
+
 The voice manifest and recordings live together under `evals/datasets/voice/`. Add a case by supplying its WAV, reference utterance, expected action, and expected filters. Use `--case CASE_ID` repeatedly for a focused run.
 
 The report includes transcript exact match, word error rate (WER), character error rate (CER), routing and argument accuracy, filter precision/recall/F1, end-to-end pass rate, cost, and mean, p50, and p95 latency. Stage timing covers STT, understanding, search or lookup, an optional validated follow-up model response, TTS, total time, and `recording_received_to_audio_ready_ms`. Ordinary search and catalog replies use deterministic grounded composition within total time, so their separate response stage is `N/A`.
@@ -109,20 +113,23 @@ With Streamlit’s built-in microphone composer, the server receives audio only 
 
 ### Recorded voice runs
 
-On 2026-09-06, two TTS-generated WAV files and one human-recorded Hinglish request were sent through the live STT, agent, MotherDuck search, grounded response, and TTS path. All three selected the search action, extracted every expected filter, and returned grounded results.
+On 2026-09-06, two TTS-generated WAV files and four human recordings were sent through the live STT, agent, MotherDuck search, grounded response, and TTS path. Five cases met all declared expectations. All six selected the expected action; the failed payload case extracted `Bangalore` instead of the catalog's canonical `Bengaluru` and consequently returned no results.
 
-| Request | Audio | STT | Understanding | Search | Response | TTS | Recording received → audio ready | Estimated list cost |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| CNG mini truck under ₹6 lakh in Pune for city delivery | 4.96 s | 0.76 s | 0.90 s | 5.01 s | N/A | 3.99 s | **10.71 s** | ₹0.6302 |
-| Diesel tipper under ₹12 lakh in Mumbai with verified papers | 6.00 s | 0.29 s | 0.81 s | 0.30 s | N/A | 1.65 s | **3.09 s** | ₹0.2999 |
-| Human Hinglish: verified pickup under ₹12 lakh in Hyderabad | 5.58 s | 0.39 s | 1.01 s | 0.30 s | N/A | 5.69 s | **7.42 s** | ₹0.6684 |
-| Mean | 5.51 s | 0.48 s | 0.91 s | 1.87 s | N/A | 3.78 s | **7.07 s** | ₹0.5329 |
+| Request | Result | Audio | STT | Understanding | Search | Response | TTS | Recording received → audio ready | Estimated list cost |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| CNG mini truck under ₹6 lakh in Pune for city delivery | Pass | 4.96 s | 0.65 s | 0.86 s | 5.00 s | N/A | 4.05 s | **10.61 s** | ₹0.6301 |
+| Diesel tipper under ₹12 lakh in Mumbai with verified papers | Pass | 6.00 s | 0.33 s | 0.81 s | 0.23 s | N/A | 1.78 s | **3.20 s** | ₹0.2999 |
+| Human Hinglish: verified pickup under ₹12 lakh in Hyderabad | Pass | 5.58 s | 0.40 s | 0.81 s | 0.30 s | N/A | 4.60 s | **6.15 s** | ₹0.6655 |
+| General diesel-versus-CNG buying question | Pass | 8.22 s | 0.50 s | 2.12 s | N/A | N/A | 1.04 s | **3.71 s** | ₹0.2853 |
+| Hinglish: at least one-tonne payload in Bengaluru | **Fail** | 5.44 s | 0.37 s | 0.82 s | 1.02 s | N/A | 1.44 s | **3.77 s** | ₹0.3090 |
+| Available cities | Pass | 2.63 s | 0.32 s | 0.96 s | 0.22 s | N/A | 2.98 s | **4.50 s** | ₹0.3977 |
+| Mean |  | 5.47 s | 0.43 s | 1.06 s | 1.36 s | N/A | 2.65 s | **5.32 s** | ₹0.4313 |
 
-TTS was the largest mean voice stage. The first catalog query also paid a 5.01-second cold-connection cost; the next two searches completed in about 0.30 seconds. Warm or pooled MotherDuck connections and streaming speech remain the first production latency improvements, as described in [technical decisions](TECHNICAL_DECISIONS.md#production-priorities).
+TTS was the largest mean voice stage. The first catalog query also paid a 5.00-second cold-connection cost; later search and catalog operations completed in 0.22–1.02 seconds. Warm or pooled MotherDuck connections and streaming speech remain the first production latency improvements, as described in [technical decisions](TECHNICAL_DECISIONS.md#production-priorities).
 
 Ordinary search and catalog replies use deterministic grounded composition within total time rather than a separate response timer. Details and comparisons report a response stage when a validated follow-up model call runs.
 
-The two synthetic inputs make baseline measurements repeatable, while the human recording adds realistic Hinglish coverage. The speech provider returned the Hinglish transcript largely in Devanagari, producing 65.0% aggregate WER across the three cases despite 100% downstream filter precision, recall, and F1. This is why transcript similarity and task success are reported separately. Recording or synthetic-audio generation happened before the measured boundary and is not included.
+The two synthetic inputs make baseline measurements repeatable, while four human recordings add English and Hinglish coverage. Three transcripts matched exactly. The provider rendered the two Hinglish requests largely in Devanagari, contributing to 69.1% aggregate WER and 33.88% CER even when their meaning was mostly preserved. Downstream filter precision, recall, and F1 were each 93.8%; routing remained 100%. This is why transcript similarity, routing, filter accuracy, and task success are reported separately. The general buying case is routing-focused and verifies that no catalog tool is called; it does not score the completeness of the buying advice. Recording or synthetic-audio generation happened before the measured boundary and is not included.
 
 ## Usage and cost
 
@@ -144,7 +151,7 @@ The latest local verification reported:
 - 1 live MotherDuck integration test skipped by default
 - Repository-wide Ruff check passed
 - Streamlit AppTest rendered the conversation, result, state, and metric surfaces
-- the three-case live voice suite completed STT, agent, catalog, grounding, and TTS successfully
+- the six-case live voice suite completed every provider stage and retained one application-level city-alias failure
 
 Provider-backed evaluation and voice tests are intentionally separate from the default unit suite because they consume external quota and transmit configured inputs.
 
@@ -153,3 +160,4 @@ Provider-backed evaluation and voice tests are intentionally separate from the d
 1. Free-tier provider pools can all return HTTP 429. Bounded route rotation improves demo resilience but does not guarantee capacity.
 2. The current voice endpoint returns complete WAV files, so the measured endpoint is generated WAV bytes rather than first streamed bytes or browser playback.
 3. Natural-response validation guarantees grounded numeric and catalog facts; it does not prove that subjective buying advice is globally optimal.
+4. Free-text city aliases are not canonicalized. In the expanded voice run, `Bangalore` did not match the catalog's `Bengaluru` value.

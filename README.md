@@ -1,7 +1,7 @@
 # Vivi: Voice-first Commercial Vehicle search
 
 [![Test, Build Image and Deploy to Render](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/actions/workflows/test-publish-container.yaml/badge.svg)](https://github.com/KayvanShah1/conversational-commercial-vehicle-search/actions/workflows/test-publish-container.yaml)
-[![Evaluation: 49/49](https://img.shields.io/badge/evaluation-49%2F49_passed-22c55e?style=flat-square)](docs/EVALUATION.md)
+[![Evaluation: 51/52](https://img.shields.io/badge/evaluation-51%2F52_passed-22c55e?style=flat-square)](docs/EVALUATION.md)
 [![Catalog: 1,000 listings](https://img.shields.io/badge/catalog-1%2C000_listings-2563eb?style=flat-square)](docs/DATA_GENERATION.md)
 [![Input: Voice & Text](https://img.shields.io/badge/input-voice_%2B_text-7c3aed?style=flat-square)](docs/SETUP.md)
 [![Grounding: validated](https://img.shields.io/badge/catalog_facts-validated-0f766e?style=flat-square)](docs/TECHNICAL_DECISIONS.md#correctness-boundaries)
@@ -25,7 +25,7 @@ Commercial-vehicle discovery is a constraint-heavy decision: the right choice de
 - **Grounded recommendations:** the model calls typed tools instead of querying the database directly or generating SQL, and every vehicle fact is checked against catalog records before reaching the user.
 - **Layered observability:** the UI shows filters, ranking scores, tool calls, latency, tokens, and estimated cost. Structured logs capture runtime operations, while optional OpenAI Agents SDK traces group each chat with its turns and spans.
 - **Resilient voice path:** Groq handles speech and model inference, with bounded retries across configured API keys and fallback models.
-- **Executable evaluation:** 46 cases test conversation, safety, catalog discovery, vehicle variants, attribute lookup, pagination, and preference changes.
+- **Executable evaluation:** 52 text and recorded-voice cases test conversation, safety, catalog discovery, vehicle variants, attribute lookup, pagination, and preference changes.
 
 > All catalog listings are synthetic and are not live marketplace inventory.
 
@@ -120,10 +120,10 @@ The buyer gets a natural conversation and comparable options; the application tu
 | --- | --- | ---: |
 | Core | Conversation, intent, slots, safety, corrections, and follow-ups | **28/28 (100%)** |
 | Vehicle variants | Sizes, bodies, fuels, categories, attributes, and pagination | **18/18 (100%)** |
-| Voice pipeline | STT, agent behavior, catalog search, grounding, TTS, and latency | **3/3 (100%)** |
-| All suites | 46 text cases and 3 recorded voice cases | **49/49 (100%)** |
+| Voice pipeline | STT, agent behavior, catalog search, grounding, TTS, and latency | **5/6 (83.3%)** |
+| All suites | 46 text cases and 6 recorded voice cases | **51/52 (98.1%)** |
 
-All three suites ran through their live provider paths on 2026-09-06 and exceeded the 90% target. Full commands, timings, token usage, and cost boundaries are in the [evaluation report](docs/EVALUATION.md).
+All three suites ran through their live provider paths on 2026-09-06. The combined result exceeds the 90% target; the retained voice failure exposes an unresolved `Bangalore`/`Bengaluru` alias mismatch instead of hiding it. Full commands, timings, token usage, and cost boundaries are in the [evaluation report](docs/EVALUATION.md).
 
 ## Tech stack
 

@@ -41,6 +41,10 @@ Run the recorded voice suite only with audio you are authorized to send to the c
 uv run --package evals python -m evals.evaluator.voice --delay-seconds 10
 ```
 
+Allow roughly 10–12 minutes to run all three live suites with the shown rate-limit delay. The latest 52-case run took about 10 minutes 54 seconds of evaluator runtime; provider latency and capacity can change that runtime.
+
+The six-case voice suite currently retains one known city-alias failure, so it saves the report and then exits with status 1 against the unchanged 90% per-suite threshold.
+
 Add another case by placing its WAV beside `voice_cases.json` and adding the reference utterance, expected action, and expected filters to that manifest. Cases with the same `conversation_id` share state and must remain in turn order.
 
 JSON and Markdown reports are written locally under `data/evaluation/` and excluded from Git. The five newest runs are retained automatically, including reports written with a custom `--output` name. See the repository [evaluation guide](../docs/EVALUATION.md) for scoring, metrics, and interpretation.
