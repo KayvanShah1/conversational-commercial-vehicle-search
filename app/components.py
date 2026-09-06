@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from html import escape
 
 import streamlit as st
 from config import METRIC_LABELS, SLOT_LABELS, STARTER_QUESTIONS
@@ -153,7 +154,13 @@ def render_matches(result: VehicleSearchResult | None, *, key_prefix: str = "mat
         with column, st.container(border=True, key=f"vehicle_card_{key_prefix}_{index}", height="stretch", gap="small"):
             with st.container(key=f"vehicle_identity_{key_prefix}_{index}", gap=None):
                 with st.container(key=f"vehicle_title_{key_prefix}_{index}", gap=None):
-                    st.markdown(f"**{ranked.vehicle.make}**  \n**{ranked.vehicle.model}**")
+                    st.markdown(
+                        (
+                            f'<span class="vehicle-make">{escape(ranked.vehicle.make)}</span>'
+                            f'<span class="vehicle-model">{escape(ranked.vehicle.model)}</span>'
+                        ),
+                        unsafe_allow_html=True,
+                    )
                 if vehicle["Papers"] == "Verified":
                     with st.container(key=f"vehicle_verified_{key_prefix}_{index}"):
                         st.markdown(":green[:material/check_circle:]")

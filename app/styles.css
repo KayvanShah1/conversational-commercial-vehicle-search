@@ -144,12 +144,23 @@
 	background: #151a21;
 }
 
-[class*="st-key-vehicle_title_"] p {
-	margin: 0;
+[class*="st-key-vehicle_title_"] .vehicle-make,
+[class*="st-key-vehicle_title_"] .vehicle-model {
+	display: block;
 	padding-right: 1.75rem;
-	font-size: 1.2rem;
-	font-weight: 700;
 	line-height: 1.25;
+}
+
+[class*="st-key-vehicle_title_"] .vehicle-make {
+	color: #c5cad1;
+	font-size: 0.92rem;
+	font-weight: 600;
+}
+
+[class*="st-key-vehicle_title_"] .vehicle-model {
+	margin-top: 0.08rem;
+	font-size: 1.25rem;
+	font-weight: 750;
 }
 
 [class*="st-key-vehicle_title_"] [data-testid="stMarkdownContainer"] {
