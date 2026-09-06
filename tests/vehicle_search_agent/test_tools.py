@@ -285,6 +285,25 @@ def test_intuitive_category_and_axles_aliases_are_accepted(monkeypatch):
     assert "Axles" in context.grounded_response.display_markdown
 
 
+def test_detail_field_mapping_is_exposed_in_the_tool_schema():
+    description = get_vehicle_details.params_json_schema["properties"]["fields"]["description"]
+
+    for mapping in (
+        "odometer -> km_driven",
+        "load capacity -> payload",
+        "gross vehicle weight -> gvw",
+        "body -> body_type",
+        "papers or verification -> papers_verified",
+        "uses or purpose -> purpose_tags",
+        "category -> vehicle_category",
+        "size or class -> weight_class",
+        "axles -> axle_count",
+        "brochure, specification, or source -> spec_source_url",
+    ):
+        assert mapping in description
+    assert "Never map mileage or fuel economy to km_driven" in description
+
+
 def test_named_details_are_limited_to_matching_previous_results(monkeypatch):
     context = _context("Give me more details about the Mahindra Jeeto.")
     context.state.selected_listing_id = None
