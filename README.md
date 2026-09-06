@@ -88,8 +88,8 @@ Use these turns in one session:
 
 1. `Chhota truck chahiye, 5 lakh ke andar, city delivery ke liye.`
 2. `Nahi, diesel nahi, CNG.`
-3. Ask for an impossible combination to see a grounded zero-result relaxation.
-4. `Second one ka payload aur GVW kya hai?`
+3. `Second one ka payload aur GVW kya hai?`
+4. Ask for an impossible combination to see a grounded zero-result relaxation.
 
 For a terminal-only conversation:
 

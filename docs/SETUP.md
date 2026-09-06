@@ -102,7 +102,7 @@ Never commit `.env` or paste real credentials into logs, screenshots, evaluation
 | `GROQ__FALLBACK_MODELS` | JSON list | Ordered Groq fallback models |
 | `GROQ__STT_MODEL` | `whisper-large-v3-turbo` | Speech-to-text model |
 | `GROQ__TTS_MODEL` | `canopylabs/orpheus-v1-english` | Text-to-speech model |
-| `GROQ__TTS_VOICE` | `daniel` | Synthesized voice |
+| `GROQ__TTS_VOICE` | `troy` | Synthesized voice |
 | `GROQ__TTS_FORMAT` | `wav` | Audio response format |
 | `GROQ__TTS_MAX_CHARS` | `200` | Per-request TTS limit; longer responses are chunked and stitched |
 
