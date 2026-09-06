@@ -17,6 +17,8 @@ def display_response(result: AgentTurnResult, session: VehicleSearchSession) -> 
 
     if grounded is None or not grounded.facts:
         return result.spoken_response
+    if result.action.value == "search" and not result.last_result_ids:
+        return grounded.fallback
 
     def bullet(fact: str) -> str:
         label, separator, value = fact.partition(":")

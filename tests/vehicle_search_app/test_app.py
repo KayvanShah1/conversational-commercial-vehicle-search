@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 from streamlit.testing.v1 import AppTest
 from vehicle_search_agent.models import (
@@ -8,6 +9,7 @@ from vehicle_search_agent.models import (
     VehicleRecord,
     VehicleSearchResult,
 )
+from vehicle_search_agent.response import GroundedResponse
 
 ROOT = Path(__file__).resolve().parents[2]
 APP_PATH = ROOT / "app" / "main.py"
@@ -16,6 +18,26 @@ STARTER_QUESTIONS = {
     "Which diesel trucks can carry at least 2 tonnes?",
     "What commercial vehicles are available in Mumbai?",
 }
+
+
+def test_zero_result_response_is_rendered_as_one_sentence(monkeypatch) -> None:
+    monkeypatch.syspath_prepend(str(ROOT / "app"))
+    from components import display_response
+
+    fallback = "I couldn't find an exact match. We could try relaxing the budget constraint."
+    grounded = GroundedResponse(
+        fallback=fallback,
+        facts=("I couldn't find an exact match.", "We could try relaxing the budget constraint."),
+        checks=(("I couldn't find an exact match.",), ("We could try relaxing the budget constraint.",)),
+    )
+    result = SimpleNamespace(
+        action=SimpleNamespace(value="search"),
+        last_result_ids=[],
+        spoken_response=fallback,
+    )
+    session = SimpleNamespace(context=SimpleNamespace(grounded_response=grounded))
+
+    assert display_response(result, session) == fallback
 
 
 def test_streamlit_app_renders_without_framework_error() -> None:
