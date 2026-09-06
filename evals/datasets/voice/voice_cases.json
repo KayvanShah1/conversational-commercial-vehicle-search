@@ -31,7 +31,7 @@
   },
   {
     "id": "hinglish_pickup_hyderabad",
-    "audio": "highlish-pickup.wav",
+    "audio": "hinglish-pickup.wav",
     "audio_source": "human_recorded",
     "utterance": "Hyderabad mein baarah lakh ke andar verified papers wali pickup chahiye.",
     "expected_action": "search",
@@ -42,5 +42,38 @@
       "papers_verified": true
     },
     "expect_results": true
+  },
+  {
+    "id": "general_buying_question",
+    "audio": "general-question.wav",
+    "audio_source": "human_recorded",
+    "utterance": "For city deliveries, how should I choose between diesel and CNG?",
+    "expected_action": "conversation",
+    "expected_filters": {}
+  },
+  {
+    "id": "payload_search",
+    "audio": "payload-search.wav",
+    "audio_source": "human_recorded",
+    "utterance": "Bengaluru mein kam se kam ek tonne payload wala truck dikhao.",
+    "expected_action": "search",
+    "expected_filters": {
+      "city": "Bengaluru",
+      "payload_min_kg": 1000
+    },
+    "expect_results": true
+  },
+  {
+    "id": "catalog_cities",
+    "audio": "catalog-question.wav",
+    "audio_source": "human_recorded",
+    "utterance": "Which cities do you operate in?",
+    "expected_action": "catalog_options",
+    "expected_filters": {},
+    "expected_response_contains_any": [
+      "available cities",
+      "operate in",
+      "Ahmedabad"
+    ]
   }
 ]
