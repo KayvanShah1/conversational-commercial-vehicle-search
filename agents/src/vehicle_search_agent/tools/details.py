@@ -9,7 +9,7 @@ from vehicle_search_agent.models import AgentAction, DetailField, VehicleRecord
 from vehicle_search_agent.response import details_response, message_response
 from vehicle_search_agent.search import get_vehicles
 from vehicle_search_agent.settings import settings
-from vehicle_search_agent.tools.context import AgentContext, logger, retry_tool_error, set_response
+from vehicle_search_agent.tools.context import AgentContext, log_tool_call, retry_tool_error, set_response
 
 DetailScope = Literal["one", "all"]
 DetailMode = Literal[
@@ -47,23 +47,44 @@ async def get_vehicle_details(
             )
         ),
     ] = "facts",
-    fields: Annotated[list[DetailField], Field(min_length=1, max_length=15)] | None = None,
-    result_number: Annotated[int, Field(ge=1, le=3)] | None = None,
+    fields: Annotated[
+        list[DetailField],
+        Field(
+            min_length=1,
+            max_length=15,
+            description="Only the attributes explicitly requested; omit only for a comparison or capability mode",
+        ),
+    ]
+    | None = None,
+    result_number: Annotated[
+        int,
+        Field(
+            ge=1,
+            le=3,
+            description="One-based position when the user refers to the first, second, or third prior result",
+        ),
+    ]
+    | None = None,
 ) -> str:
     """Read or compare grounded facts from previously returned results.
 
+    Use this when the user refers to previously returned vehicles by position,
+    name, or singular/plural reference and asks for attributes or a comparison.
     Use this only when the turn does not add or change a search constraint. A
     comparison containing a new preference belongs to search_vehicles, even if
-    the current results already appear to satisfy it. Use
-    scope=all for plural references and comparisons. For one result, pass its
-    result_number when known; a named make or model can otherwise be resolved
-    against prior results. Use mode=all_details for every available attribute.
-    For capability questions request payload, gvw, body_type, and purpose_tags;
-    for brochures request spec_source_url. Never call this once per result for
-    scope=all. Accepted fields and modes are declared in the tool schema.
+    the current results already appear to satisfy it. Use scope=all for plural
+    references and comparisons. For one result, pass its result_number when
+    known; a named make or model can otherwise be resolved against prior
+    results. Request only explicitly asked-for fields. Use mode=all_details only
+    when the user explicitly asks for every or all available details. For
+    example, "second one ka payload aur GVW" means scope=one, result_number=2,
+    mode=facts, and fields=[payload, gvw]. Capability questions request payload,
+    gvw, body_type, and purpose_tags; brochure requests use spec_source_url.
+    Never call this once per result when scope=all. Accepted fields and modes
+    are declared in the tool schema.
     """
-    logger.info("tool_called", extra={"tool": "get_vehicle_details"})
     context = ctx.context
+    log_tool_call(context, "get_vehicle_details")
     context.action = AgentAction.details
     state = context.state
 
