@@ -175,7 +175,7 @@ def test_streamlit_app_renders_without_framework_error() -> None:
         "Purpose fit" in dataframe.value.columns and dataframe.value.iloc[0]["Purpose fit"] == "30%"
         for dataframe in app.dataframe
     )
-    assert any("Mahindra Jeeto Strong Diesel" in markdown.value for markdown in app.markdown)
+    assert any("Mahindra" in markdown.value and "Jeeto Strong Diesel" in markdown.value for markdown in app.markdown)
     assert any(metric.label == "Est. payload" for metric in app.metric)
     assert any(metric.value == "815 kg" for metric in app.metric)
     assert len(app.get("audio")) == 2
@@ -208,6 +208,6 @@ def test_search_cards_remain_in_conversation_history() -> None:
     app.run(timeout=10)
 
     rendered_markdown = [markdown.value for markdown in app.markdown]
-    assert any("Mahindra First Match" in value for value in rendered_markdown)
-    assert any("Mahindra Updated Match" in value for value in rendered_markdown)
+    assert any("Mahindra" in value and "First Match" in value for value in rendered_markdown)
+    assert any("Mahindra" in value and "Updated Match" in value for value in rendered_markdown)
     assert sum(subheader.value == "Top matches" for subheader in app.get("subheader")) == 2

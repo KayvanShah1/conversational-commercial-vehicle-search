@@ -149,11 +149,11 @@ def render_matches(result: VehicleSearchResult | None, *, key_prefix: str = "mat
 
     st.subheader("Top matches")
     columns = st.columns(len(vehicles), gap="medium")
-    for index, (column, vehicle) in enumerate(zip(columns, vehicles, strict=True)):
-        with column, st.container(border=True, key=f"vehicle_card_{key_prefix}_{index}", gap="small"):
+    for index, (column, vehicle, ranked) in enumerate(zip(columns, vehicles, result.vehicles, strict=True)):
+        with column, st.container(border=True, key=f"vehicle_card_{key_prefix}_{index}", height="stretch", gap="small"):
             with st.container(key=f"vehicle_identity_{key_prefix}_{index}", gap=None):
                 with st.container(key=f"vehicle_title_{key_prefix}_{index}", gap=None):
-                    st.markdown(f"**{vehicle['Make / Model']}**")
+                    st.markdown(f"**{ranked.vehicle.make}**  \n**{ranked.vehicle.model}**")
                 if vehicle["Papers"] == "Verified":
                     with st.container(key=f"vehicle_verified_{key_prefix}_{index}"):
                         st.markdown(":green[:material/check_circle:]")
