@@ -20,7 +20,7 @@ class TurnMetrics(BaseModel):
     search_ms: float | None = None
     response_ms: float | None = None
     tts_ms: float | None = None
-    speech_end_to_audio_ready_ms: float | None = None
+    recording_received_to_audio_ready_ms: float | None = None
     total_ms: float | None = None
 
 

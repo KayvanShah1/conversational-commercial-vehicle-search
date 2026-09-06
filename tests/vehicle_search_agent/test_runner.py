@@ -141,7 +141,7 @@ def test_stage_hook_accumulates_priced_model_usage():
     assert context.pricing_complete
 
 
-def test_voice_turn_measures_server_receipt_to_audio_ready(monkeypatch):
+def test_voice_turn_measures_recording_receipt_to_audio_ready(monkeypatch):
     monkeypatch.setattr(
         "vehicle_search_agent.runner.session.transcribe_audio",
         lambda *args, **kwargs: SimpleNamespace(text="Hi", duration_ms=100.0, audio_seconds=2.0),
@@ -175,9 +175,9 @@ def test_voice_turn_measures_server_receipt_to_audio_ready(monkeypatch):
     session.session_id = "test-session"
     session.run_text_turn = fake_text_turn
 
-    result = asyncio.run(session.run_voice_turn(b"audio", speech_ended_at=10.0))
+    result = asyncio.run(session.run_voice_turn(b"audio", recording_received_at=10.0))
 
-    assert result.metrics.speech_end_to_audio_ready_ms == 500.0
+    assert result.metrics.recording_received_to_audio_ready_ms == 500.0
     assert result.metrics.stt_ms == 100.0
     assert result.metrics.tts_ms == 200.0
     assert result.usage.audio_input_seconds == 2.0

@@ -37,7 +37,7 @@ def test_streamlit_app_renders_without_framework_error() -> None:
     ]
     app.session_state.metrics = {
         "understanding_ms": 123,
-        "speech_end_to_audio_ready_ms": 455,
+        "recording_received_to_audio_ready_ms": 455,
         "total_ms": 456,
     }
     app.session_state.usage = {

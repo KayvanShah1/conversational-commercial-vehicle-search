@@ -78,13 +78,17 @@ def _run_text(message: str) -> None:
         st.session_state.error = f"Text turn failed: {type(error).__name__}. Check the terminal logs and retry."
 
 
-def _run_voice(audio_bytes: bytes, filename: str, speech_ended_at: float) -> None:
+def _run_voice(audio_bytes: bytes, filename: str, recording_received_at: float) -> None:
     st.session_state.reply_audio = None
     try:
         with st.spinner("Vivi is listening..."):
             session = _session()
             result = asyncio.run(
-                session.run_voice_turn(audio_bytes, filename=filename, speech_ended_at=speech_ended_at)
+                session.run_voice_turn(
+                    audio_bytes,
+                    filename=filename,
+                    recording_received_at=recording_received_at,
+                )
             )
         st.session_state.messages.append({"role": "user", "content": result.transcript})
         _save_result(result, session)

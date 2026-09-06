@@ -6,6 +6,10 @@ from vehicle_search_agent.models import AgentTurnResult, RankedVehicle, SearchFi
 from vehicle_search_agent.runner import VehicleSearchSession
 
 
+def _format_ms(value: float) -> str:
+    return "<1 ms" if value < 1 else f"{value:,.0f} ms"
+
+
 def display_response(result: AgentTurnResult, session: VehicleSearchSession) -> str:
     grounded = session.context.grounded_response
     if result.action.value == "details":
@@ -93,14 +97,14 @@ def render_sidebar(reset_conversation: Callable[[], None]) -> None:
 
         st.subheader("Latest turn timing")
         if st.session_state.metrics:
-            voice_total = st.session_state.metrics.get("speech_end_to_audio_ready_ms")
+            voice_total = st.session_state.metrics.get("recording_received_to_audio_ready_ms")
             rows = [
-                f"| {_metric_label(name)} | {value:,.0f} ms |"
+                f"| {_metric_label(name)} | {_format_ms(value)} |"
                 for name, value in st.session_state.metrics.items()
                 if name != "total_ms"
             ]
             if voice_total is None and (total := st.session_state.metrics.get("total_ms")) is not None:
-                rows.append(f"| **Turn total** | **{total:,.0f} ms** |")
+                rows.append(f"| **Turn total** | **{_format_ms(total)}** |")
             with st.container(key="timing_table"):
                 st.markdown("| Stage | Time |\n|:--|--:|\n" + "\n".join(rows))
         else:

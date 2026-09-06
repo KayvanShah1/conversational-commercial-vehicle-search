@@ -152,7 +152,7 @@ class VehicleSearchSession:
         )
 
     async def run_voice_turn(
-        self, audio_bytes: bytes, *, filename: str = "recording.wav", speech_ended_at: float
+        self, audio_bytes: bytes, *, filename: str = "recording.wav", recording_received_at: float
     ) -> VoiceTurnResult:
         operation = OperationLogContext("voice_turn")
 
@@ -166,7 +166,7 @@ class VehicleSearchSession:
             update={
                 "stt_ms": transcription.duration_ms,
                 "tts_ms": speech.duration_ms,
-                "speech_end_to_audio_ready_ms": round((audio_ready_at - speech_ended_at) * 1000, 2),
+                "recording_received_to_audio_ready_ms": round((audio_ready_at - recording_received_at) * 1000, 2),
                 "total_ms": completed["duration_ms"],
             }
         )

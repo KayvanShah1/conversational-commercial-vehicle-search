@@ -20,7 +20,7 @@ METRIC_LABELS = {
     "search_ms": "Search",
     "response_ms": "Response",
     "tts_ms": "TTS",
-    "speech_end_to_audio_ready_ms": "Recording received → audio ready",
+    "recording_received_to_audio_ready_ms": "Recording received → audio ready",
     "total_ms": "Total",
 }
 
