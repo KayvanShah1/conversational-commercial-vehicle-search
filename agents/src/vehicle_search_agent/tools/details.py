@@ -12,49 +12,9 @@ from vehicle_search_agent.settings import settings
 from vehicle_search_agent.tools.context import AgentContext, log_tool_call, retry_tool_error, set_response
 
 DetailScope = Literal["one", "all"]
-DetailFieldAlias = Literal[
-    "kilometers_driven",
-    "kilometres_driven",
-    "odometer",
-    "load_capacity",
-    "gross_vehicle_weight",
-    "body",
-    "papers",
-    "verification",
-    "uses",
-    "purpose",
-    "category",
-    "size",
-    "class",
-    "axles",
-    "brochure",
-    "specification",
-    "source",
-]
-DetailFieldInput = DetailField | DetailFieldAlias
 DetailMode = Literal[
     "facts", "capability", "all_details", "best_match", "cheapest", "lowest_km_driven", "highest_payload"
 ]
-
-DETAIL_FIELD_ALIASES: dict[str, DetailField] = {
-    "kilometers_driven": DetailField.km_driven,
-    "kilometres_driven": DetailField.km_driven,
-    "odometer": DetailField.km_driven,
-    "load_capacity": DetailField.payload,
-    "gross_vehicle_weight": DetailField.gvw,
-    "body": DetailField.body_type,
-    "papers": DetailField.papers_verified,
-    "verification": DetailField.papers_verified,
-    "uses": DetailField.purpose_tags,
-    "purpose": DetailField.purpose_tags,
-    "category": DetailField.vehicle_category,
-    "size": DetailField.weight_class,
-    "class": DetailField.weight_class,
-    "axles": DetailField.axle_count,
-    "brochure": DetailField.spec_source_url,
-    "specification": DetailField.spec_source_url,
-    "source": DetailField.spec_source_url,
-}
 
 
 def named_vehicles(vehicles: list[VehicleRecord], text: str) -> list[VehicleRecord]:
@@ -89,17 +49,16 @@ async def get_vehicle_details(
         ),
     ] = "facts",
     fields: Annotated[
-        list[DetailFieldInput] | None,
+        list[DetailField] | None,
         Field(
             min_length=1,
             max_length=15,
             description=(
                 "Only the attributes explicitly requested; omit only for a comparison or capability mode. "
-                "Map user wording to fields: kilometers driven, kilometres driven, or odometer -> km_driven; "
-                "load capacity -> payload; gross vehicle weight -> gvw; body -> body_type; papers or verification "
-                "-> papers_verified; uses or purpose -> purpose_tags; category -> vehicle_category; size or class "
-                "-> weight_class; axles -> axle_count; brochure, specification, or source -> spec_source_url. "
-                "Never map mileage or fuel economy to km_driven"
+                "Interpret synonymous, similar-sounding, inflected, or paraphrased attribute wording by meaning, "
+                "then emit the closest exact field value declared by this schema. Never copy the user's wording "
+                "as a new field or invent a field. km_driven is an odometer reading and must never answer mileage "
+                "or fuel-economy requests"
             ),
         ),
     ] = None,
@@ -136,11 +95,6 @@ async def get_vehicle_details(
     log_tool_call(context, "get_vehicle_details")
     context.action = AgentAction.details
     state = context.state
-
-    if fields:
-        fields = [
-            DETAIL_FIELD_ALIASES[field] if field in DETAIL_FIELD_ALIASES else DetailField(field) for field in fields
-        ]
 
     comparison_fields = {
         "best_match": list(DetailField),
