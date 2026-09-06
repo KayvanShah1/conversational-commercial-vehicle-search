@@ -53,7 +53,7 @@ Deliberately absent: generated SQL, a raw database tool, multi-agent routing, ge
 
 ## Ranking
 
-Search applies hard filters first; ranking only orders valid candidates. Purpose fit carries 30%, while verified papers, budget proximity, lower mileage, and condition carry 15% each and newer year carries 10%. Signals unavailable for a query are zeroed and the remaining weights are normalized. The UI exposes the numeric breakdown for each returned listing.
+Search applies hard filters first; ranking only orders valid candidates. Purpose fit carries 30%, while verified papers, budget proximity, fewer kilometres driven, and condition carry 15% each and newer year carries 10%. Signals unavailable for a query are zeroed and the remaining weights are normalized. The UI exposes the numeric breakdown for each returned listing.
 
 ## Fallback and failure behavior
 

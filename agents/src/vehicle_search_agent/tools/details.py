@@ -13,7 +13,7 @@ from vehicle_search_agent.tools.context import AgentContext, log_tool_call, retr
 
 DetailScope = Literal["one", "all"]
 DetailMode = Literal[
-    "facts", "capability", "all_details", "best_match", "cheapest", "lowest_mileage", "highest_payload"
+    "facts", "capability", "all_details", "best_match", "cheapest", "lowest_km_driven", "highest_payload"
 ]
 
 
@@ -43,7 +43,8 @@ async def get_vehicle_details(
         Field(
             description=(
                 "facts for named fields; capability for can-carry questions; all_details only for "
-                "explicit requests for every detail; otherwise choose the requested comparison mode"
+                "explicit requests for every detail; lowest_km_driven compares odometer readings, "
+                "not fuel mileage; otherwise choose the requested comparison mode"
             )
         ),
     ] = "facts",
@@ -52,7 +53,10 @@ async def get_vehicle_details(
         Field(
             min_length=1,
             max_length=15,
-            description="Only the attributes explicitly requested; omit only for a comparison or capability mode",
+            description=(
+                "Only the attributes explicitly requested; omit only for a comparison or capability mode. "
+                "km_driven is an odometer reading and must never answer mileage or fuel-economy requests"
+            ),
         ),
     ]
     | None = None,
@@ -80,6 +84,8 @@ async def get_vehicle_details(
     example, "second one ka payload aur GVW" means scope=one, result_number=2,
     mode=facts, and fields=[payload, gvw]. Capability questions request payload,
     gvw, body_type, and purpose_tags; brochure requests use spec_source_url.
+    km_driven is the odometer reading. The catalog has no fuel-mileage, kmpl,
+    km/l, or km/kg data, so never substitute km_driven for those requests.
     Never call this once per result when scope=all. Accepted fields and modes
     are declared in the tool schema.
     """
@@ -91,7 +97,7 @@ async def get_vehicle_details(
     comparison_fields = {
         "best_match": list(DetailField),
         "cheapest": [DetailField.price],
-        "lowest_mileage": [DetailField.km_driven],
+        "lowest_km_driven": [DetailField.km_driven],
         "highest_payload": [DetailField.payload],
     }
     if mode == "capability":

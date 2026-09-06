@@ -18,10 +18,14 @@ def _cheapest(vehicles: list[VehicleRecord]) -> ComparisonResult:
     return f"Cheapest: {vehicle.make} {vehicle.model} at {value}", (vehicle.make, vehicle.model, value)
 
 
-def _lowest_mileage(vehicles: list[VehicleRecord]) -> ComparisonResult:
+def _lowest_km_driven(vehicles: list[VehicleRecord]) -> ComparisonResult:
     vehicle = min(vehicles, key=lambda item: item.km_driven)
     value = f"{vehicle.km_driven:,} km"
-    return f"Lowest kilometres: {vehicle.make} {vehicle.model} at {value}", (vehicle.make, vehicle.model, value)
+    return f"Lowest kilometres driven: {vehicle.make} {vehicle.model} at {value}", (
+        vehicle.make,
+        vehicle.model,
+        value,
+    )
 
 
 def _highest_payload(vehicles: list[VehicleRecord]) -> ComparisonResult | None:
@@ -42,7 +46,7 @@ def _highest_payload(vehicles: list[VehicleRecord]) -> ComparisonResult | None:
 COMPARISON_RENDERERS: dict[str, ComparisonRenderer] = {
     "best_match": _best_match,
     "cheapest": _cheapest,
-    "lowest_mileage": _lowest_mileage,
+    "lowest_km_driven": _lowest_km_driven,
     "highest_payload": _highest_payload,
 }
 

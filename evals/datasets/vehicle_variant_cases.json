@@ -126,7 +126,7 @@
     ]
   },
   {
-    "id": "attribute_mileage_and_condition",
+    "id": "attribute_km_driven_and_condition",
     "conversation_id": "attribute_inquiries",
     "utterance": "And the kilometres driven and condition of the second one?",
     "expected_action": "details",

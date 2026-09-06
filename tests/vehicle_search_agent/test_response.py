@@ -44,7 +44,7 @@ def _ranked(vehicle: VehicleRecord, total: float) -> RankedVehicle:
         purpose=0,
         papers_verified=0,
         budget=0,
-        mileage=0,
+        km_driven=0,
         condition=0,
         year=0,
         total=total,
@@ -103,6 +103,20 @@ def test_cheapest_comparison_is_explicit_and_grounded():
     )
 
     assert response.fallback.endswith("Cheapest: Tata Cheap at INR 8L.")
+
+
+def test_km_driven_comparison_uses_unambiguous_odometer_wording():
+    response = details_response(
+        [
+            _priced_vehicle("Higher", 800_000),
+            _priced_vehicle("Lower", 700_000).model_copy(update={"km_driven": 10_000}),
+        ],
+        [DetailField.km_driven],
+        comparison="lowest_km_driven",
+    )
+
+    assert response.fallback.endswith("Lowest kilometres driven: Tata Lower at 10,000 km.")
+    assert "mileage" not in response.fallback.casefold()
 
 
 def test_vehicle_source_link_is_returned_as_a_grounded_detail():

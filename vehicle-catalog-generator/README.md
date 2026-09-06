@@ -22,7 +22,7 @@ flowchart LR
 ```
 
 - **Manufacturer-backed attributes:** linked through `spec_source_url` in both listing and reference artifacts.
-- **Synthetic generation anchors:** `new_vehicle_price_anchor_inr` and the configured depreciation, mileage, condition, and market-noise assumptions create realistic demo prices; they are not authoritative market quotations.
+- **Synthetic generation anchors:** `new_vehicle_price_anchor_inr` and the configured depreciation, kilometres-driven, condition, and market-noise assumptions create realistic demo prices; they are not authoritative market quotations.
 - **Derived or estimated attributes:** `payload_is_estimated=true` identifies payload values inferred from related published specifications rather than directly published for the exact configuration.
 
 Payload is retained only where a defensible reference value is available; GVW remains populated for all catalog records rather than manufacturing unsupported payload values. `payload_kg` therefore remains nullable in both the reference and listing models.

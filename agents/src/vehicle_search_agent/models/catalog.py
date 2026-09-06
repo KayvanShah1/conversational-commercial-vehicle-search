@@ -30,7 +30,7 @@ class RankingBreakdown(BaseModel):
     purpose: float = Field(ge=0)
     papers_verified: float = Field(ge=0)
     budget: float = Field(ge=0)
-    mileage: float = Field(ge=0)
+    km_driven: float = Field(ge=0)
     condition: float = Field(ge=0)
     year: float = Field(ge=0)
     total: float = Field(ge=0)

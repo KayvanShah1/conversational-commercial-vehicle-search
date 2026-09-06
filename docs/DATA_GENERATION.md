@@ -56,14 +56,14 @@ Once a vehicle reference is selected, listing-specific attributes are generated.
 | Year | Random vehicle age within the configured range |
 | KM driven | Based on vehicle age and annual usage range |
 | Condition | Weighted choice of `excellent`, `good`, or `fair` |
-| Price | New-vehicle anchor adjusted for age, mileage, condition, and market noise |
+| Price | New-vehicle anchor adjusted for age, kilometres driven, condition, and market noise |
 | City | Weighted sampling across supported cities |
 | Papers verified | Configurable probability |
 | Listing ID | Deterministic generated identifier |
 | Specification source URL | Link to official vehicle listing/ selected vehicle reference spec sheet|
 | Payload basis | `payload_is_estimated` follows the selected reference and is shown with the value in agent responses and result cards |
 
-Mileage is tied to vehicle age rather than sampled independently.
+Kilometres driven are tied to vehicle age rather than sampled independently.
 
 ```text
 km_driven ≈ age × annual_km × usage_variance
@@ -75,7 +75,7 @@ Price is calculated using an intentionally simple and inspectable depreciation m
 used_price =
     new_price_anchor
     × age_factor
-    × mileage_factor
+    × km_driven_factor
     × condition_factor
     × market_noise
 ```
@@ -101,7 +101,7 @@ Additional controlled assumptions include:
 - vehicle weight-class distribution
 - condition distribution
 - depreciation rate
-- mileage depreciation
+- kilometres-driven depreciation
 - market-price variation
 - city distribution
 
@@ -148,4 +148,4 @@ This keeps the catalog predictable enough for hard-filter and evaluation require
 
 The catalog is synthetic and intended only to support the voice-search system.
 
-It does not attempt to reproduce actual used-commercial-vehicle inventory or market pricing. Manufacturer references are used to keep vehicle characteristics plausible, while listing-specific attributes such as age, mileage, price, city, condition, and verification status remain synthetic.
+It does not attempt to reproduce actual used-commercial-vehicle inventory or market pricing. Manufacturer references are used to keep vehicle characteristics plausible, while listing-specific attributes such as age, kilometres driven, price, city, condition, and verification status remain synthetic.

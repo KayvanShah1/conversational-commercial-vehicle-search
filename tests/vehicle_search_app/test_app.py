@@ -122,7 +122,7 @@ def test_streamlit_app_renders_without_framework_error() -> None:
                     purpose=1,
                     papers_verified=1,
                     budget=1,
-                    mileage=1,
+                    km_driven=1,
                     condition=1,
                     year=1,
                     total=6,

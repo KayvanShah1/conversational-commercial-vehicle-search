@@ -6,6 +6,7 @@ import vehicle_search_agent.tools.details as details_tool_module
 import vehicle_search_agent.tools.search as search_tool_module
 from agents.tool_context import ToolContext
 from vehicle_search_agent.models import ConversationState, VehicleRecord, VehicleSearchResult
+from vehicle_search_agent.response import GroundedResponse
 from vehicle_search_agent.tools import AgentContext, get_vehicle_details, search_vehicles
 
 
@@ -50,6 +51,18 @@ def _invoke(context: AgentContext, arguments: dict) -> None:
         tool_arguments=encoded,
     )
     asyncio.run(get_vehicle_details.on_invoke_tool(tool_context, encoded))
+
+
+def test_rephrase_instruction_keeps_km_driven_distinct_from_fuel_mileage():
+    response = GroundedResponse(
+        fallback="Tata Test has covered 20,000 km.",
+        facts=("20,000 km",),
+        checks=(("20,000",),),
+    )
+
+    request = tool_context_module.rephrase_request(response, first_turn=False)
+
+    assert "Never describe kilometres driven or an odometer reading as mileage or fuel economy." in request
 
 
 def test_search_uses_the_models_typed_slot_extraction(monkeypatch):

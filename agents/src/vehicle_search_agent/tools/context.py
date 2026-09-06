@@ -69,7 +69,9 @@ def rephrase_request(response: GroundedResponse, *, first_turn: bool) -> str:
     introduction = " Begin with a short, warm introduction as Vivi." if first_turn else ""
     return (
         "Write one concise, natural reply. Preserve every catalog value and key label below, "
-        f"but connect and rephrase them naturally. Mention each vehicle once. Do not add facts or numbers.{introduction}\n\n"
+        "but connect and rephrase them naturally. Mention each vehicle once. Do not add facts or numbers. "
+        "Never describe kilometres driven or an odometer reading as mileage or fuel economy."
+        f"{introduction}\n\n"
         f"Grounded facts:\n{facts}"
     )
 

@@ -88,9 +88,7 @@ def render_sidebar(reset_conversation: Callable[[], None]) -> None:
                     f"| TTS output | {totals['tts_characters']:,} characters | "
                     f"{_format_cost(totals['estimated_tts_list_cost_inr'])} |"
                 )
-            total_rows.append(
-                f"| **Conversation total** |  | **{_format_cost(totals['estimated_list_cost_inr'])}** |"
-            )
+            total_rows.append(f"| **Conversation total** |  | **{_format_cost(totals['estimated_list_cost_inr'])}** |")
             with st.container(key="conversation_table"):
                 st.markdown("| Usage | Total | Est. cost |\n|:--|--:|--:|\n" + "\n".join(total_rows))
             st.caption("Conversation cost sums completed-turn estimates; free-tier spend may be zero.")
@@ -162,10 +160,10 @@ def render_matches(result: VehicleSearchResult | None) -> None:
                 st.caption(f"{vehicle['Year']} · {vehicle['City']} · {vehicle['Body'].title()} body")
 
             with st.container(key=f"vehicle_metrics_{index}", gap="small"):
-                price, mileage = st.columns([3, 2], gap="medium", vertical_alignment="top")
+                price, kilometres = st.columns([3, 2], gap="medium", vertical_alignment="top")
                 with price:
                     st.metric("Price", _format_price(vehicle["Price (INR)"]), border=False)
-                with mileage:
+                with kilometres:
                     st.metric("KM driven", f"{vehicle['KM']:,}", border=False)
 
             with st.container(key=f"vehicle_specs_{index}", gap="small"):
@@ -197,7 +195,7 @@ def render_matches(result: VehicleSearchResult | None) -> None:
             width="stretch",
             column_config={
                 "Price (INR)": st.column_config.NumberColumn(format="₹%d", width="small"),
-                "KM": st.column_config.NumberColumn(format="%d km", width="small"),
+                "KM driven": st.column_config.NumberColumn(format="%d km", width="small"),
                 "Payload (kg)": st.column_config.NumberColumn(format="%d kg"),
                 "GVW (kg)": st.column_config.NumberColumn(format="%d kg"),
                 "Specification source": st.column_config.LinkColumn(display_text="Open source"),
@@ -212,7 +210,7 @@ def render_matches(result: VehicleSearchResult | None) -> None:
                 "Purpose": item.score.purpose,
                 "Papers": item.score.papers_verified,
                 "Budget": item.score.budget,
-                "Mileage": item.score.mileage,
+                "KM driven": item.score.km_driven,
                 "Condition": item.score.condition,
                 "Year": item.score.year,
             }
@@ -229,7 +227,7 @@ def render_matches(result: VehicleSearchResult | None) -> None:
                         "Purpose fit": "30%",
                         "Verified papers": "15%",
                         "Within budget": "15%",
-                        "Lower mileage": "15%",
+                        "Lower KM driven": "15%",
                         "Condition": "15%",
                         "Newer year": "10%",
                     }

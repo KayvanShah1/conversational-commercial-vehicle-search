@@ -55,14 +55,14 @@ def calculate_price(
         GENERATION_PARAMETERS.minimum_age_factor,
         (1 - GENERATION_PARAMETERS.annual_depreciation_rate) ** age,
     )
-    mileage_factor = max(
-        GENERATION_PARAMETERS.minimum_mileage_factor,
-        1 - (km_driven / GENERATION_PARAMETERS.mileage_depreciation_distance_km),
+    km_driven_factor = max(
+        GENERATION_PARAMETERS.minimum_km_driven_factor,
+        1 - (km_driven / GENERATION_PARAMETERS.km_driven_depreciation_distance),
     )
     condition_factor = CONDITION_PRICE_FACTORS[condition]
     market_noise = random.uniform(*GENERATION_PARAMETERS.market_noise_range)
 
-    price = new_vehicle_price_anchor_inr * age_factor * mileage_factor * condition_factor * market_noise
+    price = new_vehicle_price_anchor_inr * age_factor * km_driven_factor * condition_factor * market_noise
     rounded_price = round(price / GENERATION_PARAMETERS.price_rounding_interval_inr)
     return max(
         GENERATION_PARAMETERS.minimum_price_inr,

@@ -16,8 +16,8 @@ class GenerationParameters:
     minimum_km_driven: int = 1_000
     annual_depreciation_rate: float = 0.10
     minimum_age_factor: float = 0.30
-    mileage_depreciation_distance_km: int = 500_000
-    minimum_mileage_factor: float = 0.75
+    km_driven_depreciation_distance: int = 500_000
+    minimum_km_driven_factor: float = 0.75
     market_noise_range: tuple[float, float] = (0.92, 1.08)
     minimum_price_inr: int = 150_000
     price_rounding_interval_inr: int = 5_000

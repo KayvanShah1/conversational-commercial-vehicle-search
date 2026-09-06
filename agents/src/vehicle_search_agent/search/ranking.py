@@ -13,7 +13,7 @@ RANKING_WEIGHTS = {
     "purpose": 0.30,
     "papers_verified": 0.15,
     "budget": 0.15,
-    "mileage": 0.15,
+    "km_driven": 0.15,
     "condition": 0.15,
     "year": 0.10,
 }
@@ -100,7 +100,7 @@ def rank(vehicles: list[VehicleRecord], filters: SearchFilters) -> list[RankedVe
             "purpose": float(filters.purpose in purpose_tags) if filters.purpose else 0.0,
             "papers_verified": float(vehicle.papers_verified),
             "budget": scaled(vehicle.price_inr, *ranges["price"], lower_is_better=True),
-            "mileage": scaled(vehicle.km_driven, *ranges["kilometres"], lower_is_better=True),
+            "km_driven": scaled(vehicle.km_driven, *ranges["kilometres"], lower_is_better=True),
             "condition": CONDITION_SCORE.get(vehicle.condition.casefold(), 0.0),
             "year": scaled(vehicle.year, *ranges["year"], lower_is_better=False),
         }
