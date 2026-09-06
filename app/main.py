@@ -17,7 +17,6 @@ def _initialize_state() -> None:
     defaults = {
         "session_id": f"web-{uuid4().hex}",
         "vehicle_session": None,
-        "last_search_result": None,
         "messages": [],
         "metrics": {},
         "usage": {},
@@ -26,8 +25,6 @@ def _initialize_state() -> None:
             "total_ms": 0.0,
             **dict.fromkeys(CUMULATIVE_USAGE_FIELDS, 0),
         },
-        "reply_audio": None,
-        "audio_format": "wav",
         "processed_audio": None,
         "error": None,
     }
@@ -42,16 +39,25 @@ def _session() -> VehicleSearchSession:
     return st.session_state.vehicle_session
 
 
-def _save_result(result: AgentTurnResult, session: VehicleSearchSession) -> None:
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": display_response(result, session),
-            "tool": TOOL_NAMES[result.action.value],
-        }
-    )
+def _save_result(
+    result: AgentTurnResult,
+    session: VehicleSearchSession,
+    *,
+    audio: bytes | None = None,
+    audio_format: str | None = None,
+) -> None:
+    message = {
+        "role": "assistant",
+        "content": display_response(result, session),
+        "tool": TOOL_NAMES[result.action.value],
+        "turn_number": result.turn_number,
+    }
     if session.context.last_search_result is not None:
-        st.session_state.last_search_result = session.context.last_search_result
+        message["search_result"] = session.context.last_search_result.model_copy(deep=True)
+    if audio is not None and audio_format is not None:
+        message["audio"] = audio
+        message["audio_format"] = audio_format
+    st.session_state.messages.append(message)
     st.session_state.metrics = result.metrics.model_dump(mode="json", exclude_none=True)
     st.session_state.usage = result.usage.model_dump(mode="json", exclude_none=True)
     _update_conversation_totals(result)
@@ -68,7 +74,6 @@ def _update_conversation_totals(result: AgentTurnResult) -> None:
 
 def _run_text(message: str) -> None:
     st.session_state.messages.append({"role": "user", "content": message})
-    st.session_state.reply_audio = None
     try:
         with st.spinner("Vivi is thinking..."):
             session = _session()
@@ -79,7 +84,6 @@ def _run_text(message: str) -> None:
 
 
 def _run_voice(audio_bytes: bytes, filename: str, recording_received_at: float) -> None:
-    st.session_state.reply_audio = None
     try:
         with st.spinner("Vivi is listening..."):
             session = _session()
@@ -91,9 +95,7 @@ def _run_voice(audio_bytes: bytes, filename: str, recording_received_at: float) 
                 )
             )
         st.session_state.messages.append({"role": "user", "content": result.transcript})
-        _save_result(result, session)
-        st.session_state.reply_audio = result.audio
-        st.session_state.audio_format = result.audio_format
+        _save_result(result, session, audio=result.audio, audio_format=result.audio_format)
     except Exception as error:  # noqa: BLE001 - keep the live demo usable after a provider failure
         st.session_state.error = f"Voice turn failed: {type(error).__name__}. Check the terminal logs and retry."
 
@@ -139,20 +141,18 @@ with st.chat_message("assistant"):
 
 render_starter_questions(_run_text)
 
-for message in st.session_state.messages:
+for index, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         if message["role"] == "assistant":
             st.markdown(message["content"])
+            if audio := message.get("audio"):
+                st.audio(audio, format=f"audio/{message['audio_format']}")
             if tool := message.get("tool"):
                 st.caption(f"Tool used: `{tool}`")
         else:
             st.write(message["content"])
-
-if st.session_state.reply_audio:
-    with st.chat_message("assistant"):
-        st.audio(st.session_state.reply_audio, format=f"audio/{st.session_state.audio_format}")
-
-render_matches(st.session_state.last_search_result)
+    if search_result := message.get("search_result"):
+        render_matches(search_result, key_prefix=f"message_{index}")
 
 if st.session_state.error:
     st.error(st.session_state.error)

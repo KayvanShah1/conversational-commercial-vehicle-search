@@ -20,6 +20,49 @@ STARTER_QUESTIONS = {
 }
 
 
+def _search_result(listing_id: str, model: str, *, budget_max: int = 800_000) -> VehicleSearchResult:
+    return VehicleSearchResult(
+        executed_filters=SearchFilters(budget_max=budget_max, purpose="city_delivery"),
+        changed_fields=[],
+        vehicles=[
+            RankedVehicle(
+                vehicle=VehicleRecord(
+                    listing_id=listing_id,
+                    make="Mahindra",
+                    model=model,
+                    year=2024,
+                    price_inr=440_000,
+                    km_driven=29_919,
+                    fuel="Diesel",
+                    payload_kg=815,
+                    payload_is_estimated=True,
+                    gvw_kg=1_605,
+                    vehicle_category="mini_truck",
+                    weight_class="light",
+                    body_type="box",
+                    axle_count=2,
+                    city="Chennai",
+                    papers_verified=True,
+                    condition="excellent",
+                    purpose_tags=["city_delivery"],
+                    spec_source_url="https://example.com/jeeto",
+                ),
+                score=RankingBreakdown(
+                    purpose=1,
+                    papers_verified=1,
+                    budget=1,
+                    km_driven=1,
+                    condition=1,
+                    year=1,
+                    total=6,
+                ),
+            )
+        ],
+        total_matches=1,
+        search_ms=10,
+    )
+
+
 def test_zero_result_response_is_rendered_as_one_sentence(monkeypatch) -> None:
     monkeypatch.syspath_prepend(str(ROOT / "app"))
     from components import display_response
@@ -55,6 +98,8 @@ def test_streamlit_app_renders_without_framework_error() -> None:
             "role": "assistant",
             "content": "We have listings in Ahmedabad and Mumbai.",
             "tool": "list_catalog_options",
+            "audio": b"first audio",
+            "audio_format": "wav",
         },
     ]
     app.session_state.metrics = {
@@ -92,45 +137,18 @@ def test_streamlit_app_renders_without_framework_error() -> None:
         "estimated_tts_list_cost_inr": 0.006,
         "estimated_list_cost_inr": 0.0123,
     }
-    app.session_state.last_search_result = VehicleSearchResult(
-        executed_filters=SearchFilters(budget_max=800_000, purpose="city_delivery"),
-        changed_fields=[],
-        vehicles=[
-            RankedVehicle(
-                vehicle=VehicleRecord(
-                    listing_id="VEH-TEST",
-                    make="Mahindra",
-                    model="Jeeto Strong Diesel",
-                    year=2024,
-                    price_inr=440_000,
-                    km_driven=29_919,
-                    fuel="Diesel",
-                    payload_kg=815,
-                    payload_is_estimated=True,
-                    gvw_kg=1_605,
-                    vehicle_category="mini_truck",
-                    weight_class="light",
-                    body_type="box",
-                    axle_count=2,
-                    city="Chennai",
-                    papers_verified=True,
-                    condition="excellent",
-                    purpose_tags=["city_delivery"],
-                    spec_source_url="https://example.com/jeeto",
-                ),
-                score=RankingBreakdown(
-                    purpose=1,
-                    papers_verified=1,
-                    budget=1,
-                    km_driven=1,
-                    condition=1,
-                    year=1,
-                    total=6,
-                ),
-            )
-        ],
-        total_matches=1,
-        search_ms=10,
+    app.session_state.messages.extend(
+        [
+            {"role": "user", "content": "Actually, keep it under ₹6 lakh."},
+            {
+                "role": "assistant",
+                "content": "Here is the updated match.",
+                "tool": "search_vehicles",
+                "audio": b"second audio",
+                "audio_format": "wav",
+                "search_result": _search_result("VEH-TEST", "Jeeto Strong Diesel", budget_max=600_000),
+            },
+        ]
     )
     app.run(timeout=10)
 
@@ -160,8 +178,36 @@ def test_streamlit_app_renders_without_framework_error() -> None:
     assert any("Mahindra Jeeto Strong Diesel" in markdown.value for markdown in app.markdown)
     assert any(metric.label == "Est. payload" for metric in app.metric)
     assert any(metric.value == "815 kg" for metric in app.metric)
+    assert len(app.get("audio")) == 2
 
     app.session_state.metrics = {"understanding_ms": 123, "total_ms": 456}
     app.run(timeout=10)
 
     assert any("| **Turn total** | **456 ms** |" in markdown.value for markdown in app.markdown)
+
+
+def test_search_cards_remain_in_conversation_history() -> None:
+    app = AppTest.from_file(APP_PATH).run(timeout=10)
+    app.session_state.messages = [
+        {"role": "user", "content": "Show city-delivery trucks under ₹8 lakh."},
+        {
+            "role": "assistant",
+            "content": "Here is the first match.",
+            "tool": "search_vehicles",
+            "search_result": _search_result("VEH-FIRST", "First Match"),
+        },
+        {"role": "user", "content": "Actually, keep it under ₹6 lakh."},
+        {
+            "role": "assistant",
+            "content": "Here is the updated match.",
+            "tool": "search_vehicles",
+            "search_result": _search_result("VEH-SECOND", "Updated Match", budget_max=600_000),
+        },
+    ]
+
+    app.run(timeout=10)
+
+    rendered_markdown = [markdown.value for markdown in app.markdown]
+    assert any("Mahindra First Match" in value for value in rendered_markdown)
+    assert any("Mahindra Updated Match" in value for value in rendered_markdown)
+    assert sum(subheader.value == "Top matches" for subheader in app.get("subheader")) == 2
