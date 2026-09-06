@@ -99,6 +99,11 @@ class VehicleSearchSession:
             )
 
         search_result = self.context.last_search_result
+        turn_result_ids = (
+            [item.vehicle.listing_id for item in search_result.vehicles]
+            if search_result is not None
+            else list(self.context.state.last_result_ids)
+        )
         completed = operation.completed_extra(status="succeeded")
         sdk_usage = run_result.context_wrapper.usage
         if discarded_usage is not None:
@@ -128,7 +133,7 @@ class VehicleSearchSession:
             session_id=self.session_id,
             turn_number=self.context.state.turn_number,
             active_filters=self.context.state.active_filters.model_dump(exclude_none=True),
-            result_ids=self.context.state.last_result_ids,
+            result_ids=turn_result_ids,
             timings_ms=metrics.model_dump(exclude_none=True),
             usage=usage.model_dump(exclude_none=True),
         )
@@ -141,7 +146,7 @@ class VehicleSearchSession:
             action=self.context.action,
             spoken_response=spoken_response,
             active_filters=self.context.state.active_filters,
-            last_result_ids=self.context.state.last_result_ids,
+            last_result_ids=turn_result_ids,
             changed_fields=search_result.changed_fields if search_result else [],
             executed_filters=search_result.executed_filters if search_result else None,
             model_used=(

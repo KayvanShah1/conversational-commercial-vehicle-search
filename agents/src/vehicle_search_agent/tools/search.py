@@ -22,7 +22,7 @@ from vehicle_search_agent.models import (
 from vehicle_search_agent.response import search_response
 from vehicle_search_agent.search import search_catalog
 from vehicle_search_agent.settings import settings
-from vehicle_search_agent.tools.context import AgentContext, logger, retry_tool_error, set_response
+from vehicle_search_agent.tools.context import AgentContext, log_tool_call, retry_tool_error, set_response
 
 SearchMode = Literal["new", "refine", "more"]
 
@@ -107,7 +107,8 @@ async def search_vehicles(
 
     Accepted values and numeric constraints are declared in the tool schema.
     """
-    logger.info("tool_called", extra={"tool": "search_vehicles"})
+    context = ctx.context
+    log_tool_call(context, "search_vehicles")
     patch = SlotPatch(
         budget_min=budget_min,
         budget_max=budget_max,
@@ -124,7 +125,6 @@ async def search_vehicles(
         papers_verified=papers_verified,
         clear_fields=clear_fields or [],
     )
-    context = ctx.context
     context.action = AgentAction.search
 
     current_filters = SearchFilters() if mode == "new" else context.state.active_filters
@@ -133,12 +133,13 @@ async def search_vehicles(
     result = await asyncio.to_thread(search_catalog, filters, changed_fields, excluded_ids)
 
     context.state.active_filters = filters
-    context.state.last_result_ids = [item.vehicle.listing_id for item in result.vehicles]
-    context.state.last_result_labels = [f"{item.vehicle.make} {item.vehicle.model}" for item in result.vehicles]
-    if mode == "more":
-        context.state.shown_result_ids.extend(context.state.last_result_ids)
-    else:
-        context.state.shown_result_ids = list(context.state.last_result_ids)
-    context.state.selected_listing_id = None
+    if result.vehicles:
+        context.state.last_result_ids = [item.vehicle.listing_id for item in result.vehicles]
+        context.state.last_result_labels = [f"{item.vehicle.make} {item.vehicle.model}" for item in result.vehicles]
+        if mode == "more":
+            context.state.shown_result_ids.extend(context.state.last_result_ids)
+        else:
+            context.state.shown_result_ids = list(context.state.last_result_ids)
+        context.state.selected_listing_id = None
     context.last_search_result = result
     return set_response(context, search_response(result))
