@@ -29,14 +29,18 @@ def llm_list_cost_usd(model: str, input_tokens: int, output_tokens: int) -> floa
     return (input_tokens * input_rate + output_tokens * output_rate) / 1_000_000
 
 
-def voice_list_cost_usd(
-    audio_seconds: float | None, characters: int, *, stt_model: str, tts_model: str
-) -> float | None:
-    stt_rate = STT_USD_PER_HOUR.get(stt_model)
-    tts_rate = TTS_USD_PER_MILLION_CHARACTERS.get(tts_model)
-    if audio_seconds is None or stt_rate is None or tts_rate is None:
+def stt_list_cost_usd(audio_seconds: float | None, model: str) -> float | None:
+    rate = STT_USD_PER_HOUR.get(model)
+    if audio_seconds is None or rate is None:
         return None
-    return audio_seconds / 3600 * stt_rate + characters / 1_000_000 * tts_rate
+    return audio_seconds / 3600 * rate
+
+
+def tts_list_cost_usd(characters: int, model: str) -> float | None:
+    rate = TTS_USD_PER_MILLION_CHARACTERS.get(model)
+    if rate is None:
+        return None
+    return characters / 1_000_000 * rate
 
 
 class AgentStageTimer(RunHooks[AgentContext]):

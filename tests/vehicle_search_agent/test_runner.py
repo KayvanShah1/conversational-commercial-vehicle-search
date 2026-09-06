@@ -1,6 +1,7 @@
 import asyncio
 from types import SimpleNamespace
 
+import pytest
 from agents.usage import Usage
 from vehicle_search_agent.models import (
     AgentAction,
@@ -163,7 +164,11 @@ def test_voice_turn_measures_server_receipt_to_audio_ready(monkeypatch):
             changed_fields=[],
             model_used="openai/gpt-oss-120b",
             metrics=TurnMetrics(total_ms=300.0),
-            usage=TurnUsage(estimated_list_cost_usd=0.001, estimated_list_cost_inr=0.09543),
+            usage=TurnUsage(
+                estimated_llm_list_cost_inr=0.09543,
+                estimated_list_cost_usd=0.001,
+                estimated_list_cost_inr=0.09543,
+            ),
         )
 
     session = object.__new__(VehicleSearchSession)
@@ -177,3 +182,7 @@ def test_voice_turn_measures_server_receipt_to_audio_ready(monkeypatch):
     assert result.metrics.tts_ms == 200.0
     assert result.usage.audio_input_seconds == 2.0
     assert result.usage.tts_characters == 20
+    assert result.usage.estimated_llm_list_cost_inr == 0.09543
+    assert result.usage.estimated_stt_list_cost_inr == pytest.approx(0.0021206667)
+    assert result.usage.estimated_tts_list_cost_inr == pytest.approx(0.0419892)
+    assert result.usage.estimated_list_cost_inr == pytest.approx(0.1395398667)

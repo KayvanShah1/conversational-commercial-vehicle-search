@@ -64,27 +64,43 @@ def render_sidebar(reset_conversation: Callable[[], None]) -> None:
         totals = st.session_state.conversation_totals
         if totals["turns"]:
             total_rows = [
-                f"| Completed turns | {totals['turns']:,} |",
-                f"| Processing time | {_format_duration(totals['total_ms'])} |",
-                f"| LLM requests | {totals['llm_requests']:,} |",
-                f"| Total tokens | {totals['total_tokens']:,} |",
-                f"| Est. list cost | ₹{totals['estimated_list_cost_inr']:.4f} |",
+                f"| Completed turns | {totals['turns']:,} |  |",
+                f"| Processing time | {_format_duration(totals['total_ms'])} |  |",
+                f"| LLM requests | {totals['llm_requests']:,} |  |",
+                (
+                    f"| LLM tokens | {totals['total_tokens']:,} | "
+                    f"{_format_cost(totals['estimated_llm_list_cost_inr'])} |"
+                ),
             ]
+            if totals["audio_input_seconds"]:
+                total_rows.append(
+                    f"| STT audio | {totals['audio_input_seconds']:.2f} s | "
+                    f"{_format_cost(totals['estimated_stt_list_cost_inr'])} |"
+                )
+            if totals["tts_characters"]:
+                total_rows.append(
+                    f"| TTS output | {totals['tts_characters']:,} characters | "
+                    f"{_format_cost(totals['estimated_tts_list_cost_inr'])} |"
+                )
+            total_rows.append(
+                f"| **Conversation total** |  | **{_format_cost(totals['estimated_list_cost_inr'])}** |"
+            )
             with st.container(key="conversation_table"):
-                st.markdown("| Metric | Total |\n|:--|--:|\n" + "\n".join(total_rows))
-            st.caption("Completed-turn totals; free-tier spend may be zero.")
+                st.markdown("| Usage | Total | Est. cost |\n|:--|--:|--:|\n" + "\n".join(total_rows))
+            st.caption("Conversation cost sums completed-turn estimates; free-tier spend may be zero.")
         else:
             st.caption("Time, tokens and estimated cost will accumulate here.")
 
         st.subheader("Latest turn timing")
         if st.session_state.metrics:
+            voice_total = st.session_state.metrics.get("speech_end_to_audio_ready_ms")
             rows = [
                 f"| {_metric_label(name)} | {value:,.0f} ms |"
                 for name, value in st.session_state.metrics.items()
                 if name != "total_ms"
             ]
-            if total := st.session_state.metrics.get("total_ms"):
-                rows.append(f"| **Total** | **{total:,.0f} ms** |")
+            if voice_total is None and (total := st.session_state.metrics.get("total_ms")) is not None:
+                rows.append(f"| **Turn total** | **{total:,.0f} ms** |")
             with st.container(key="timing_table"):
                 st.markdown("| Stage | Time |\n|:--|--:|\n" + "\n".join(rows))
         else:
@@ -94,21 +110,29 @@ def render_sidebar(reset_conversation: Callable[[], None]) -> None:
         if st.session_state.usage:
             usage = st.session_state.usage
             usage_rows = [
-                f"| LLM requests | {usage['llm_requests']:,} |",
-                f"| Context / input tokens | {usage['input_tokens']:,} |",
-                f"| Cached context tokens | {usage.get('cached_input_tokens', 0):,} |",
-                f"| Output tokens | {usage['output_tokens']:,} |",
-                f"| Reasoning tokens | {usage.get('reasoning_tokens', 0):,} |",
-                f"| **Total tokens** | **{usage['total_tokens']:,}** |",
+                f"| LLM requests | {usage['llm_requests']:,} |  |",
+                f"| Context / input tokens | {usage['input_tokens']:,} |  |",
+                f"| Cached context tokens | {usage.get('cached_input_tokens', 0):,} |  |",
+                f"| Output tokens | {usage['output_tokens']:,} |  |",
+                f"| Reasoning tokens | {usage.get('reasoning_tokens', 0):,} |  |",
+                (
+                    f"| **Total LLM tokens** | **{usage['total_tokens']:,}** | "
+                    f"**{_format_cost(usage.get('estimated_llm_list_cost_inr'))}** |"
+                ),
             ]
             if (seconds := usage.get("audio_input_seconds")) is not None:
-                usage_rows.append(f"| Audio input | {seconds:.2f} s |")
+                usage_rows.append(
+                    f"| STT audio | {seconds:.2f} s | {_format_cost(usage.get('estimated_stt_list_cost_inr'))} |"
+                )
             if (characters := usage.get("tts_characters")) is not None:
-                usage_rows.append(f"| TTS characters | {characters:,} |")
+                usage_rows.append(
+                    f"| TTS output | {characters:,} characters | "
+                    f"{_format_cost(usage.get('estimated_tts_list_cost_inr'))} |"
+                )
             if (cost := usage.get("estimated_list_cost_inr")) is not None:
-                usage_rows.append(f"| Estimated list cost | ₹{cost:.4f} |")
+                usage_rows.append(f"| **Turn total** |  | **{_format_cost(cost)}** |")
             with st.container(key="usage_table"):
-                st.markdown("| Metric | Value |\n|:--|--:|\n" + "\n".join(usage_rows))
+                st.markdown("| Usage | Quantity | Est. cost |\n|:--|--:|--:|\n" + "\n".join(usage_rows))
             st.caption("List-price estimate; free-tier spend may be zero.")
         else:
             st.caption("Token usage appears after the first turn.")
@@ -296,6 +320,10 @@ def _format_duration(milliseconds: float) -> str:
         return f"{milliseconds / 1_000:,.1f} s"
     minutes, seconds = divmod(milliseconds / 1_000, 60)
     return f"{minutes:,.0f}m {seconds:02.0f}s"
+
+
+def _format_cost(cost_inr: float | None) -> str:
+    return f"₹{cost_inr:.4f}" if cost_inr is not None else "—"
 
 
 def _format_price(price_inr: int) -> str:

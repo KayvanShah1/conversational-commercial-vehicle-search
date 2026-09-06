@@ -49,6 +49,9 @@ def test_streamlit_app_renders_without_framework_error() -> None:
         "total_tokens": 120,
         "audio_input_seconds": 2.5,
         "tts_characters": 42,
+        "estimated_llm_list_cost_inr": 0.0004,
+        "estimated_stt_list_cost_inr": 0.0001,
+        "estimated_tts_list_cost_inr": 0.0005,
         "estimated_list_cost_inr": 0.001,
     }
     app.session_state.conversation_totals = {
@@ -62,6 +65,9 @@ def test_streamlit_app_renders_without_framework_error() -> None:
         "total_tokens": 720,
         "audio_input_seconds": 2.5,
         "tts_characters": 42,
+        "estimated_llm_list_cost_inr": 0.005,
+        "estimated_stt_list_cost_inr": 0.0013,
+        "estimated_tts_list_cost_inr": 0.006,
         "estimated_list_cost_inr": 0.0123,
     }
     app.session_state.last_search_result = VehicleSearchResult(
@@ -109,14 +115,20 @@ def test_streamlit_app_renders_without_framework_error() -> None:
     assert not {button.label for button in app.button}.intersection(STARTER_QUESTIONS)
     assert any("Hi, I'm Vivi" in markdown.value for markdown in app.markdown)
     assert any("Tool used: `list_catalog_options`" in caption.value for caption in app.caption)
-    assert any("| **Total** | **456 ms** |" in markdown.value for markdown in app.markdown)
-    assert any("Speech end to audio ready" in markdown.value for markdown in app.markdown)
+    assert any("| Recording received → audio ready | 455 ms |" in markdown.value for markdown in app.markdown)
+    assert not any("Voice processing total" in markdown.value for markdown in app.markdown)
     assert any("**120**" in markdown.value for markdown in app.markdown)
     assert any("Cached context tokens" in markdown.value for markdown in app.markdown)
     assert any("Reasoning tokens" in markdown.value for markdown in app.markdown)
-    assert any("2.50 s" in markdown.value for markdown in app.markdown)
+    assert any("| **Total LLM tokens** | **120** | **₹0.0004** |" in markdown.value for markdown in app.markdown)
+    assert any("| STT audio | 2.50 s | ₹0.0001 |" in markdown.value for markdown in app.markdown)
+    assert any("| TTS output | 42 characters | ₹0.0005 |" in markdown.value for markdown in app.markdown)
+    assert any("| **Turn total** |  | **₹0.0010** |" in markdown.value for markdown in app.markdown)
     assert any("12.3 s" in markdown.value for markdown in app.markdown)
-    assert any("₹0.0123" in markdown.value for markdown in app.markdown)
+    assert any("| LLM tokens | 720 | ₹0.0050 |" in markdown.value for markdown in app.markdown)
+    assert any("| STT audio | 2.50 s | ₹0.0013 |" in markdown.value for markdown in app.markdown)
+    assert any("| TTS output | 42 characters | ₹0.0060 |" in markdown.value for markdown in app.markdown)
+    assert any("| **Conversation total** |  | **₹0.0123** |" in markdown.value for markdown in app.markdown)
     assert any("weighted signals below" in caption.value for caption in app.caption)
     assert any("Vivi may infer purpose and vehicle size" in caption.value for caption in app.caption)
     assert any(
@@ -126,3 +138,8 @@ def test_streamlit_app_renders_without_framework_error() -> None:
     assert any("Mahindra Jeeto Strong Diesel" in markdown.value for markdown in app.markdown)
     assert any(metric.label == "Est. payload" for metric in app.metric)
     assert any(metric.value == "815 kg" for metric in app.metric)
+
+    app.session_state.metrics = {"understanding_ms": 123, "total_ms": 456}
+    app.run(timeout=10)
+
+    assert any("| **Turn total** | **456 ms** |" in markdown.value for markdown in app.markdown)

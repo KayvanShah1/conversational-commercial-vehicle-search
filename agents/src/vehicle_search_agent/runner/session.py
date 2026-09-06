@@ -8,7 +8,12 @@ from agents import ModelSettings, RunConfig, Runner, SQLiteSession, set_tracing_
 from vehicle_search_agent.agent import FallbackModel, build_agent
 from vehicle_search_agent.models import AgentTurnResult, ConversationState, TurnMetrics, TurnUsage, VoiceTurnResult
 from vehicle_search_agent.response import conversational_response, natural_response
-from vehicle_search_agent.runner.telemetry import USD_TO_INR, AgentStageTimer, voice_list_cost_usd
+from vehicle_search_agent.runner.telemetry import (
+    USD_TO_INR,
+    AgentStageTimer,
+    stt_list_cost_usd,
+    tts_list_cost_usd,
+)
 from vehicle_search_agent.settings import settings
 from vehicle_search_agent.tools import AgentContext
 from vehicle_search_agent.voice import synthesize_speech, transcribe_audio
@@ -107,6 +112,9 @@ class VehicleSearchSession:
             output_tokens=sdk_usage.output_tokens,
             reasoning_tokens=sdk_usage.output_tokens_details.reasoning_tokens,
             total_tokens=sdk_usage.total_tokens,
+            estimated_llm_list_cost_inr=(
+                estimated_cost_usd * USD_TO_INR if estimated_cost_usd is not None else None
+            ),
             estimated_list_cost_usd=estimated_cost_usd,
             estimated_list_cost_inr=estimated_cost_usd * USD_TO_INR if estimated_cost_usd is not None else None,
         )
@@ -162,21 +170,21 @@ class VehicleSearchSession:
                 "total_ms": completed["duration_ms"],
             }
         )
-        voice_cost_usd = voice_list_cost_usd(
-            transcription.audio_seconds,
-            speech.character_count,
-            stt_model=settings.groq.stt_model,
-            tts_model=settings.groq.tts_model,
-        )
+        stt_cost_usd = stt_list_cost_usd(transcription.audio_seconds, settings.groq.stt_model)
+        tts_cost_usd = tts_list_cost_usd(speech.character_count, settings.groq.tts_model)
         total_cost_usd = (
-            turn.usage.estimated_list_cost_usd + voice_cost_usd
-            if turn.usage.estimated_list_cost_usd is not None and voice_cost_usd is not None
+            turn.usage.estimated_list_cost_usd + stt_cost_usd + tts_cost_usd
+            if turn.usage.estimated_list_cost_usd is not None
+            and stt_cost_usd is not None
+            and tts_cost_usd is not None
             else None
         )
         usage = turn.usage.model_copy(
             update={
                 "audio_input_seconds": transcription.audio_seconds,
                 "tts_characters": speech.character_count,
+                "estimated_stt_list_cost_inr": stt_cost_usd * USD_TO_INR if stt_cost_usd is not None else None,
+                "estimated_tts_list_cost_inr": tts_cost_usd * USD_TO_INR if tts_cost_usd is not None else None,
                 "estimated_list_cost_usd": total_cost_usd,
                 "estimated_list_cost_inr": total_cost_usd * USD_TO_INR if total_cost_usd is not None else None,
             }

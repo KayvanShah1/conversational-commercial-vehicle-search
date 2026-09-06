@@ -33,6 +33,9 @@ class TurnUsage(BaseModel):
     total_tokens: int = Field(default=0, ge=0)
     audio_input_seconds: float | None = Field(default=None, ge=0)
     tts_characters: int | None = Field(default=None, ge=0)
+    estimated_llm_list_cost_inr: float | None = Field(default=None, ge=0)
+    estimated_stt_list_cost_inr: float | None = Field(default=None, ge=0)
+    estimated_tts_list_cost_inr: float | None = Field(default=None, ge=0)
     estimated_list_cost_usd: float | None = Field(default=None, ge=0)
     estimated_list_cost_inr: float | None = Field(default=None, ge=0)
 

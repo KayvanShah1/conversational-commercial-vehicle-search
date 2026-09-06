@@ -20,7 +20,7 @@ METRIC_LABELS = {
     "search_ms": "Search",
     "response_ms": "Response",
     "tts_ms": "TTS",
-    "speech_end_to_audio_ready_ms": "Speech end to audio ready",
+    "speech_end_to_audio_ready_ms": "Recording received → audio ready",
     "total_ms": "Total",
 }
 
@@ -46,5 +46,8 @@ CUMULATIVE_USAGE_FIELDS = (
     "total_tokens",
     "audio_input_seconds",
     "tts_characters",
+    "estimated_llm_list_cost_inr",
+    "estimated_stt_list_cost_inr",
+    "estimated_tts_list_cost_inr",
     "estimated_list_cost_inr",
 )
