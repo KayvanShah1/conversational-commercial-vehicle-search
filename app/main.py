@@ -158,7 +158,7 @@ if st.session_state.error:
     st.error(st.session_state.error)
 
 submission = st.chat_input(
-    "Describe a vehicle need or ask a follow-up",
+    "Ask Vivi",
     accept_audio=True,
     audio_sample_rate=16_000,
     key="message",

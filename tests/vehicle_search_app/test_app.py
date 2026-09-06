@@ -87,7 +87,7 @@ def test_streamlit_app_renders_without_framework_error() -> None:
     app = AppTest.from_file(APP_PATH).run(timeout=10)
 
     assert not app.exception
-    assert app.chat_input[0].placeholder == "Describe a vehicle need or ask a follow-up"
+    assert app.chat_input[0].placeholder == "Ask Vivi"
     assert any("Hi, I'm Vivi" in markdown.value for markdown in app.markdown)
     assert {button.label for button in app.button} >= STARTER_QUESTIONS
     assert any(button.label == "Start new chat" and button.key == "new_chat" for button in app.button)
