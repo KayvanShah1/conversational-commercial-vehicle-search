@@ -12,11 +12,13 @@
 
 Vivi is a voice-first search and decision-support prototype for India's used commercial-vehicle market. It helps owner-operators, small businesses, and fleet buyers describe what they need in English or Hinglish, refine their requirements over multiple turns, and get a ranked shortlist based on catalog data.
 
-Commercial-vehicle discovery is a constraint-heavy decision: the right choice depends on payload, operating conditions, price, mileage, condition, and paperwork, while buyers may not know the catalog terminology. Vivi reduces that friction through a multi-turn conversation that can clarify requirements, apply hard filters, compare eligible vehicles, and explain why each result fits. The same pattern could support vehicle marketplaces, dealership websites, and assisted sales or financing journeys.
+Commercial-vehicle discovery is a constraint-heavy decision: the right choice depends on payload, operating conditions, price, kilometres driven, condition, and paperwork, while buyers may not know the catalog terminology. Vivi reduces that friction through a multi-turn conversation that can clarify requirements, apply hard filters, compare eligible vehicles, and explain why each result fits. The same pattern could support vehicle marketplaces, dealership websites, and assisted sales or financing journeys.
 
 ## Try the live demo
 
 **[Open Vivi in your browser](https://conversational-commercial-vehicle-search.onrender.com/)** and start with a text or voice request. No local setup is required.
+
+![Vivi Demo UI](assets/vivi-ui-live.png)
 
 ## Highlights
 
@@ -28,6 +30,8 @@ Commercial-vehicle discovery is a constraint-heavy decision: the right choice de
 - **Executable evaluation:** 52 text and recorded-voice cases test conversation, safety, catalog discovery, vehicle variants, attribute lookup, pagination, and preference changes.
 
 > All catalog listings are synthetic and are not live marketplace inventory.
+
+![Vivi Ranked Matches](assets/vivi-ui-ranked-matches.png)
 
 ## Run locally
 
