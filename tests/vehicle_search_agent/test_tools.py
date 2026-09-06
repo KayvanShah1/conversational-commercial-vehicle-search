@@ -259,6 +259,32 @@ def test_requested_fields_for_an_ordinal_return_only_those_fields(monkeypatch):
     assert "Listed uses" not in context.grounded_response.display_markdown
 
 
+def test_intuitive_category_and_axles_aliases_are_accepted(monkeypatch):
+    context = _context(
+        "What are the kilometers driven and the category of the first one and how many axles does it have?"
+    )
+
+    def fake_lookup(listing_ids):
+        assert listing_ids == ["VEH-001"]
+        return [_vehicle("VEH-001")], 1.0
+
+    monkeypatch.setattr(details_tool_module, "get_vehicles", fake_lookup)
+    _invoke(
+        context,
+        {
+            "scope": "one",
+            "mode": "facts",
+            "fields": ["km_driven", "category", "axles"],
+            "result_number": 1,
+        },
+    )
+
+    assert context.grounded_response.facts == ("Tata VEH-001: 20,000 km, category pickup, axles 2",)
+    assert "Kilometres driven" in context.grounded_response.display_markdown
+    assert "Category" in context.grounded_response.display_markdown
+    assert "Axles" in context.grounded_response.display_markdown
+
+
 def test_named_details_are_limited_to_matching_previous_results(monkeypatch):
     context = _context("Give me more details about the Mahindra Jeeto.")
     context.state.selected_listing_id = None

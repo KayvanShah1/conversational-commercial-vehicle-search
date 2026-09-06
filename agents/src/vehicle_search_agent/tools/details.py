@@ -12,6 +12,7 @@ from vehicle_search_agent.settings import settings
 from vehicle_search_agent.tools.context import AgentContext, log_tool_call, retry_tool_error, set_response
 
 DetailScope = Literal["one", "all"]
+DetailFieldInput = DetailField | Literal["category", "axles"]
 DetailMode = Literal[
     "facts", "capability", "all_details", "best_match", "cheapest", "lowest_km_driven", "highest_payload"
 ]
@@ -49,13 +50,14 @@ async def get_vehicle_details(
         ),
     ] = "facts",
     fields: Annotated[
-        list[DetailField],
+        list[DetailFieldInput],
         Field(
             min_length=1,
             max_length=15,
             description=(
                 "Only the attributes explicitly requested; omit only for a comparison or capability mode. "
-                "km_driven is an odometer reading and must never answer mileage or fuel-economy requests"
+                "category aliases vehicle_category and axles aliases axle_count. km_driven is an odometer "
+                "reading and must never answer mileage or fuel-economy requests"
             ),
         ),
     ]
@@ -93,6 +95,10 @@ async def get_vehicle_details(
     log_tool_call(context, "get_vehicle_details")
     context.action = AgentAction.details
     state = context.state
+
+    if fields:
+        aliases = {"category": DetailField.vehicle_category, "axles": DetailField.axle_count}
+        fields = [aliases[field] if field in aliases else DetailField(field) for field in fields]
 
     comparison_fields = {
         "best_match": list(DetailField),
