@@ -10,6 +10,7 @@ from vehicle_search_agent.models import (
     SearchFilters,
     TurnMetrics,
     TurnUsage,
+    VehicleSearchResult,
 )
 from vehicle_search_agent.response import message_response
 from vehicle_search_agent.runner import AgentStageTimer, VehicleSearchSession
@@ -128,9 +129,50 @@ def test_named_catalog_answer_is_retried_with_the_details_tool(monkeypatch):
     assert calls[1].tool_choice == "get_vehicle_details"
 
 
+def test_zero_result_turn_reports_no_new_ids_but_retains_reference_state(monkeypatch):
+    class Session:
+        async def get_items(self):
+            return []
+
+    async def fake_run(*args, **kwargs):
+        session.context.action = AgentAction.search
+        session.context.last_search_result = VehicleSearchResult(
+            executed_filters=SearchFilters(city="Kolkata", budget_max=100_000),
+            changed_fields=[],
+            vehicles=[],
+            total_matches=0,
+            relaxation="budget",
+            search_ms=1,
+        )
+        session.context.grounded_response = message_response(
+            "I couldn't find an exact match. We could try relaxing the budget constraint."
+        )
+        return _run_result(session.context.grounded_response.fallback)
+
+    monkeypatch.setattr("vehicle_search_agent.runner.session.Runner.run", staticmethod(fake_run))
+    session = object.__new__(VehicleSearchSession)
+    session.session_id = "test-session"
+    session.context = AgentContext(
+        state=ConversationState(
+            session_id=session.session_id,
+            last_result_ids=["VEH-001", "VEH-002", "VEH-003"],
+            last_result_labels=["Tata One", "Tata Two", "Tata Three"],
+            turn_number=1,
+        )
+    )
+    session.agent = SimpleNamespace(model=SimpleNamespace(model="test-model"))
+    session.sdk_session = Session()
+    session.hooks = AgentStageTimer()
+
+    result = asyncio.run(session.run_text_turn("Actually, show only CNG tankers under 1 lakh in Kolkata."))
+
+    assert result.last_result_ids == []
+    assert session.context.state.last_result_ids == ["VEH-001", "VEH-002", "VEH-003"]
+
+
 def test_stage_hook_accumulates_priced_model_usage():
     context = AgentContext(state=ConversationState(session_id="test"))
-    agent = SimpleNamespace(model=SimpleNamespace(model="openai/gpt-oss-120b"))
+    agent = SimpleNamespace(model=SimpleNamespace(model="openai/gpt-oss-120b", route="groq-key-2/openai/gpt-oss-120b"))
     response = SimpleNamespace(
         usage=Usage(requests=1, input_tokens=1_000_000, output_tokens=1_000_000, total_tokens=2_000_000)
     )
@@ -139,6 +181,8 @@ def test_stage_hook_accumulates_priced_model_usage():
 
     assert context.llm_list_cost_usd == 0.75
     assert context.pricing_complete
+    assert context.model_name == "openai/gpt-oss-120b"
+    assert context.model_route == "groq-key-2/openai/gpt-oss-120b"
 
 
 def test_voice_turn_measures_recording_receipt_to_audio_ready(monkeypatch):

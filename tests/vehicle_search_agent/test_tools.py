@@ -1,6 +1,7 @@
 import asyncio
 import json
 
+import vehicle_search_agent.tools.context as tool_context_module
 import vehicle_search_agent.tools.details as details_tool_module
 import vehicle_search_agent.tools.search as search_tool_module
 from agents.tool_context import ToolContext
@@ -56,6 +57,8 @@ def test_search_uses_the_models_typed_slot_extraction(monkeypatch):
     context = AgentContext(
         state=ConversationState(session_id="test"),
         current_input="Show me a heavy diesel rigid truck with a tipper body.",
+        model_name="openai/gpt-oss-120b",
+        model_route="groq-key-2/openai/gpt-oss-120b",
     )
 
     def fake_search(filters, changed_fields, excluded_ids):
@@ -72,7 +75,7 @@ def test_search_uses_the_models_typed_slot_extraction(monkeypatch):
         )
 
     monkeypatch.setattr(search_tool_module, "search_catalog", fake_search)
-    monkeypatch.setattr(search_tool_module.logger, "info", lambda message, *, extra: logs.append((message, extra)))
+    monkeypatch.setattr(tool_context_module.logger, "info", lambda message, *, extra: logs.append((message, extra)))
     encoded = json.dumps(
         {
             "mode": "new",
@@ -91,7 +94,59 @@ def test_search_uses_the_models_typed_slot_extraction(monkeypatch):
 
     asyncio.run(search_vehicles.on_invoke_tool(tool_context, encoded))
 
-    assert logs == [("tool_called", {"tool": "search_vehicles"})]
+    assert logs == [
+        (
+            "tool_called",
+            {
+                "tool": "search_vehicles",
+                "model": "openai/gpt-oss-120b",
+                "model_route": "groq-key-2/openai/gpt-oss-120b",
+            },
+        )
+    ]
+
+
+def test_zero_result_search_preserves_the_last_successful_result_references(monkeypatch):
+    context = AgentContext(
+        state=ConversationState(
+            session_id="test",
+            last_result_ids=["VEH-001", "VEH-002", "VEH-003"],
+            last_result_labels=["Tata One", "Tata Two", "Tata Three"],
+            shown_result_ids=["VEH-001", "VEH-002", "VEH-003"],
+            selected_listing_id="VEH-002",
+        ),
+        current_input="Only CNG tankers under 1 lakh in Kolkata.",
+    )
+
+    def fake_search(filters, changed_fields, excluded_ids):
+        assert filters.city == "Kolkata"
+        assert not excluded_ids
+        return VehicleSearchResult(
+            executed_filters=filters,
+            changed_fields=changed_fields,
+            vehicles=[],
+            total_matches=0,
+            relaxation="budget",
+            search_ms=1,
+        )
+
+    monkeypatch.setattr(search_tool_module, "search_catalog", fake_search)
+    encoded = json.dumps({"mode": "new", "city": "Kolkata"})
+    tool_context = ToolContext(
+        context=context,
+        tool_name="search_vehicles",
+        tool_call_id="test-call",
+        tool_arguments=encoded,
+    )
+
+    asyncio.run(search_vehicles.on_invoke_tool(tool_context, encoded))
+
+    assert context.state.last_result_ids == ["VEH-001", "VEH-002", "VEH-003"]
+    assert context.state.last_result_labels == ["Tata One", "Tata Two", "Tata Three"]
+    assert context.state.shown_result_ids == ["VEH-001", "VEH-002", "VEH-003"]
+    assert context.state.selected_listing_id == "VEH-002"
+    assert context.last_search_result is not None
+    assert not context.last_search_result.vehicles
 
 
 def test_more_mode_excludes_previously_shown_results(monkeypatch):
@@ -164,6 +219,31 @@ def test_all_details_for_an_ordinal_returns_every_user_facing_field(monkeypatch)
         "specification source",
     ):
         assert label in fact
+
+
+def test_requested_fields_for_an_ordinal_return_only_those_fields(monkeypatch):
+    context = _context("Second one ka payload aur GVW kya hai?")
+
+    def fake_lookup(listing_ids):
+        assert listing_ids == ["VEH-002"]
+        return [_vehicle("VEH-002")], 1.0
+
+    monkeypatch.setattr(details_tool_module, "get_vehicles", fake_lookup)
+    _invoke(
+        context,
+        {
+            "scope": "one",
+            "mode": "facts",
+            "fields": ["payload", "gvw"],
+            "result_number": 2,
+        },
+    )
+
+    assert context.grounded_response.facts == ("Tata VEH-002: payload 2,000 kg, GVW 4,000 kg",)
+    assert "Payload" in context.grounded_response.display_markdown
+    assert "GVW" in context.grounded_response.display_markdown
+    assert "Body" not in context.grounded_response.display_markdown
+    assert "Listed uses" not in context.grounded_response.display_markdown
 
 
 def test_named_details_are_limited_to_matching_previous_results(monkeypatch):
