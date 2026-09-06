@@ -150,23 +150,23 @@ def render_matches(result: VehicleSearchResult | None, *, key_prefix: str = "mat
     st.subheader("Top matches")
     columns = st.columns(len(vehicles), gap="medium")
     for index, (column, vehicle) in enumerate(zip(columns, vehicles, strict=True)):
-        with column, st.container(border=True, key=f"{key_prefix}_vehicle_card_{index}", gap="small"):
-            with st.container(key=f"{key_prefix}_vehicle_identity_{index}", gap=None):
-                with st.container(key=f"{key_prefix}_vehicle_title_{index}", gap=None):
+        with column, st.container(border=True, key=f"vehicle_card_{key_prefix}_{index}", gap="small"):
+            with st.container(key=f"vehicle_identity_{key_prefix}_{index}", gap=None):
+                with st.container(key=f"vehicle_title_{key_prefix}_{index}", gap=None):
                     st.markdown(f"**{vehicle['Make / Model']}**")
                 if vehicle["Papers"] == "Verified":
-                    with st.container(key=f"{key_prefix}_vehicle_verified_{index}"):
+                    with st.container(key=f"vehicle_verified_{key_prefix}_{index}"):
                         st.markdown(":green[:material/check_circle:]")
                 st.caption(f"{vehicle['Year']} · {vehicle['City']} · {vehicle['Body'].title()} body")
 
-            with st.container(key=f"{key_prefix}_vehicle_metrics_{index}", gap="small"):
+            with st.container(key=f"vehicle_metrics_{key_prefix}_{index}", gap="small"):
                 price, kilometres = st.columns([3, 2], gap="medium", vertical_alignment="top")
                 with price:
                     st.metric("Price", _format_price(vehicle["Price (INR)"]), border=False)
                 with kilometres:
                     st.metric("KM driven", f"{vehicle['KM']:,}", border=False)
 
-            with st.container(key=f"{key_prefix}_vehicle_specs_{index}", gap="small"):
+            with st.container(key=f"vehicle_specs_{key_prefix}_{index}", gap="small"):
                 specs = st.columns([0.8, 1.2, 1.2], gap="small", vertical_alignment="top")
                 payload_label = "Est. payload" if vehicle["Payload basis"] == "Estimated" else "Payload"
                 payload_value = _format_weight(vehicle["Payload (kg)"])
@@ -179,7 +179,7 @@ def render_matches(result: VehicleSearchResult | None, *, key_prefix: str = "mat
                     with spec:
                         st.metric(label, value, border=False, width="stretch")
 
-            with st.container(key=f"{key_prefix}_vehicle_reason_{index}", gap="small"):
+            with st.container(key=f"vehicle_reason_{key_prefix}_{index}", gap="small"):
                 st.metric("Why it fits", vehicle["Why this match"], border=False, width="stretch")
             st.link_button(
                 "View specifications",
