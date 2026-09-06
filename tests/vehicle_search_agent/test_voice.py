@@ -34,6 +34,15 @@ def test_wav_duration_is_measured_from_frames():
     assert wav_duration_seconds(b"not a wav") is None
 
 
+def test_wav_duration_uses_available_frames_when_streaming_header_has_placeholder_sizes():
+    audio = bytearray(_wav(bytes(8_000)))
+    audio[4:8] = b"\xff\xff\xff\xff"
+    data_size_offset = audio.index(b"data") + 4
+    audio[data_size_offset : data_size_offset + 4] = b"\xff\xff\xff\xff"
+
+    assert wav_duration_seconds(bytes(audio)) == 1.0
+
+
 def test_synthesize_speech_stitches_wav_chunks(monkeypatch):
     calls: list[str] = []
 

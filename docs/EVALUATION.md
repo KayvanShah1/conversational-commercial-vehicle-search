@@ -105,6 +105,20 @@ The report includes STT, understanding, search or lookup, optional response gene
 
 With Streamlit’s built-in microphone composer, the server receives audio only after browser recording and upload complete. The measurement therefore starts when the completed recording reaches the server and ends when the full synthesized WAV is ready for playback. It is a repeatable server-side proxy, not exact browser speech-stop to first streamed audio byte.
 
+### Recorded voice runs
+
+On 2026-09-06, two TTS-generated WAV requests were sent through the live STT, agent, MotherDuck search, grounded response, and TTS path. Both transcriptions preserved the requested constraints and correctly selected the search action.
+
+| Request | Audio | STT | Understanding | Search | TTS | Speech end → audio ready | Estimated list cost |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| CNG mini truck under ₹6 lakh in Pune for city delivery | 4.96 s | 0.73 s | 0.80 s | 6.04 s | 3.89 s | **11.52 s** | ₹0.6285 |
+| Diesel tipper under ₹12 lakh in Mumbai with verified papers | 6.00 s | 0.72 s | 0.90 s | 5.44 s | 1.66 s | **8.75 s** | ₹0.3000 |
+| Mean | 5.48 s | 0.72 s | 0.85 s | 5.74 s | 2.77 s | **10.13 s** | ₹0.4643 |
+
+Catalog search was the dominant measured stage. The first mitigation is to warm or pool MotherDuck connections, as described in [technical decisions](TECHNICAL_DECISIONS.md#production-priorities).
+
+The synthetic input makes these backend measurements repeatable but does not replace a browser microphone demonstration. Input-audio generation happened before the measured boundary and is not included, matching a real turn where recording is complete before the server receives it.
+
 ## Usage and cost
 
 Per turn, the harness stores:
@@ -121,7 +135,7 @@ The estimate is not an invoice. Free-tier spend can be zero, and database, hosti
 
 The latest local verification reported:
 
-- 68 tests passed
+- 69 tests passed
 - 1 live MotherDuck integration test skipped by default
 - Repository-wide Ruff check passed
 - Streamlit AppTest rendered the conversation, result, state, and metric surfaces

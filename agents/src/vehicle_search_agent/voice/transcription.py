@@ -13,7 +13,10 @@ stt_logger = get_logger("SpeechToText")
 def wav_duration_seconds(audio: bytes) -> float | None:
     try:
         with wave.open(io.BytesIO(audio), "rb") as reader:
-            return reader.getnframes() / reader.getframerate()
+            frame_size = reader.getnchannels() * reader.getsampwidth()
+            frame_rate = reader.getframerate()
+            frames = reader.readframes(reader.getnframes())
+            return len(frames) / frame_size / frame_rate
     except (EOFError, wave.Error):
         return None
 
