@@ -147,11 +147,11 @@
 [class*="st-key-vehicle_title_"] .vehicle-make,
 [class*="st-key-vehicle_title_"] .vehicle-model {
 	display: block;
-	padding-right: 1.75rem;
 	line-height: 1.25;
 }
 
 [class*="st-key-vehicle_title_"] .vehicle-make {
+	padding-right: 6.5rem;
 	color: #c5cad1;
 	font-size: 0.92rem;
 	font-weight: 600;
@@ -167,17 +167,50 @@
 	margin-bottom: 0;
 }
 
-[class*="st-key-vehicle_verified_"] {
+[class*="st-key-vehicle_verification_"] {
 	position: absolute;
-	top: 0.95rem;
-	right: 0.85rem;
+	top: 0.75rem;
+	right: 0.75rem;
 	z-index: 2;
-	width: 1rem;
+	width: auto;
 }
 
-[class*="st-key-vehicle_verified_"] p {
+[class*="st-key-vehicle_verification_"] p {
 	margin: 0;
 	line-height: 1;
+}
+
+.verification-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.25rem 0.48rem;
+	border: 1px solid;
+	border-radius: 999px;
+	font-size: 0.7rem;
+	font-weight: 700;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.verification-badge::before {
+	width: 0.42rem;
+	height: 0.42rem;
+	border-radius: 50%;
+	background: currentColor;
+	content: "";
+}
+
+.verification-badge.verified {
+	border-color: #266b43;
+	background: #123523;
+	color: #86efac;
+}
+
+.verification-badge.not-verified {
+	border-color: #7a4a12;
+	background: #3a250e;
+	color: #fbbf24;
 }
 
 [class*="st-key-vehicle_card_"] [data-testid="stCaptionContainer"] {

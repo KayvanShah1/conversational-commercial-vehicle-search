@@ -161,9 +161,12 @@ def render_matches(result: VehicleSearchResult | None, *, key_prefix: str = "mat
                         ),
                         unsafe_allow_html=True,
                     )
-                if vehicle["Papers"] == "Verified":
-                    with st.container(key=f"vehicle_verified_{key_prefix}_{index}"):
-                        st.markdown(":green[:material/check_circle:]")
+                verification_class = "verified" if vehicle["Papers"] == "Verified" else "not-verified"
+                with st.container(key=f"vehicle_verification_{key_prefix}_{index}"):
+                    st.markdown(
+                        (f'<span class="verification-badge {verification_class}">{escape(vehicle["Papers"])}</span>'),
+                        unsafe_allow_html=True,
+                    )
                 st.caption(f"{vehicle['Year']} · {vehicle['City']} · {vehicle['Body'].title()} body")
 
             with st.container(key=f"vehicle_metrics_{key_prefix}_{index}", gap="small"):

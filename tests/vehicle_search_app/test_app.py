@@ -20,7 +20,13 @@ STARTER_QUESTIONS = {
 }
 
 
-def _search_result(listing_id: str, model: str, *, budget_max: int = 800_000) -> VehicleSearchResult:
+def _search_result(
+    listing_id: str,
+    model: str,
+    *,
+    budget_max: int = 800_000,
+    papers_verified: bool = True,
+) -> VehicleSearchResult:
     return VehicleSearchResult(
         executed_filters=SearchFilters(budget_max=budget_max, purpose="city_delivery"),
         changed_fields=[],
@@ -42,7 +48,7 @@ def _search_result(listing_id: str, model: str, *, budget_max: int = 800_000) ->
                     body_type="box",
                     axle_count=2,
                     city="Chennai",
-                    papers_verified=True,
+                    papers_verified=papers_verified,
                     condition="excellent",
                     purpose_tags=["city_delivery"],
                     spec_source_url="https://example.com/jeeto",
@@ -201,7 +207,12 @@ def test_search_cards_remain_in_conversation_history() -> None:
             "role": "assistant",
             "content": "Here is the updated match.",
             "tool": "search_vehicles",
-            "search_result": _search_result("VEH-SECOND", "Updated Match", budget_max=600_000),
+            "search_result": _search_result(
+                "VEH-SECOND",
+                "Updated Match",
+                budget_max=600_000,
+                papers_verified=False,
+            ),
         },
     ]
 
@@ -210,4 +221,6 @@ def test_search_cards_remain_in_conversation_history() -> None:
     rendered_markdown = [markdown.value for markdown in app.markdown]
     assert any("Mahindra" in value and "First Match" in value for value in rendered_markdown)
     assert any("Mahindra" in value and "Updated Match" in value for value in rendered_markdown)
+    assert any('class="verification-badge verified">Verified</span>' in value for value in rendered_markdown)
+    assert any('class="verification-badge not-verified">Not verified</span>' in value for value in rendered_markdown)
     assert sum(subheader.value == "Top matches" for subheader in app.get("subheader")) == 2
