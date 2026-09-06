@@ -21,9 +21,13 @@ This matrix maps each requirement to inspectable implementation or evaluation ev
 | Seven identifiable components | [Architecture](TECHNICAL_DECISIONS.md#seven-identifiable-components) and presentation | Met |
 | Three decisions and rejected alternatives | [Technical decisions](TECHNICAL_DECISIONS.md) | Met |
 | 100,000 conversations/month discussion | [Scale plan](TECHNICAL_DECISIONS.md#production-priorities) | Met |
-| README runs in under 10 minutes | [Quick start](../README.md#quick-start) and [setup guide](SETUP.md) | Met |
+| README runs in under 10 minutes | [Run locally](../README.md#run-locally) and [setup guide](SETUP.md) | Met |
 | Presentation PDF | [Evaluator walkthrough](../output/pdf/vivi-vehicle-search-presentation.pdf) | Met |
 | External references | [Sources and acknowledgements](SOURCES.md) | Met |
+
+## Selected stretch goals
+
+The submission presents two optional stretch goals: explainable ranking and estimated INR cost. Hinglish support and cross-turn state are treated as product capabilities rather than additional stretch claims.
 
 ## Declared limitations
 

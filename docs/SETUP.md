@@ -160,8 +160,8 @@ uv run --package agents python analysis/agent_chat.py
 Run local static checks and unit tests:
 
 ```powershell
-uv run ruff check agents app evals tests
-uv run pytest -q
+uv run ruff check agents app evals tests utils vehicle-catalog-generator
+uv run pytest tests -q
 ```
 
 The live MotherDuck integration test is intentionally opt-in because it sends a real query to the configured database:

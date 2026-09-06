@@ -10,7 +10,7 @@
 
 ![Vivi voice-first commercial vehicle search](assets/vivi-repo-cover.png)
 
-Vivi is a voice-first search and decision-support prototype for India's used commercial-vehicle market. It helps owner-operators, small businesses, and fleet buyers can describe what they need in English or Hinglish, refine their requirements over multiple turns, and get a ranked shortlist based on catalog data.
+Vivi is a voice-first search and decision-support prototype for India's used commercial-vehicle market. It helps owner-operators, small businesses, and fleet buyers describe what they need in English or Hinglish, refine their requirements over multiple turns, and get a ranked shortlist based on catalog data.
 
 Commercial-vehicle discovery is a constraint-heavy decision: the right choice depends on payload, operating conditions, price, mileage, condition, and paperwork, while buyers may not know the catalog terminology. Vivi reduces that friction through a multi-turn conversation that can clarify requirements, apply hard filters, compare eligible vehicles, and explain why each result fits. The same pattern could support vehicle marketplaces, dealership websites, and assisted sales or financing journeys.
 
@@ -31,7 +31,7 @@ Commercial-vehicle discovery is a constraint-heavy decision: the right choice de
 
 ## Run locally
 
-### Published container
+### Run the published container
 
 You need Docker, a MotherDuck token, and at least one Groq API key. Create `.env` from [`example.env`](example.env), then set these required values:
 
@@ -49,7 +49,23 @@ docker run --rm --name vivi --env-file .env -p 8501:10000 ghcr.io/kayvanshah1/co
 
 Open <http://localhost:8501>. The container stores session data only for its lifetime; add `-v vivi-sessions:/app/data/sessions` to the `docker run` command if you want sessions to persist between containers.
 
-### From source
+### Use Docker Compose
+
+The included [`compose.yml`](compose.yml) builds the application image from this repository, loads `.env`, and keeps session data in a named volume:
+
+```console
+docker compose up --build
+```
+
+Open <http://localhost:8501>. Stop the application with `Ctrl+C`, then remove its containers and network with:
+
+```console
+docker compose down
+```
+
+The `vivi-sessions` volume is retained so conversations survive container recreation.
+
+### Run from source
 
 You need [uv](https://docs.astral.sh/uv/), a MotherDuck token, and at least one Groq API key.
 
@@ -160,8 +176,8 @@ data/                         Generated catalog and evaluation artifacts
 ## Verify locally
 
 ```powershell
-uv run ruff check agents app evals tests
-uv run pytest -q
+uv run ruff check agents app evals tests utils vehicle-catalog-generator
+uv run pytest tests -q
 ```
 
 The live MotherDuck integration test is opt-in. See [Verification](docs/SETUP.md#verification) before enabling it.

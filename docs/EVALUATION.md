@@ -123,7 +123,7 @@ The latest local verification reported:
 
 - 68 tests passed
 - 1 live MotherDuck integration test skipped by default
-- Ruff passed for the changed agent source and tests; the repository-wide check retains one pre-existing notebook import-order finding
+- Repository-wide Ruff check passed
 - Streamlit AppTest rendered the conversation, result, state, and metric surfaces
 - live STT and TTS smoke checks produced valid transcript and WAV output
 
