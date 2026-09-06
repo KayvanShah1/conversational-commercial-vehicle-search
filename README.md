@@ -10,7 +10,9 @@
 
 ![Vivi voice-first commercial vehicle search](assets/vivi-repo-cover.png)
 
-Vivi is a conversational assistant for finding used commercial vehicles through voice or text. It turns natural requests into inspectable constraints, applies deterministic filters and ranking to a MotherDuck catalog, and validates vehicle facts before returning or speaking a recommendation.
+Vivi is a voice-first search and decision-support prototype for India's used commercial-vehicle market. It helps owner-operators, small businesses, and fleet buyers can describe what they need in English or Hinglish, refine their requirements over multiple turns, and get a ranked shortlist based on catalog data.
+
+Commercial-vehicle discovery is a constraint-heavy decision: the right choice depends on payload, operating conditions, price, mileage, condition, and paperwork, while buyers may not know the catalog terminology. Vivi reduces that friction through a multi-turn conversation that can clarify requirements, apply hard filters, compare eligible vehicles, and explain why each result fits. The same pattern could support vehicle marketplaces, dealership websites, and assisted sales or financing journeys.
 
 ## Try the live demo
 
@@ -18,11 +20,14 @@ Vivi is a conversational assistant for finding used commercial vehicles through 
 
 ## Highlights
 
-- **Natural conversation:** understands budgets, payloads, vehicle sizes, fuels, body types, locations, corrections, and follow-up questions.
-- **Grounded recommendations:** the model never writes SQL, and catalog facts are checked against returned records before they reach the user.
-- **Inspectable decisions:** active filters, ranked results, ranking components, tool calls, model route, latency, tokens, and estimated cost are visible in the demo.
-- **Resilient voice path:** Groq handles speech and model inference with bounded key and model rotation.
-- **Executable evaluation:** 46 cases cover conversation, safety, catalog discovery, all vehicle sizes, body variants, attribute lookup, pagination, and preference changes.
+- **Stateful conversation:** understands budgets, payloads, vehicle sizes, fuels, body types, and locations, and remembers them across corrections and follow-up questions.
+- **Deterministic matching:** keeps hard filters intact, ranks eligible vehicles with a fixed formula, and never relaxes requirements silently.
+- **Grounded recommendations:** the model calls typed tools instead of querying the database directly or generating SQL, and every vehicle fact is checked against catalog records before reaching the user.
+- **Layered observability:** the UI shows filters, ranking scores, tool calls, latency, tokens, and estimated cost. Structured logs capture runtime operations, while optional OpenAI Agents SDK traces group each chat with its turns and spans.
+- **Resilient voice path:** Groq handles speech and model inference, with bounded retries across configured API keys and fallback models.
+- **Executable evaluation:** 46 cases test conversation, safety, catalog discovery, vehicle variants, attribute lookup, pagination, and preference changes.
+
+> All catalog listings are synthetic and are not live marketplace inventory.
 
 ## Run locally
 
