@@ -1,0 +1,46 @@
+[
+  {
+    "id": "cng_mini_pune",
+    "audio": "cng-mini-pune.wav",
+    "audio_source": "synthetic_tts",
+    "utterance": "I need a CNG mini truck under 6 lakh rupees in Pune for city deliveries.",
+    "expected_action": "search",
+    "expected_filters": {
+      "budget_max": 600000,
+      "fuel": "CNG",
+      "city": "Pune",
+      "purpose": "city_delivery",
+      "vehicle_category": "mini_truck"
+    },
+    "expect_results": true
+  },
+  {
+    "id": "diesel_tipper_mumbai",
+    "audio": "diesel-tipper-mumbai.wav",
+    "audio_source": "synthetic_tts",
+    "utterance": "Show me a diesel tipper under 12 lakh rupees in Mumbai with verified papers.",
+    "expected_action": "search",
+    "expected_filters": {
+      "budget_max": 1200000,
+      "body_type": "tipper",
+      "fuel": "Diesel",
+      "city": "Mumbai",
+      "papers_verified": true
+    },
+    "expect_results": true
+  },
+  {
+    "id": "hinglish_pickup_hyderabad",
+    "audio": "highlish-pickup.wav",
+    "audio_source": "human_recorded",
+    "utterance": "Hyderabad mein baarah lakh ke andar verified papers wali pickup chahiye.",
+    "expected_action": "search",
+    "expected_filters": {
+      "budget_max": 1200000,
+      "city": "Hyderabad",
+      "vehicle_category": "pickup",
+      "papers_verified": true
+    },
+    "expect_results": true
+  }
+]

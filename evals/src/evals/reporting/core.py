@@ -1,3 +1,5 @@
+"""Shared evaluation aggregation, output paths, and console reporting."""
+
 import json
 from datetime import datetime
 from pathlib import Path
@@ -9,7 +11,15 @@ from rich.table import Table
 
 from evals.settings import PROJECT_ROOT, REPORT_RETENTION_COUNT, REPORTS_DIR
 
-TIMING_FIELDS = ("understanding_ms", "search_ms", "response_ms", "total_ms")
+TIMING_FIELDS = (
+    "stt_ms",
+    "understanding_ms",
+    "search_ms",
+    "response_ms",
+    "tts_ms",
+    "recording_received_to_audio_ready_ms",
+    "total_ms",
+)
 USAGE_FIELDS = (
     "llm_requests",
     "input_tokens",
@@ -17,6 +27,11 @@ USAGE_FIELDS = (
     "output_tokens",
     "reasoning_tokens",
     "total_tokens",
+    "audio_input_seconds",
+    "tts_characters",
+    "estimated_llm_list_cost_inr",
+    "estimated_stt_list_cost_inr",
+    "estimated_tts_list_cost_inr",
     "estimated_list_cost_inr",
 )
 ACCURACY_LABELS = (
@@ -81,8 +96,13 @@ def prune_old_reports(directory: Path) -> None:
             path.unlink()
 
 
-def print_report(report: dict[str, Any], console: Console) -> None:
-    table = Table(title="Vehicle Search Agent Evaluation")
+def print_report(
+    report: dict[str, Any],
+    console: Console,
+    *,
+    title: str = "Vehicle Search Agent Evaluation",
+) -> None:
+    table = Table(title=title)
     table.add_column("Case")
     table.add_column("Expected")
     table.add_column("Actual")
@@ -127,7 +147,7 @@ def markdown_report(report: dict[str, Any], dataset: Path) -> str:
         "# Vehicle search agent evaluation",
         "",
         f"- Generated: {report['generated_at_utc']}",
-        f"- Dataset: `{_display_path(dataset)}`",
+        f"- Dataset: `{display_path(dataset)}`",
         f"- End-to-end pass rate: **{report['pass_rate']:.1f}% ({report['passed']}/{report['total']})**",
         "",
         "## Accuracy",
@@ -152,11 +172,15 @@ def markdown_report(report: dict[str, Any], dataset: Path) -> str:
         label = name.removesuffix("_ms").replace("_", " ").title()
         lines.append(f"| {label} | {value:,.2f} ms |")
     for name, value in report["mean_usage"].items():
-        unit = "INR" if name == "estimated_list_cost_inr" else "tokens"
+        unit = "INR" if name.startswith("estimated_") else "tokens"
         precision = 4 if unit == "INR" else 2
         label = name.replace("_", " ").title().replace("Llm", "LLM").replace("Inr", "INR")
         if name == "llm_requests":
             unit = "requests"
+        elif name == "audio_input_seconds":
+            unit = "seconds"
+        elif name == "tts_characters":
+            unit = "characters"
         lines.append(f"| {label} | {value:,.{precision}f} {unit} |")
 
     lines.extend(
@@ -217,13 +241,17 @@ def _score(rows: list[dict[str, Any]], field: str) -> dict[str, float | int | No
     }
 
 
+def percentage(numerator: int, denominator: int) -> float | None:
+    return 100 * numerator / denominator if denominator else None
+
+
 def _format_score(score: dict[str, Any]) -> str:
     if not score["total"]:
         return "N/A (0 cases)"
     return f"{score['rate']:.1f}% ({score['correct']}/{score['total']})"
 
 
-def _display_path(path: Path) -> str:
+def display_path(path: Path) -> str:
     try:
         return path.relative_to(PROJECT_ROOT).as_posix()
     except ValueError:

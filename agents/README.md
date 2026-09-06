@@ -51,7 +51,7 @@ uv run pytest tests/vehicle_search_agent -q
 Run the 28-turn live evaluation (the delay avoids free-tier bursts):
 
 ```powershell
-uv run --package evals python -m evals.evaluate_agent --delay-seconds 10
+uv run --package evals python -m evals.evaluator.agent --delay-seconds 10
 ```
 
 The cases live in `evals/datasets/agent_cases.json`. Each run writes timestamped JSON
@@ -60,7 +60,7 @@ and Markdown reports under `data/evaluation/`.
 Run the focused size, body, attribute, and follow-up evaluation:
 
 ```powershell
-uv run --package evals python -m evals.evaluate_agent --cases evals/datasets/vehicle_variant_cases.json --delay-seconds 10
+uv run --package evals python -m evals.evaluator.agent --cases evals/datasets/vehicle_variant_cases.json --delay-seconds 10
 ```
 
 See the repository [setup guide](../docs/SETUP.md) and [evaluation report](../docs/EVALUATION.md) for configuration, output naming, and metric boundaries.

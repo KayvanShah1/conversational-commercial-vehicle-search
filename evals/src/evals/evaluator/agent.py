@@ -10,10 +10,11 @@ from uuid import uuid4
 from rich.console import Console
 from vehicle_search_agent.runner import VehicleSearchSession
 
-from evals.reporting import build_report, markdown_report, print_report, prune_old_reports, report_paths
+from evals.reporting.core import build_report, markdown_report, print_report, prune_old_reports, report_paths
 from evals.settings import DEFAULT_CASES_PATH, DEFAULT_DELAY_SECONDS, DEFAULT_MIN_PASS_RATE
 
 console = Console()
+ALLOWED_INFERRED_FILTERS = {"vehicle_category", "weight_class", "purpose"}
 
 
 def _arguments() -> argparse.Namespace:
@@ -35,7 +36,7 @@ def _arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _mismatches(
+def case_mismatches(
     case: dict[str, Any],
     result: Any,
     previous_ids: list[str],
@@ -83,11 +84,7 @@ def _argument_mismatches(case: dict[str, Any], result: Any) -> list[str]:
     unexpected = (
         set(actual_filters)
         - set(case["expected_filters"])
-        - {
-            "vehicle_category",
-            "weight_class",
-            "purpose",
-        }
+        - ALLOWED_INFERRED_FILTERS
     )
     if unexpected:
         problems.append(f"unexpected_filters={sorted(unexpected)}")
@@ -116,7 +113,7 @@ async def evaluate(cases: list[dict[str, Any]], *, delay_seconds: float = 0.0) -
             result = await session.run_text_turn(case["utterance"])
             grounded = session.context.grounded_response
             routing_correct = result.action.value == case["expected_action"]
-            problems, arguments_correct = _mismatches(
+            problems, arguments_correct = case_mismatches(
                 case,
                 result,
                 previous_ids,
@@ -160,7 +157,7 @@ async def evaluate(cases: list[dict[str, Any]], *, delay_seconds: float = 0.0) -
     return rows
 
 
-def _load_cases(path: Path, case_ids: list[str] | None) -> list[dict[str, Any]]:
+def load_cases(path: Path, case_ids: list[str] | None) -> list[dict[str, Any]]:
     cases = json.loads(path.read_text(encoding="utf-8"))
     if case_ids:
         cases = [case for case in cases if case["id"] in case_ids]
@@ -177,7 +174,7 @@ def main() -> None:
     arguments = _arguments()
     rows = asyncio.run(
         evaluate(
-            _load_cases(arguments.cases, arguments.case_ids),
+            load_cases(arguments.cases, arguments.case_ids),
             delay_seconds=arguments.delay_seconds,
         )
     )
